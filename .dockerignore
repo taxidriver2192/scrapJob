@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+
+# Build artifacts
+linkedin-scraper
+*.exe
+
+# Chrome profile data
+chrome-profile/
+
+# Documentation
+README.md
+QUICKSTART.md
+ea_diagram.json
+
+# Scripts (not needed in container)
+scripts/
+start.sh
+
+# IDE
+.vscode/
+.idea/
