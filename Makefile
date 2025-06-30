@@ -103,7 +103,7 @@ scrape:
 # Scraping with different modes
 scrape-headless:
 	@echo "🔍 Starting headless scraping..."
-	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
+	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 50 --jobs-per-page 25
 
 scrape-visible:
 	@echo "🔍 Starting visible scraping (with browser window)..."

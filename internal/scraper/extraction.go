@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"linkedin-job-scraper/internal/models"
+
 	"github.com/chromedp/chromedp"
 	"github.com/sirupsen/logrus"
-	"linkedin-job-scraper/internal/models"
 )
 
 // extractJobURLs extracts job URLs from the current search results page

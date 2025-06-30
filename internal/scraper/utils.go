@@ -1,12 +1,13 @@
 package scraper
 
 import (
+	"context"
 	"fmt"
+	"linkedin-job-scraper/internal/models"
 	"strconv"
 	"strings"
 	"time"
-	"linkedin-job-scraper/internal/models"
-	"context"
+
 	"github.com/chromedp/chromedp"
 )
 
