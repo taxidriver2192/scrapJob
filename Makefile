@@ -1,4 +1,4 @@
-.PHONY: help setup build start stop migrate reset db-status db-shell scrape test clean logs dev
+.PHONY: help setup build start stop migrate reset db-status db-shell scrape show-jobs test clean logs dev
 
 # Default target
 help:
@@ -6,7 +6,9 @@ help:
 	@echo ""
 	@echo "Setup & Build:"
 	@echo "  make setup     - Install dependencies and build application"
+	@echo "  make setup-ts  - Setup TypeScript environment"
 	@echo "  make build     - Build the Go application"
+	@echo "  make build-ts  - Compile TypeScript scripts to JavaScript"
 	@echo ""
 	@echo "Docker Services:"
 	@echo "  make start     - Start MySQL + phpMyAdmin (docker-compose up -d)"
@@ -20,7 +22,10 @@ help:
 	@echo ""
 	@echo "Scraping:"
 	@echo "  make scrape    - Start scraping (with default params: 1 page, 5 jobs per page)"
-	@echo "  make test      - Show recent scraped jobs"
+	@echo "  make show-jobs - Show recent scraped jobs"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test      - Run Go tests"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean     - Clean build artifacts"
@@ -39,7 +44,18 @@ setup:
 
 build:
 	@echo "🔨 Building application..."
+	@make build-ts
 	go build -o linkedin-scraper cmd/main.go
+
+# TypeScript compilation
+build-ts:
+	@echo "📝 Compiling TypeScript scripts..."
+	@if command -v tsc >/dev/null 2>&1; then \
+		npm run compile-scripts; \
+	else \
+		echo "⚠️  TypeScript compiler not found. Install with: npm install -g typescript"; \
+		echo "🔄 Using existing JavaScript files as fallback"; \
+	fi
 
 # Docker services
 start:
@@ -79,11 +95,15 @@ db-shell:
 # Scraping
 scrape:
 	@echo "🔍 Starting scraping (edit Makefile to change keywords/location)..."
-	./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
+	./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --max-pages 1 --jobs-per-page 1
 
-test:
+show-jobs:
 	@echo "📋 Recent scraped jobs:"
 	go run cmd/test/main.go
+
+test:
+	@echo "🧪 Running Go tests..."
+	go test ./...
 
 # Utilities
 clean:

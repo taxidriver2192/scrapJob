@@ -16,51 +16,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 	// Wait for job results to load
 	var jobResultsFound bool
 	err := chromedp.Run(ctx,
-		chromedp.Evaluate(`
-			(function() {
-				console.log('=== DEBUGGING JOB RESULTS PAGE ===');
-				
-				// Check various indicators that this is a job search page
-				const url = window.location.href;
-				const title = document.title;
-				const isJobSearchPage = url.includes('/jobs/search');
-				
-				console.log('Current URL:', url);
-				console.log('Page title:', title);
-				console.log('Is job search page:', isJobSearchPage);
-				
-				// Check if logged in
-				const hasUserMenu = document.querySelector('[data-tracking-control-name*="nav.feed"]') !== null;
-				console.log('Appears to be logged in:', hasUserMenu);
-				
-				console.log('=== END DEBUGGING ===');
-				
-				// Look for job results container
-				const containerSelectors = [
-					'.jobs-search-results-list',
-					'.jobs-search__results-list',
-					'[data-total-results]',
-					'.search-results-container',
-					'ul.jobs-search__results-list'
-				];
-				
-				let foundContainer = false;
-				for (const selector of containerSelectors) {
-					const container = document.querySelector(selector);
-					if (container) {
-						console.log('Found job results container with selector:', selector);
-						foundContainer = true;
-						break;
-					}
-				}
-				
-				// Count total job links as backup
-				const totalJobLinks = document.querySelectorAll('a[href*="/jobs/view/"]').length;
-				console.log('Total job links found:', totalJobLinks);
-				
-				return foundContainer || totalJobLinks > 0;
-			})();
-		`, &jobResultsFound),
+		chromedp.Evaluate(s.buildPageAnalysisScript(), &jobResultsFound),
 	)
 
 	if err != nil || !jobResultsFound {
@@ -68,19 +24,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 		
 		// Get more detailed page analysis
 		var pageAnalysis map[string]interface{}
-		chromedp.Run(ctx, chromedp.Evaluate(`
-			(function() {
-				return {
-					url: window.location.href,
-					title: document.title,
-					bodyClasses: document.body ? document.body.className : 'no body',
-					mainFound: document.querySelector('main') !== null,
-					jobLinksCount: document.querySelectorAll('a[href*="/jobs/view/"]').length,
-					hasLoginForm: document.querySelector('input[name="session_key"]') !== null,
-					pageText: document.body ? document.body.innerText.substring(0, 500) : 'no body text'
-				};
-			})();
-		`, &pageAnalysis))
+		chromedp.Run(ctx, chromedp.Evaluate(s.buildDetailedAnalysisScript(), &pageAnalysis))
 		
 		logrus.Infof("📊 Page analysis: %+v", pageAnalysis)
 		
@@ -99,41 +43,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 	logrus.Info("🔍 Extracting job URLs...")
 	var jobURLs []string
 	err = chromedp.Run(ctx,
-		chromedp.Evaluate(`
-			(function() {
-				console.log('=== EXTRACTING JOB URLs ===');
-				
-				// Try multiple selectors for job links
-				const linkSelectors = [
-					'a[href*="/jobs/view/"]',
-					'[data-occludable-job-id] a',
-					'.job-search-card a[href*="/jobs/view/"]',
-					'.result-card a[href*="/jobs/view/"]',
-					'[data-tracking-control-name*="job-result-card"] a'
-				];
-				
-				let allLinks = [];
-				
-				for (const selector of linkSelectors) {
-					const links = document.querySelectorAll(selector);
-					console.log('Selector', selector, 'found', links.length, 'links');
-					
-					for (const link of links) {
-						if (link.href && link.href.includes('/jobs/view/')) {
-							// Clean the URL - remove any tracking parameters and fragments
-							let cleanURL = link.href.split('?')[0].split('#')[0];
-							if (!allLinks.includes(cleanURL)) {
-								allLinks.push(cleanURL);
-								console.log('Found job URL:', cleanURL);
-							}
-						}
-					}
-				}
-				
-				console.log('Total unique job URLs extracted:', allLinks.length);
-				return allLinks;
-			})();
-		`, &jobURLs),
+		chromedp.Evaluate(s.buildExtractJobURLsScript(), &jobURLs),
 	)
 
 	if err != nil {
@@ -159,28 +69,7 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 	err = chromedp.Run(ctx,
 		chromedp.Sleep(2*time.Second),
 		// Try to click "Show more" button if it exists
-		chromedp.Evaluate(`
-			(function() {
-				const showMoreButtons = document.querySelectorAll('button[aria-expanded="false"]');
-				for (const button of showMoreButtons) {
-					if (button.innerText && (button.innerText.includes('Show more') || button.innerText.includes('Se mere'))) {
-						console.log('Clicking show more button:', button.innerText);
-						button.click();
-						return true;
-					}
-				}
-				
-				// Also try alternative selectors for show more
-				const moreButtons = document.querySelectorAll('.jobs-description-content__toggle, .show-more-less-html__button, [data-tracking-control-name*="show_more"]');
-				for (const button of moreButtons) {
-					console.log('Clicking description toggle button');
-					button.click();
-					return true;
-				}
-				
-				return false;
-			})();
-		`, nil),
+		chromedp.Evaluate(s.buildExpandDescriptionScript(), nil),
 		chromedp.Sleep(1*time.Second), // Wait for content to expand
 	)
 

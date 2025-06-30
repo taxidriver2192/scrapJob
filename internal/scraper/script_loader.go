@@ -3,22 +3,66 @@ package scraper
 import (
 	"embed"
 	"fmt"
+	"os/exec"
+	"strings"
 )
 
-//go:embed scripts/*.js
+//go:embed scripts/dist/*.js scripts/src/*.ts
 var scriptFiles embed.FS
+
+// Script file constants
+const (
+	utilsScript = "utils.js"
+	utilsScriptTS = "utils.ts"
+)
 
 // loadScript loads a JavaScript file from the embedded filesystem
 func loadScript(filename string) (string, error) {
-	content, err := scriptFiles.ReadFile("scripts/" + filename)
+	// Try to load from dist directory first
+	content, err := scriptFiles.ReadFile("scripts/dist/" + filename)
 	if err != nil {
-		return "", fmt.Errorf("failed to load script %s: %w", filename, err)
+		// Fallback to old location for backwards compatibility
+		content, err = scriptFiles.ReadFile("scripts/" + filename)
+		if err != nil {
+			return "", fmt.Errorf("failed to load script %s: %w", filename, err)
+		}
 	}
 	return string(content), nil
 }
 
+// loadTypeScript loads and compiles a TypeScript file
+func loadTypeScript(filename string) (string, error) {
+	// First try to load pre-compiled JavaScript version from dist
+	jsFilename := strings.Replace(filename, ".ts", ".js", 1)
+	if content, err := loadScript(jsFilename); err == nil {
+		return content, nil
+	}
+	
+	// If no JS version exists, try to compile TypeScript from src
+	// Simple TypeScript compilation using project config
+	cmd := exec.Command("npx", "tsc", "--project", "tsconfig.json")
+	if err := cmd.Run(); err != nil {
+		// Fallback: try to load from src as fallback (though this won't work in browser)
+		content, err := scriptFiles.ReadFile("scripts/src/" + filename)
+		if err != nil {
+			return "", fmt.Errorf("failed to load TypeScript file %s and compilation failed: %w", filename, err)
+		}
+		return string(content), nil
+	}
+	
+	// After compilation, try to load the JS version again
+	return loadScript(jsFilename)
+}
+
 // buildJobExtractionScript builds the complete job extraction script
 func (s *LinkedInScraper) buildJobExtractionScript() string {
+	// Load utils first - required by other scripts
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		// Fallback to embedded script if file loading fails
+		return s.buildFallbackJobExtractionScript()
+	}
+	
 	jobDetailsScript, err := loadScript("job_details.js")
 	if err != nil {
 		// Fallback to embedded script if file loading fails
@@ -32,14 +76,33 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 	}
 	
 	return fmt.Sprintf(`
+		// Utils functionality first - make it globally available
+		%s
+		
+		// Job details extraction functions
+		%s
+		
+		// Skills and work type extraction functions
+		%s
+		
+		// Execute job extraction and return result
 		(function() {
-			// Job details extraction
-			const jobDetails = %s;
+			console.log('=== STARTING JOB EXTRACTION ===');
 			
-			// Skills and work type extraction
-			%s
+			// Execute job details extraction
+			const jobDetails = {
+				title: getTitleText(),
+				company: getCompanyText(),
+				location: getLocationData(),
+				description: getDescriptionText(),
+				applyUrl: getApplyUrl(),
+				postedDate: getPostedDate()
+			};
+			
+			// Execute skills extraction
 			const workTypeAndSkills = getWorkTypeAndSkills();
 			
+			// Combine results
 			const result = {
 				title: jobDetails.title,
 				company: jobDetails.company,
@@ -55,7 +118,92 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 			
 			return result;
 		})();
-	`, jobDetailsScript, skillsScript)
+	`, utilsScriptContent, jobDetailsScript, skillsScript)
+}
+
+// buildPageAnalysisScript builds script for analyzing job search page
+func (s *LinkedInScraper) buildPageAnalysisScript() string {
+	script, err := loadTypeScript("page_analysis.ts")
+	if err != nil {
+		return `document.querySelectorAll('a[href*="/jobs/view/"]').length > 0`
+	}
+	return script
+}
+
+// buildDetailedAnalysisScript builds script for detailed page analysis
+func (s *LinkedInScraper) buildDetailedAnalysisScript() string {
+	script, err := loadTypeScript("detailed_analysis.ts")
+	if err != nil {
+		return `({ url: window.location.href, title: document.title })`
+	}
+	return script
+}
+
+// buildExtractJobURLsScript builds script for extracting job URLs
+func (s *LinkedInScraper) buildExtractJobURLsScript() string {
+	script, err := loadTypeScript("extract_job_urls.ts")
+	if err != nil {
+		return `Array.from(document.querySelectorAll('a[href*="/jobs/view/"]')).map(a => a.href.split('?')[0])`
+	}
+	return script
+}
+
+// buildExpandDescriptionScript builds script for expanding job descriptions
+func (s *LinkedInScraper) buildExpandDescriptionScript() string {
+	script, err := loadTypeScript("expand_description.ts")
+	if err != nil {
+		return `document.querySelector('.show-more-less-html__button')?.click() || false`
+	}
+	return script
+}
+
+// buildClickInsightsScript builds script for clicking insights button
+func (s *LinkedInScraper) buildClickInsightsScript() string {
+	script, err := loadTypeScript("click_insights.ts")
+	if err != nil {
+		return `false` // Fallback returns false if no insights button found
+	}
+	return script
+}
+
+// buildIsLoggedInScript builds script for checking login status
+func (s *LinkedInScraper) buildIsLoggedInScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `document.querySelector('input[name="session_key"]') === null`
+	}
+	return utilsScriptContent + `
+		Utils.isLoggedIn();`
+}
+
+// buildHasLoginFormScript builds script for checking if page has login form
+func (s *LinkedInScraper) buildHasLoginFormScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `document.querySelector('input[name="session_key"]') !== null`
+	}
+	return utilsScriptContent + `
+		Utils.hasLoginForm();`
+}
+
+// buildScrollToBottomScript builds script for scrolling to bottom
+func (s *LinkedInScraper) buildScrollToBottomScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `window.scrollTo(0, document.body.scrollHeight);`
+	}
+	return utilsScriptContent + `
+		Utils.scrollToBottom();`
+}
+
+// buildScrollToTopScript builds script for scrolling to top
+func (s *LinkedInScraper) buildScrollToTopScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `window.scrollTo(0, 0);`
+	}
+	return utilsScriptContent + `
+		Utils.scrollToTop();`
 }
 
 // buildFallbackJobExtractionScript provides fallback when external files fail

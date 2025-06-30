@@ -50,7 +50,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, jobsPerPag
 	// Check if login is required
 	var hasLoginForm bool
 	err = chromedp.Run(ctx,
-		chromedp.Evaluate(`document.querySelector('input[name="session_key"]') !== null`, &hasLoginForm),
+		chromedp.Evaluate(s.buildHasLoginFormScript(), &hasLoginForm),
 	)
 	
 	if err == nil && hasLoginForm {

@@ -1,0 +1,14 @@
+{
+  "name": "linkedin-job-scraper",
+  "version": "1.0.0",
+  "description": "LinkedIn job scraper with TypeScript support",
+  "private": true,
+  "scripts": {
+    "build-ts": "tsc --project tsconfig.json",
+    "watch-ts": "tsc --project tsconfig.json --watch",
+    "compile-scripts": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

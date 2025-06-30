@@ -20,7 +20,7 @@ func (s *LinkedInScraper) login(ctx context.Context) error {
 		chromedp.Navigate("https://www.linkedin.com/login"),
 		chromedp.WaitVisible(`body`, chromedp.ByQuery),
 		chromedp.Sleep(2*time.Second), // Give page time to load
-		chromedp.Evaluate(`document.querySelector('input[name="session_key"]') === null`, &isLoggedIn),
+		chromedp.Evaluate(s.buildIsLoggedInScript(), &isLoggedIn),
 	)
 	
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *LinkedInScraper) login(ctx context.Context) error {
 	// Verify login was successful
 	var loginSuccess bool
 	err = chromedp.Run(ctx,
-		chromedp.Evaluate(`!document.querySelector('input[name="session_key"]')`, &loginSuccess),
+		chromedp.Evaluate(s.buildIsLoggedInScript(), &loginSuccess),
 	)
 
 	if err != nil || !loginSuccess {

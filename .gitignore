@@ -2,6 +2,9 @@
 linkedin-scraper
 *.exe
 
+# TypeScript compiled files
+internal/scraper/scripts/dist/
+
 # Logs
 logs/
 *.log
