@@ -16,14 +16,15 @@ func (s *LinkedInScraper) saveJob(scrapedJob *models.ScrapedJob) error {
 		return fmt.Errorf("invalid LinkedIn job ID '%s': %w", scrapedJob.LinkedInJobID, err)
 	}
 
-	// Check if job already exists
+	// Check if job already exists (double-check for safety)
+	// Note: This should rarely happen now due to early filtering in scrapePage
 	exists, err := s.jobRepo.ExistsLinkedInJobID(jobID)
 	if err != nil {
 		return fmt.Errorf("failed to check if job exists: %w", err)
 	}
 
 	if exists {
-		logrus.Debugf("⏭️  Job %s already exists, skipping", scrapedJob.LinkedInJobID)
+		logrus.Debugf("⏭️  Job %s already exists in database, skipping save", scrapedJob.LinkedInJobID)
 		return nil
 	}
 

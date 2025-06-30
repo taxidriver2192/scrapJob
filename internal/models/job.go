@@ -17,6 +17,7 @@ type JobPosting struct {
 	Applicants    *int           `json:"applicants,omitempty" db:"applicants"` // Pointer to handle NULL values
 	WorkType      *string        `json:"work_type,omitempty" db:"work_type"`   // Remote, Hybrid, On-site
 	Skills        *SkillsList    `json:"skills,omitempty" db:"skills"`         // JSON list of skills
+	OpenaiAdresse *string        `json:"openai_adresse,omitempty" db:"openai_adresse"` // AI-extracted standardized address
 	
 	// Joined fields
 	CompanyName string `json:"company_name,omitempty" db:"company_name"`
@@ -34,4 +35,5 @@ type ScrapedJob struct {
 	Applicants    *int        // Number of applicants (NULL if not found)
 	WorkType      *string     // Remote, Hybrid, On-site work type
 	Skills        *SkillsList // List of required skills
+	OpenaiAdresse *string     // AI-extracted standardized address
 }

@@ -4,12 +4,34 @@ import (
 	"context"
 	"fmt"
 	"linkedin-job-scraper/internal/models"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
 )
+
+func extractLinkedInJobIDFromURL(jobURL string) (int64, error) {
+	// LinkedIn job URLs typically look like: 
+	// https://www.linkedin.com/jobs/view/1234567890/
+	// or https://www.linkedin.com/jobs/view/1234567890?...
+	
+	// Use regex to extract the job ID
+	re := regexp.MustCompile(`/jobs/view/(\d+)`)
+	matches := re.FindStringSubmatch(jobURL)
+	
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("could not extract job ID from URL: %s", jobURL)
+	}
+	
+	jobID, err := strconv.ParseInt(matches[1], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid job ID '%s' in URL: %w", matches[1], err)
+	}
+	
+	return jobID, nil
+}
 
 // Math utilities
 func minInt(a, b int) int {

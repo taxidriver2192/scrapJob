@@ -26,10 +26,9 @@ var scrapeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		keywords, _ := cmd.Flags().GetString("keywords")
 		location, _ := cmd.Flags().GetString("location")
-		maxPages, _ := cmd.Flags().GetInt("max-pages")
-		jobsPerPage, _ := cmd.Flags().GetInt("jobs-per-page")
+		totalJobs, _ := cmd.Flags().GetInt("total-jobs")
 
-		runScraper(keywords, location, maxPages, jobsPerPage)
+		runScraper(keywords, location, totalJobs)
 	},
 }
 
@@ -44,8 +43,7 @@ var migrateCmd = &cobra.Command{
 func init() {
 	scrapeCmd.Flags().StringP("keywords", "k", "", "Job search keywords (required)")
 	scrapeCmd.Flags().StringP("location", "l", "", "Job search location (required)")
-	scrapeCmd.Flags().IntP("max-pages", "p", 5, "Maximum pages to scrape")
-	scrapeCmd.Flags().IntP("jobs-per-page", "j", 10, "Number of jobs to scrape per page (1-25)")
+	scrapeCmd.Flags().IntP("total-jobs", "t", 50, "Total number of jobs to scrape (LinkedIn shows 25 jobs per page)")
 	scrapeCmd.MarkFlagRequired("keywords")
 	scrapeCmd.MarkFlagRequired("location")
 
@@ -65,7 +63,7 @@ func main() {
 	}
 }
 
-func runScraper(keywords, location string, maxPages, jobsPerPage int) {
+func runScraper(keywords, location string, totalJobs int) {
 	// Initialize configuration
 	cfg := config.Load()
 
@@ -83,9 +81,9 @@ func runScraper(keywords, location string, maxPages, jobsPerPage int) {
 	jobScraper := scraper.NewLinkedInScraper(cfg, db)
 
 	// Start scraping
-	logrus.Infof("Starting to scrape jobs with keywords: %s, location: %s, max pages: %d, jobs per page: %d", keywords, location, maxPages, jobsPerPage)
+	logrus.Infof("Starting to scrape %d jobs with keywords: %s, location: %s", totalJobs, keywords, location)
 	
-	err = jobScraper.ScrapeJobs(keywords, location, maxPages, jobsPerPage)
+	err = jobScraper.ScrapeJobs(keywords, location, totalJobs)
 	if err != nil {
 		logrus.Fatal("Scraping failed: ", err)
 	}

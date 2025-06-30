@@ -30,7 +30,7 @@ func NewLinkedInScraper(cfg *config.Config, db *database.DB) *LinkedInScraper {
 }
 
 // ScrapeJobs scrapes LinkedIn jobs based on search parameters
-func (s *LinkedInScraper) ScrapeJobs(keywords, location string, maxPages, jobsPerPage int) error {
+func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) error {
 	logrus.Infof("🚀 Initializing Chrome browser...")
 	
 	// Setup Chrome options with better error handling
@@ -86,17 +86,22 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, maxPages, jobsPe
 	}
 	logrus.Info("✅ Login successful!")
 
-	// Build search URL
-	searchURL := s.buildSearchURL(keywords, location, 0)
-	logrus.Infof("🔍 Starting scrape with search URL: %s", searchURL)
+	// Calculate pagination parameters
+	// LinkedIn shows 25 jobs per page, so we calculate how many pages we need
+	const jobsPerLinkedInPage = 25
+	maxPages := (totalJobs + jobsPerLinkedInPage - 1) / jobsPerLinkedInPage // Ceiling division
+	
+	logrus.Infof("🔍 Starting scrape to collect up to %d jobs across maximum %d pages", totalJobs, maxPages)
 
-	totalJobs := 0
+	totalScrapedJobs := 0
 	for page := 0; page < maxPages; page++ {
-		pageURL := s.buildSearchURL(keywords, location, page*25)
+		start := page * jobsPerLinkedInPage
+		pageURL := s.buildSearchURL(keywords, location, start)
 		
-		logrus.Infof("📄 Scraping page %d/%d: %s", page+1, maxPages, pageURL)
+		logrus.Infof("📄 Scraping page %d/%d (start=%d): %s", page+1, maxPages, start, pageURL)
 		
-		jobs, err := s.scrapePage(ctx, pageURL, jobsPerPage)
+		// Scrape all jobs available on this page (up to 25)
+		jobs, err := s.scrapePage(ctx, pageURL, jobsPerLinkedInPage)
 		if err != nil {
 			logrus.Errorf("❌ Error scraping page %d: %v", page+1, err)
 			continue
@@ -108,17 +113,36 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, maxPages, jobsPe
 		}
 		
 		// Process and save jobs
+		jobsSavedFromPage := 0
 		for _, job := range jobs {
 			if err := s.saveJob(job); err != nil {
 				logrus.Errorf("❌ Failed to save job: %v", err)
 				continue
 			}
-			totalJobs++
+			totalScrapedJobs++
+			jobsSavedFromPage++
+			
+			// Check if we've reached our target
+			if totalScrapedJobs >= totalJobs {
+				logrus.Infof("🎯 Reached target of %d jobs, stopping", totalJobs)
+				break
+			}
 		}
 		
-		logrus.Infof("✅ Processed %d jobs from page %d", len(jobs), page+1)
+		logrus.Infof("✅ Processed %d jobs from page %d (total: %d/%d)", jobsSavedFromPage, page+1, totalScrapedJobs, totalJobs)
+		
+		// If we didn't get any new jobs from this page, we might have reached the end
+		if jobsSavedFromPage == 0 {
+			logrus.Warn("⚠️  No new jobs saved from this page, possibly reached end of results")
+			break
+		}
+		
+		// If we've reached our target, stop
+		if totalScrapedJobs >= totalJobs {
+			break
+		}
 	}
 
-	logrus.Infof("🎉 Scraping completed! Total jobs processed: %d", totalJobs)
+	logrus.Infof("🎉 Scraping completed! Total jobs processed: %d", totalScrapedJobs)
 	return nil
 }
