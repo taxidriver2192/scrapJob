@@ -19,7 +19,7 @@ help:
 	@echo "  make db-shell  - Open MySQL shell"
 	@echo ""
 	@echo "Scraping:"
-	@echo "  make scrape    - Start scraping (with default params)"
+	@echo "  make scrape    - Start scraping (with default params: 1 page, 5 jobs per page)"
 	@echo "  make test      - Show recent scraped jobs"
 	@echo ""
 	@echo "Utilities:"
@@ -79,7 +79,7 @@ db-shell:
 # Scraping
 scrape:
 	@echo "🔍 Starting scraping (edit Makefile to change keywords/location)..."
-	./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --max-pages 1
+	./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
 
 test:
 	@echo "📋 Recent scraped jobs:"
