@@ -19,7 +19,30 @@ func (s *LinkedInScraper) login(ctx context.Context) error {
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("https://www.linkedin.com/login"),
 		chromedp.WaitVisible(`body`, chromedp.ByQuery),
-		chromedp.Sleep(2*time.Second), // Give page time to load
+	)
+	
+	if err != nil {
+		return fmt.Errorf("failed to navigate to login page: %w", err)
+	}
+	
+	// Try intelligent wait first, fallback to sleep if it fails
+	waitErr := chromedp.Run(ctx,
+		chromedp.WaitReady(`input[name="session_key"], nav.global-nav, .global-nav`, chromedp.ByQuery),
+	)
+	
+	// If intelligent wait fails, use short fallback sleep
+	if waitErr != nil {
+		logrus.Debug("Intelligent wait failed, using fallback sleep")
+		err = chromedp.Run(ctx,
+			chromedp.Sleep(2*time.Second),
+		)
+		if err != nil {
+			return fmt.Errorf("fallback wait failed: %w", err)
+		}
+	}
+	
+	// Now evaluate login status
+	err = chromedp.Run(ctx,
 		chromedp.Evaluate(s.buildIsLoggedInScript(), &isLoggedIn),
 	)
 	
@@ -43,7 +66,8 @@ func (s *LinkedInScraper) login(ctx context.Context) error {
 		chromedp.SendKeys(`input[name="session_key"]`, s.config.LinkedIn.Email, chromedp.ByQuery),
 		chromedp.SendKeys(`input[name="session_password"]`, s.config.LinkedIn.Password, chromedp.ByQuery),
 		chromedp.Click(`button[type="submit"]`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second), // Wait for login to process
+		// Wait for login redirect - either to feed or login error
+		chromedp.WaitReady(`nav.global-nav, .alert, .form__input--error`, chromedp.ByQuery),
 	)
 
 	if err != nil {

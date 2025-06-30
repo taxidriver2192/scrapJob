@@ -40,3 +40,16 @@ interface ButtonInfo {
     className: string;
     id?: string;
 }
+
+// Utils interface for TypeScript compilation
+interface UtilsInterface {
+    isLoggedIn(): boolean;
+    hasLoginForm(): boolean;
+    scrollToBottom(): void;
+    scrollToTop(): void;
+    safeQuery<T extends Element = Element>(selector: string, parent?: Document | Element): T | null;
+    safeQueryAll<T extends Element = Element>(selector: string, parent?: Document | Element): NodeListOf<T> | null;
+}
+
+// Global Utils declaration
+declare const Utils: UtilsInterface;

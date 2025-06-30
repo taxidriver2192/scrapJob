@@ -150,20 +150,32 @@ func (s *LinkedInScraper) buildExtractJobURLsScript() string {
 
 // buildExpandDescriptionScript builds script for expanding job descriptions
 func (s *LinkedInScraper) buildExpandDescriptionScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `document.querySelector('.show-more-less-html__button')?.click() || false`
+	}
+	
 	script, err := loadTypeScript("expand_description.ts")
 	if err != nil {
 		return `document.querySelector('.show-more-less-html__button')?.click() || false`
 	}
-	return script
+	
+	return utilsScriptContent + "\n" + script
 }
 
 // buildClickInsightsScript builds script for clicking insights button
 func (s *LinkedInScraper) buildClickInsightsScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `false` // Fallback returns false if no insights button found
+	}
+	
 	script, err := loadTypeScript("click_insights.ts")
 	if err != nil {
 		return `false` // Fallback returns false if no insights button found
 	}
-	return script
+	
+	return utilsScriptContent + "\n" + script
 }
 
 // buildIsLoggedInScript builds script for checking login status

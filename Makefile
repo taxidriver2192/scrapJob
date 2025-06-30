@@ -21,8 +21,11 @@ help:
 	@echo "  make db-shell  - Open MySQL shell"
 	@echo ""
 	@echo "Scraping:"
-	@echo "  make scrape    - Start scraping (with default params: 1 page, 5 jobs per page)"
-	@echo "  make show-jobs - Show recent scraped jobs"
+	@echo "  make scrape         - Start scraping (with default params: 1 page, 5 jobs per page)"
+	@echo "  make scrape-headless - Start headless scraping (no browser window)"  
+	@echo "  make scrape-visible  - Start visible scraping (with browser window)"
+	@echo "  make scrape-debug    - Start debug scraping (visible + debug logs)"
+	@echo "  make show-jobs      - Show recent scraped jobs"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test      - Run Go tests"
@@ -95,11 +98,24 @@ db-shell:
 # Scraping
 scrape:
 	@echo "🔍 Starting scraping (edit Makefile to change keywords/location)..."
-	./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --max-pages 1 --jobs-per-page 1
+	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
+
+# Scraping with different modes
+scrape-headless:
+	@echo "🔍 Starting headless scraping..."
+	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
+
+scrape-visible:
+	@echo "🔍 Starting visible scraping (with browser window)..."
+	HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 1 --jobs-per-page 5
+
+scrape-debug:
+	@echo "🔍 Starting debug scraping (visible browser + debug logs)..."
+	LOG_LEVEL=debug HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --max-pages 1 --jobs-per-page 2
 
 show-jobs:
 	@echo "📋 Recent scraped jobs:"
-	go run cmd/test/main.go
+	go run cmd/show-jobs/main.go
 
 test:
 	@echo "🧪 Running Go tests..."

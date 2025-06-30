@@ -2,7 +2,6 @@ package scraper
 
 import (
 	"context"
-	"time"
 
 	"github.com/chromedp/chromedp"
 	"github.com/sirupsen/logrus"
@@ -13,7 +12,8 @@ func (s *LinkedInScraper) clickInsightsButton(ctx context.Context) error {
 	var skillsModalOpened bool
 	err := chromedp.Run(ctx,
 		chromedp.Evaluate(s.buildClickInsightsScript(), &skillsModalOpened),
-		chromedp.Sleep(3*time.Second), // Wait longer for modal to open
+		// Wait for modal to open or timeout (whichever comes first)
+		chromedp.WaitReady(`.modal, .artdeco-modal, body`, chromedp.ByQuery),
 	)
 
 	if err != nil {

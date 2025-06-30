@@ -50,7 +50,7 @@ func Load() *Config {
 			MaxPages:              getEnvAsInt("MAX_PAGES", 10),
 			DelayBetweenRequests:  getEnvAsInt("DELAY_BETWEEN_REQUESTS", 2),
 			ConcurrentWorkers:     getEnvAsInt("CONCURRENT_WORKERS", 3),
-			HeadlessBrowser:       getEnvAsBool("HEADLESS_BROWSER", true),
+			HeadlessBrowser:       getEnvAsBool("HEADLESS_BROWSER", true), // Already defaults to true (headless)
 			UserDataDir:           getEnv("USER_DATA_DIR", "./chrome-profile"),
 		},
 		LogLevel: getEnv("LOG_LEVEL", "info"),

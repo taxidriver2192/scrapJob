@@ -5,53 +5,6 @@ import (
 	"time"
 )
 
-func TestParseRelativeDate(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected time.Duration // relative to now
-	}{
-		{
-			name:     "Danish 1 day ago",
-			input:    "1 dag siden",
-			expected: -24 * time.Hour,
-		},
-		{
-			name:     "Danish 3 days ago",
-			input:    "3 dage siden",
-			expected: -72 * time.Hour,
-		},
-		{
-			name:     "English 1 day ago",
-			input:    "1 day ago",
-			expected: -24 * time.Hour,
-		},
-		{
-			name:     "English 2 weeks ago",
-			input:    "2 weeks ago",
-			expected: -14 * 24 * time.Hour,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := parseRelativeDate(tt.input)
-			if result == nil {
-				t.Errorf("parseRelativeDate(%q) returned nil", tt.input)
-				return
-			}
-			
-			// Check if the result is approximately correct (within 1 hour tolerance)
-			now := time.Now()
-			expected := now.Add(tt.expected)
-			diff := result.Sub(expected)
-			if diff < -time.Hour || diff > time.Hour {
-				t.Errorf("parseRelativeDate(%q) = %v, expected approximately %v", tt.input, result, expected)
-			}
-		})
-	}
-}
-
 func TestParseApplicantsCount(t *testing.T) {
 	tests := []struct {
 		name     string

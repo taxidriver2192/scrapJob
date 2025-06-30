@@ -1,10 +1,13 @@
 package scraper
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 	"linkedin-job-scraper/internal/models"
+	"context"
+	"github.com/chromedp/chromedp"
 )
 
 // Math utilities
@@ -207,4 +210,57 @@ func extractNumberFromPattern(text, pattern string) int {
 		}
 	}
 	return 0
+}
+
+// Helper function to get map keys for debugging
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// Smart wait utilities for optimized scraping
+
+// smartWaitForElement waits for an element to appear with a timeout and condition checking
+func smartWaitForElement(ctx context.Context, selector string, maxWait time.Duration) error {
+	timeout := time.Now().Add(maxWait)
+	
+	for time.Now().Before(timeout) {
+		var elementExists bool
+		err := chromedp.Run(ctx,
+			chromedp.Evaluate(fmt.Sprintf(`document.querySelector('%s') !== null`, selector), &elementExists),
+		)
+		
+		if err == nil && elementExists {
+			return nil
+		}
+		
+		// Check every 100ms
+		time.Sleep(100 * time.Millisecond)
+	}
+	
+	return fmt.Errorf("element %s not found within %v", selector, maxWait)
+}
+
+// smartWaitForCondition waits for a JavaScript condition to be true
+func smartWaitForCondition(ctx context.Context, jsCondition string, maxWait time.Duration) error {
+	timeout := time.Now().Add(maxWait)
+	
+	for time.Now().Before(timeout) {
+		var conditionMet bool
+		err := chromedp.Run(ctx,
+			chromedp.Evaluate(jsCondition, &conditionMet),
+		)
+		
+		if err == nil && conditionMet {
+			return nil
+		}
+		
+		// Check every 100ms for faster response
+		time.Sleep(100 * time.Millisecond)
+	}
+	
+	return fmt.Errorf("condition '%s' not met within %v", jsCondition, maxWait)
 }

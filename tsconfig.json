@@ -20,6 +20,8 @@
     "internal/scraper/scripts/src/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "internal/scraper/scripts/dist/**/*",
+    "node_modules",
+    "**/*.js"
   ]
 }
