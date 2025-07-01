@@ -19,16 +19,18 @@
     console.log('Appears to be logged in:', hasUserMenu);
     
     console.log('=== END DEBUGGING ===');
-    
-    // Look for job results container
+      // Look for job results container (relaxed check)
     const containerSelectors: string[] = [
         '.jobs-search-results-list',
         '.jobs-search__results-list',
         '[data-total-results]',
         '.search-results-container',
-        'ul.jobs-search__results-list'
+        'ul.jobs-search__results-list',
+        '.jobs-search-results', // More generic selectors
+        '[class*="jobs-search"]',
+        '[class*="search-results"]'
     ];
-    
+
     let foundContainer: boolean = false;
     for (const selector of containerSelectors) {
         const container = Utils.safeQuery(selector);
@@ -38,11 +40,14 @@
             break;
         }
     }
-    
+
     // Count total job links as backup
     const jobLinks = Utils.safeQueryAll('a[href*="/jobs/view/"]');
     const totalJobLinks: number = jobLinks ? jobLinks.length : 0;
     console.log('Total job links found:', totalJobLinks);
+
+    // Be more lenient - if we have job links, consider it successful
+    const hasJobLinks: boolean = totalJobLinks > 0;
     
-    return foundContainer || totalJobLinks > 0;
+    return foundContainer || hasJobLinks;
 })();

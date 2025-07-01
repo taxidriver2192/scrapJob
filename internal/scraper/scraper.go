@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"linkedin-job-scraper/internal/config"
 	"linkedin-job-scraper/internal/database"
+	"strconv"
 	"strings"
 
-	"github.com/chromedp/chromedp"
 	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/chromedp"
 	"github.com/sirupsen/logrus"
 )
 
@@ -86,63 +87,163 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	}
 	logrus.Info("✅ Login successful!")
 
-	// Calculate pagination parameters
-	// LinkedIn shows 25 jobs per page, so we calculate how many pages we need
-	const jobsPerLinkedInPage = 25
-	maxPages := (totalJobs + jobsPerLinkedInPage - 1) / jobsPerLinkedInPage // Ceiling division
+	// Dynamic pagination based on job URLs FOUND on LinkedIn (not jobs saved to DB)
+	totalJobUrlsFound := 0   // Total job URLs LinkedIn has shown us (for pagination)
+	totalJobsSaved := 0      // Total jobs actually saved to database
+	page := 1
+	const maxPages = 10 // Safety limit to prevent infinite loops
 	
-	logrus.Infof("🔍 Starting scrape to collect up to %d jobs across maximum %d pages", totalJobs, maxPages)
+	logrus.Infof("🔍 Starting scrape to collect up to %d jobs with dynamic pagination", totalJobs)
 
-	totalScrapedJobs := 0
-	for page := 0; page < maxPages; page++ {
-		start := page * jobsPerLinkedInPage
+	for page <= maxPages && totalJobsSaved < totalJobs {
+		// Use LinkedIn's pagination: start from total job URLs we've seen
+		start := totalJobUrlsFound
 		pageURL := s.buildSearchURL(keywords, location, start)
 		
-		logrus.Infof("📄 Scraping page %d/%d (start=%d): %s", page+1, maxPages, start, pageURL)
+		logrus.Infof("📄 Scraping page %d (start=%d): %s", page, start, pageURL)
 		
-		// Scrape all jobs available on this page (up to 25)
-		jobs, err := s.scrapePage(ctx, pageURL, jobsPerLinkedInPage)
+		// Scrape page and get result info
+		pageResult, err := s.scrapePageWithDetails(ctx, pageURL, 25)
 		if err != nil {
-			logrus.Errorf("❌ Error scraping page %d: %v", page+1, err)
-			continue
+			logrus.Errorf("❌ Error scraping page %d: %v", page, err)
+			break
 		}
 		
-		if len(jobs) == 0 {
+		if pageResult.TotalJobsFound == 0 {
 			logrus.Warn("⚠️  No jobs found on page, stopping...")
 			break
 		}
 		
-		// Process and save jobs
-		jobsSavedFromPage := 0
-		for _, job := range jobs {
-			if err := s.saveJob(job); err != nil {
-				logrus.Errorf("❌ Failed to save job: %v", err)
-				continue
-			}
-			totalScrapedJobs++
-			jobsSavedFromPage++
-			
-			// Check if we've reached our target
-			if totalScrapedJobs >= totalJobs {
-				logrus.Infof("🎯 Reached target of %d jobs, stopping", totalJobs)
-				break
-			}
-		}
+		// Update total job URLs found (this is what LinkedIn uses for pagination)
+		totalJobUrlsFound += pageResult.TotalJobsFound
 		
-		logrus.Infof("✅ Processed %d jobs from page %d (total: %d/%d)", jobsSavedFromPage, page+1, totalScrapedJobs, totalJobs)
+		// Update saved jobs count
+		totalJobsSaved += pageResult.JobsSaved
 		
-		// If we didn't get any new jobs from this page, we might have reached the end
-		if jobsSavedFromPage == 0 {
-			logrus.Warn("⚠️  No new jobs saved from this page, possibly reached end of results")
-			break
-		}
+		logrus.Infof("✅ Processed %d job URLs from page %d (saved: %d, skipped: %d, total saved: %d/%d, next start: %d)", 
+			pageResult.TotalJobsFound, page, pageResult.JobsSaved, pageResult.JobsSkipped, 
+			totalJobsSaved, totalJobs, totalJobUrlsFound)
 		
 		// If we've reached our target, stop
-		if totalScrapedJobs >= totalJobs {
+		if totalJobsSaved >= totalJobs {
+			logrus.Infof("🎯 Reached target of %d jobs, stopping", totalJobs)
 			break
 		}
+		
+		page++
 	}
 
-	logrus.Infof("🎉 Scraping completed! Total jobs processed: %d", totalScrapedJobs)
+	logrus.Infof("🎉 Scraping completed! Total jobs saved: %d, total job URLs processed: %d", totalJobsSaved, totalJobUrlsFound)
 	return nil
+}
+
+// PageResult holds information about a scraped page
+type PageResult struct {
+    TotalJobsFound int // Number of job URLs found on the page
+    JobsSaved      int // Number of jobs actually saved to database  
+    JobsSkipped    int // Number of jobs skipped (already exist)
+}
+
+// scrapePageWithDetails scrapes a page and returns detailed results
+func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL string, maxJobs int) (*PageResult, error) {
+	// Navigate to the page
+	err := chromedp.Run(ctx, chromedp.Navigate(pageURL))
+	if err != nil {
+		return nil, fmt.Errorf("failed to navigate to page: %w", err)
+	}
+
+	logrus.Info("🔍 Extracting job URLs from current page...")
+	
+	// Extract job URLs using existing function
+	jobURLs, err := s.extractJobURLs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract job URLs: %w", err)
+	}
+	
+	logrus.Infof("✅ Found %d job URLs on page", len(jobURLs))
+	
+	// Filter new vs existing jobs
+	newJobURLs, skippedCount := s.filterNewJobs(jobURLs)
+	
+	result := &PageResult{
+		TotalJobsFound: len(jobURLs),
+		JobsSkipped:    skippedCount,
+		JobsSaved:      0,
+	}
+	
+	if len(newJobURLs) == 0 {
+		logrus.Infof("⏭️  All %d jobs already exist in database", skippedCount)
+		return result, nil
+	}
+	
+	logrus.Infof("⏭️  Skipped %d existing jobs, will scrape %d new jobs", skippedCount, len(newJobURLs))
+	
+	// Process new jobs
+	result.JobsSaved = s.processNewJobs(ctx, newJobURLs)
+	
+	logrus.Infof("✅ Scraped %d job details from page", result.JobsSaved)
+	return result, nil
+}
+
+// filterNewJobs separates new jobs from existing ones
+func (s *LinkedInScraper) filterNewJobs(jobURLs []string) ([]string, int) {
+	newJobURLs := []string{}
+	skippedCount := 0
+	
+	for _, jobURL := range jobURLs {
+		if s.isJobNew(jobURL) {
+			newJobURLs = append(newJobURLs, jobURL)
+		} else {
+			skippedCount++
+		}
+	}
+	
+	return newJobURLs, skippedCount
+}
+
+// isJobNew checks if a job is new (not in database)
+func (s *LinkedInScraper) isJobNew(jobURL string) bool {
+	jobID := s.extractJobIDFromURL(jobURL)
+	if jobID == "" {
+		logrus.Warnf("⚠️  Could not extract job ID from URL: %s", jobURL)
+		return false
+	}
+	
+	jobIDInt, err := strconv.ParseInt(jobID, 10, 64)
+	if err != nil {
+		logrus.Warnf("⚠️  Invalid job ID '%s': %v", jobID, err)
+		return false
+	}
+	
+	exists, err := s.jobRepo.ExistsLinkedInJobID(jobIDInt)
+	if err != nil {
+		logrus.Warnf("⚠️  Error checking if job exists: %v", err)
+		return false
+	}
+	
+	return !exists
+}
+
+// processNewJobs scrapes and saves new jobs
+func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) int {
+	savedCount := 0
+	
+	for i, jobURL := range jobURLs {
+		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(jobURLs), jobURL)
+		
+		job, err := s.scrapeJobDetails(ctx, jobURL)
+		if err != nil {
+			logrus.Errorf("❌ Failed to scrape job %s: %v", jobURL, err)
+			continue
+		}
+		
+		if err := s.saveJob(job); err != nil {
+			logrus.Errorf("❌ Failed to save job: %v", err)
+			continue
+		}
+		
+		savedCount++
+	}
+	
+	return savedCount
 }

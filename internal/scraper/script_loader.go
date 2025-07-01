@@ -123,29 +123,47 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 
 // buildPageAnalysisScript builds script for analyzing job search page
 func (s *LinkedInScraper) buildPageAnalysisScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `document.querySelectorAll('a[href*="/jobs/view/"]').length > 0`
+	}
+	
 	script, err := loadTypeScript("page_analysis.ts")
 	if err != nil {
 		return `document.querySelectorAll('a[href*="/jobs/view/"]').length > 0`
 	}
-	return script
+	
+	return utilsScriptContent + "\n" + script
 }
 
 // buildDetailedAnalysisScript builds script for detailed page analysis
 func (s *LinkedInScraper) buildDetailedAnalysisScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `({ url: window.location.href, title: document.title })`
+	}
+	
 	script, err := loadTypeScript("detailed_analysis.ts")
 	if err != nil {
 		return `({ url: window.location.href, title: document.title })`
 	}
-	return script
+	
+	return utilsScriptContent + "\n" + script
 }
 
 // buildExtractJobURLsScript builds script for extracting job URLs
 func (s *LinkedInScraper) buildExtractJobURLsScript() string {
+	utilsScriptContent, err := loadScript(utilsScript)
+	if err != nil {
+		return `Array.from(document.querySelectorAll('a[href*="/jobs/view/"]')).map(a => a.href.split('?')[0])`
+	}
+	
 	script, err := loadTypeScript("extract_job_urls.ts")
 	if err != nil {
 		return `Array.from(document.querySelectorAll('a[href*="/jobs/view/"]')).map(a => a.href.split('?')[0])`
 	}
-	return script
+	
+	return utilsScriptContent + "\n" + script
 }
 
 // buildExpandDescriptionScript builds script for expanding job descriptions

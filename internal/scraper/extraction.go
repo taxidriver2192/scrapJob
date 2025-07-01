@@ -14,16 +14,19 @@ import (
 
 // extractJobURLs extracts job URLs from the current search results page
 func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) {
-	// Wait for job results to load
+	// Wait for job results to load and check page status
 	var jobResultsFound bool
 	err := chromedp.Run(ctx,
 		chromedp.Evaluate(s.buildPageAnalysisScript(), &jobResultsFound),
 	)
 
-	if err != nil || !jobResultsFound {
-		logrus.Warn("⚠️  Job results container not found - analyzing page...")
-		
-		// Get more detailed page analysis
+	if err != nil {
+		logrus.Warnf("⚠️  Page analysis failed: %v", err)
+		return nil, fmt.Errorf("page analysis failed: %w", err)
+	}
+	
+	if !jobResultsFound {
+		// Get more detailed page analysis to understand what's happening
 		var pageAnalysis map[string]interface{}
 		chromedp.Run(ctx, chromedp.Evaluate(s.buildDetailedAnalysisScript(), &pageAnalysis))
 		
@@ -31,7 +34,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 		
 		// Check if we have job links even without proper container
 		if jobLinks, ok := pageAnalysis["jobLinksCount"].(float64); ok && jobLinks > 0 {
-			logrus.Infof("✅ Found %.0f job links, proceeding anyway...", jobLinks)
+			logrus.Infof("✅ Found %.0f job links, proceeding with extraction...", jobLinks)
 		} else {
 			logrus.Warn("❌ No job links found - page may have changed or we need login")
 			return []string{}, nil

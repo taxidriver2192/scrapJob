@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
 	"linkedin-job-scraper/internal/models"
+
+	"github.com/sirupsen/logrus"
 )
 
 // saveJob saves a scraped job to the database

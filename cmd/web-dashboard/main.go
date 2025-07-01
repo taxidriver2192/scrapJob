@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joho/godotenv"
 	"linkedin-job-scraper/internal/config"
 	"linkedin-job-scraper/internal/database"
+
+	"github.com/joho/godotenv"
 )
 
 const (
