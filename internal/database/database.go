@@ -15,8 +15,14 @@ type DB struct {
 
 // NewConnection creates a new database connection
 func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
+	var dsn string
+	if cfg.Password == "" {
+		dsn = fmt.Sprintf("%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.User, cfg.Host, cfg.Port, cfg.DBName)
+	} else {
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
+	}
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -33,8 +39,14 @@ func NewConnection(cfg config.DatabaseConfig) (*DB, error) {
 // NewConnectionWithAutoCreate creates a new database connection and creates database if it doesn't exist
 func NewConnectionWithAutoCreate(cfg config.DatabaseConfig) (*DB, error) {
 	// First try to connect without specifying database to create it if needed
-	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port)
+	var dsnWithoutDB string
+	if cfg.Password == "" {
+		dsnWithoutDB = fmt.Sprintf("%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.User, cfg.Host, cfg.Port)
+	} else {
+		dsnWithoutDB = fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.User, cfg.Password, cfg.Host, cfg.Port)
+	}
 
 	tempDB, err := sql.Open("mysql", dsnWithoutDB)
 	if err != nil {

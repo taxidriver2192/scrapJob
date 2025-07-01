@@ -103,6 +103,7 @@ func main() {
 
 	// Setup routes
 	http.HandleFunc("/", dashboardHandler)
+	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/api/jobs", apiJobsHandler)
 	http.HandleFunc("/api/companies", apiCompaniesHandler)
 	http.HandleFunc("/api/queue", apiQueueHandler)
@@ -1292,6 +1293,15 @@ func apiJobDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(ContentTypeHeader, ContentTypeJSON)
 	json.NewEncoder(w).Encode(response)
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(ContentTypeHeader, ContentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "healthy",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
 }
 
 // Additional handler implementations would continue here...

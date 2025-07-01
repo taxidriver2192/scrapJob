@@ -1,124 +1,268 @@
 # LinkedIn Job Scraper
 
-Et Go-program til at scrape LinkedIn job postings og gemme dem i en MySQL database.
+A comprehensive LinkedIn job scraping tool with AI-powered job matching, built with Go, TypeScript, and Docker.
+
+## Architecture
+
+- **Local**: Web scraping with Chrome automation, AI processing, queue management
+- **Docker**: MySQL database, phpMyAdmin, web dashboard
 
 ## Features
 
-- 🔍 Søg efter jobs baseret på keywords og lokation
-- 🏢 Automatisk company management med normaliseret database struktur  
-- 📊 Job queue system for avanceret processing 
-- ⭐ Job rating system med JSON criteria
-- 🤖 ChromeDP-baseret browser automation
-- 🔐 Session management med cookie persistence
-- 📝 Omfattende logging
-- 🛠️ CLI interface med Cobra
+- **Smart Job Scraping**: Automated LinkedIn job search with pagination
+- **AI-Powered Matching**: OpenAI integration for intelligent job recommendations
+- **Web Dashboard**: Modern interface for viewing jobs, companies, and ratings
+- **Queue System**: Batch processing for AI analysis
+- **Database Management**: MySQL with automated migrations and backups
+- **Deduplication**: Automatic removal of duplicate job postings
 
-## Database Struktur
+## Prerequisites
 
-Projektet bruger en normaliseret MySQL database med følgende tabeller:
+Before running the setup script, ensure you have:
 
-- **companies**: Gemmer unikke virksomheder
-- **job_postings**: Hovedtabellen for job postings  
-- **job_queue**: Queue system for job processing
-- **job_ratings**: AI-baseret job rating system
+- **Docker & Docker Compose**: For database and web dashboard
+- **Node.js (18+)**: For TypeScript compilation  
+- **Go (1.21+)**: For building the application
+- **LinkedIn Account**: For job scraping
+- **OpenAI API Key**: For AI-powered features
 
-## Installation
+## Quick Start
 
-1. Clone repository:
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd linkedin-job-scraper
+   ```
+
+2. **Run the setup script**
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
+   ```
+
+   The setup script will:
+   - Check all prerequisites
+   - Install TypeScript dependencies
+   - Compile TypeScript to JavaScript
+   - Build the Go application
+   - Start Docker services (MySQL, phpMyAdmin, Web Dashboard)
+   - Run database migrations
+
+3. **Configure credentials**
+   
+   Edit the `.env` file with your credentials:
+   ```bash
+   LINKEDIN_EMAIL=your-email@example.com
+   LINKEDIN_PASSWORD=your-password
+   OPENAI_API_KEY=your-openai-api-key
+   ```
+
+4. **Start scraping**
+   ```bash
+   ./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --total-jobs 50
+   ```
+
+## Usage
+
+### Scraping Jobs
+
 ```bash
-git clone <repository-url>
-cd linkedin-job-scraper
+# Basic scraping
+./linkedin-scraper scrape --keywords "php developer" --location "Copenhagen" --total-jobs 100
+
+# Visible browser (for debugging)
+HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "python" --location "remote" --total-jobs 50
+
+# Debug mode
+LOG_LEVEL=debug HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "react" --location "Berlin" --total-jobs 25
 ```
 
-2. Installer dependencies:
+### AI Processing
+
 ```bash
-go mod tidy
+# Find best job matches
+./linkedin-scraper match-jobs --limit 0 --min-score 70
+
+# Extract addresses from job descriptions
+./linkedin-scraper extract-addresses --limit 10
+
+# Queue management
+./linkedin-scraper queue --action enqueue --limit 50
+./linkedin-scraper queue --action status
 ```
 
-3. Setup environment:
+### Web Dashboard
+
+Access the web dashboard at `http://localhost:8081` to:
+- Browse all scraped jobs
+- View company information
+- See AI match ratings
+- Filter and search results
+- View detailed job analysis
+
+### Database Management
+
 ```bash
-cp .env.example .env
-# Rediger .env med dine credentials
+# Create backup
+make backup
+
+# Restore from backup
+make restore
+
+# Database statistics
+make db-status
+
+# Reset database
+make reset
+
+# Direct MySQL access
+make db-shell
 ```
 
-4. Setup database:
-```bash
-# Opret MySQL database
-mysql -u root -p -e "CREATE DATABASE linkedin_jobs;"
+## Services
 
-# Kør migrations
-go run cmd/main.go migrate
-```
+After running setup, the following services are available:
 
-## Brug
-
-### Basic scraping:
-```bash
-go run cmd/main.go scrape --keywords "software engineer" --location "Copenhagen" --max-pages 5
-```
-
-### Vis seneste jobs:
-```bash
-go run cmd/test/main.go
-```
-
-## Projekt Struktur
-
-```
-├── cmd/
-│   ├── main.go              # Hoved CLI applikation
-│   └── test/main.go         # Test utility til at vise data
-├── internal/
-│   ├── config/
-│   │   └── config.go        # Configuration management
-│   ├── database/
-│   │   ├── database.go      # Database connection og migrations
-│   │   └── repositories.go  # Data access layer
-│   ├── models/
-│   │   └── models.go        # Database models og structs
-│   ├── scraper/
-│   │   └── linkedin.go      # LinkedIn scraping logic
-│   └── utils/
-│       └── helpers.go       # Utility functions
-├── ea_diagram.json          # Entity Relationship diagram
-├── go.mod                   # Go module definition
-└── .env.example            # Environment template
-```
+- **Web Dashboard**: http://localhost:8081
+- **phpMyAdmin**: http://localhost:8080 
+- **MySQL**: localhost:3307
 
 ## Configuration
 
-Alle indstillinger styres via environment variables i `.env` filen:
+### Environment Variables
 
-- `DB_*`: Database forbindelse
-- `LINKEDIN_*`: LinkedIn credentials  
-- `MAX_PAGES`: Maksimum sider at scrape
-- `DELAY_BETWEEN_REQUESTS`: Forsinkelse mellem requests
-- `HEADLESS_BROWSER`: Kør browser i headless mode
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `LINKEDIN_EMAIL` | LinkedIn account email | Yes |
+| `LINKEDIN_PASSWORD` | LinkedIn account password | Yes |
+| `OPENAI_API_KEY` | OpenAI API key for AI features | Yes |
+| `DB_HOST` | Database host | Auto-configured |
+| `DB_PORT` | Database port | Auto-configured |
+| `DB_USER` | Database user | Auto-configured |
+| `DB_PASSWORD` | Database password | Auto-configured |
+| `HEADLESS_BROWSER` | Run browser in headless mode | Optional |
+| `LOG_LEVEL` | Logging level (debug, info, warn, error) | Optional |
 
-## Næste Steps
+### Scraping Parameters
 
-1. **Implementer DetailedScraper**: Scrape fuld job beskrivelse fra individuelle job sider
-2. **AI Integration**: Implementer job rating system
-3. **API Layer**: Tilføj REST API til at eksponere data
-4. **Web Dashboard**: Byg web interface til at browse jobs
-5. **Advanced Filtering**: Tilføj mere avancerede søgeparametre
-6. **Rate Limiting**: Implementer intelligent rate limiting
-7. **Error Recovery**: Forbedret error handling og recovery
-8. **Docker Support**: Containerisering til nem deployment
+- `--keywords`: Job search keywords (required)
+- `--location`: Job location (required)
+- `--total-jobs`: Number of jobs to scrape (default: 50)
 
-## Teknologier
+## Development
 
-- **Go 1.21+**: Hovedsprog
-- **ChromeDP**: Browser automation
-- **MySQL**: Database
-- **Cobra**: CLI framework  
-- **Logrus**: Structured logging
-- **Docker**: Containerization (kommende)
+### Building
 
-## Bidrag
+```bash
+# Build Go application
+make build
 
-Velkommen til at bidrage med pull requests og feature suggestions!
+# Compile TypeScript
+make build-ts
 
-## Licens
+# Build everything
+make setup
+```
 
-MIT License
+### Testing
+
+```bash
+# Run Go tests
+make test
+
+# View logs
+make logs
+
+# Clean build artifacts
+make clean
+```
+
+### Docker Management
+
+```bash
+# Start services
+make start
+
+# Stop services  
+make stop
+
+# Restart services
+make restart
+
+# View web dashboard logs
+make web-dashboard-logs
+```
+
+## Project Structure
+
+```
+├── cmd/                    # Go applications
+│   ├── main.go            # Main scraper application
+│   ├── web-dashboard/     # Web dashboard server
+│   ├── match-jobs/        # AI job matching
+│   └── queue-manager/     # Queue management
+├── internal/              # Internal Go packages
+│   ├── scraper/           # Core scraping logic
+│   ├── models/            # Data models
+│   ├── database/          # Database operations
+│   └── config/            # Configuration management
+├── scripts/               # Database scripts
+├── logs/                  # Application logs
+├── backups/               # Database backups
+├── chrome-profile/        # Chrome browser profile
+├── docker-compose.yml     # Docker services
+├── Dockerfile             # Web dashboard container
+├── setup.sh              # Setup script
+└── Makefile              # Build automation
+```
+
+## Troubleshooting
+
+### LinkedIn Authentication
+
+If LinkedIn requires verification:
+1. The scraper will prompt for a verification code
+2. Check your email for the code
+3. Enter the code in the terminal
+4. The scraper will continue automatically
+
+### Database Connection Issues
+
+```bash
+# Check if services are running
+docker-compose ps
+
+# View MySQL logs
+docker-compose logs mysql
+
+# Restart services
+make restart
+```
+
+### Build Issues
+
+```bash
+# Clean and rebuild
+make clean
+make setup
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## Security Notes
+
+- Store credentials securely in the `.env` file
+- Never commit the `.env` file to version control
+- Use strong passwords for LinkedIn account
+- Respect LinkedIn's rate limits and terms of service
+- Keep your OpenAI API key secure
+
+## License
+
+This project is intended for educational and personal use only. Please respect LinkedIn's Terms of Service and robots.txt when using this tool.

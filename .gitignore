@@ -32,3 +32,6 @@ Thumbs.db
 # Database
 *.db
 *.sqlite
+
+# Node.js
+node_modules/

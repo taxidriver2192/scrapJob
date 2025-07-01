@@ -1,3 +1,4 @@
+# Web Dashboard Dockerfile (minimal, no scraping dependencies)
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
@@ -9,23 +10,34 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o linkedin-scraper cmd/main.go
+# Build only the web dashboard
+RUN CGO_ENABLED=0 GOOS=linux go build -o web-dashboard cmd/web-dashboard/main.go
 
-# Final stage
-FROM chromium:latest
+# Final runtime stage
+FROM alpine:3.18
 
-RUN apk add --no-cache ca-certificates
+# Install minimal dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    wget \
+    tzdata \
+    && addgroup -g 1001 -S linkedin \
+    && adduser -S linkedin -u 1001
 
-WORKDIR /root/
+WORKDIR /app
 
-# Copy the binary from builder stage
-COPY --from=builder /app/linkedin-scraper .
+# Copy only the web dashboard binary
+COPY --from=builder /app/web-dashboard .
 
-# Create directories
-RUN mkdir -p logs chrome-profile
+# Create directories and set ownership
+RUN mkdir -p logs backups \
+    && chown -R linkedin:linkedin /app
 
-# Expose port (if you add a web server later)
-EXPOSE 8080
+# Switch to non-root user
+USER linkedin
 
-CMD ["./linkedin-scraper"]
+# Expose port for web dashboard
+EXPOSE 8081
+
+# Start web dashboard
+CMD ["./web-dashboard"]

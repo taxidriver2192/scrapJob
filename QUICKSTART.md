@@ -1,68 +1,176 @@
-# 🚀 LinkedIn Job Scraper
+# Quick Start Guide
 
-Et Go-program til at scrape LinkedIn-jobopslag med MySQL-database og phpMyAdmin-interface.
+Get the LinkedIn Job Scraper up and running in 5 minutes.
 
-## 🎯 Hurtigstart
+## Prerequisites Check
 
-```bash
-# Alt i én kommando
-make dev
-
-# Eller manuelt:
-make start    # Start MySQL + phpMyAdmin
-make build    # Byg applikationen
-make migrate  # Kør database-migrationer
-make scrape   # Start scraping
-make test     # Se seneste jobs
-make stop     # Stop alle services
-````
-
-**phpMyAdmin:** [http://localhost:8080](http://localhost:8080)
-**Login:** `root` / (ingen adgangskode som standard)
-
-## 🛠️ Alle Kommandoer
+Before starting, verify you have these installed:
 
 ```bash
-make help      # Vis alle tilgængelige kommandoer
-make setup     # Installer dependencies og byg applikationen
-make build     # Byg Go-applikationen
-make start     # Start services (MySQL + phpMyAdmin)
-make stop      # Stop alle services
-make migrate   # Kør database-migrationer
-make reset     # Nulstil database (sletter alt data!)
-make db-status # Vis database-statistikker
-make db-shell  # Åbn MySQL-shell
-make scrape    # Start scraping (med default params)
-make test      # Kør test for at se nyligt scrape’de job
-make clean     # Ryd build-artifakter og Docker-system
-make logs      # Følg applikations-logs
-make dev       # Setup + start dev-miljø (setup, start, migrate)
+# Check Docker
+docker --version
+docker-compose --version
+
+# Check Node.js
+node --version
+npm --version
+
+# Check Go
+go version
 ```
 
-## 🔧 Konfiguration
+If any are missing, install them first:
+- **Docker**: https://www.docker.com/products/docker-desktop
+- **Node.js**: https://nodejs.org/ (v18 or later)
+- **Go**: https://golang.org/dl/ (v1.21 or later)
 
-Rediger `.env`-filen med dine LinkedIn-legitimationsoplysninger:
+## Setup Process
 
-```env
-LINKEDIN_EMAIL=din_email@example.com
-LINKEDIN_PASSWORD=dit_password
-HEADLESS_BROWSER=false  # false = synlig browser
+### 1. Clone and Setup
+
+```bash
+git clone <repository-url>
+cd linkedin-job-scraper
+chmod +x setup.sh
+./setup.sh
 ```
 
-## 📁 Projektstruktur
+The setup script will:
+- Install TypeScript and dependencies
+- Compile TypeScript to JavaScript
+- Build the Go application
+- Start Docker services
+- Run database migrations
 
-```
-├── cmd/                 # CLI-applikationer
-├── internal/            # Go-packages
-│   ├── config/          # Konfiguration
-│   ├── database/        # Database & repositories
-│   ├── models/          # Data-modeller
-│   ├── scraper/         # LinkedIn-scraping
-│   └── utils/           # Hjælpefunktioner
-├── scripts/             # Setup-scripts (fx reset-db.bat)
-├── docker-compose.yml   # Docker-tjenester
-├── Makefile             # Build- og drifts-kommandoer
-└── .env                 # Miljøvariabler
+### 2. Configure Credentials
+
+Edit the `.env` file:
+
+```bash
+# Required for scraping
+LINKEDIN_EMAIL=your-email@example.com
+LINKEDIN_PASSWORD=your-password
+
+# Required for AI features
+OPENAI_API_KEY=sk-your-openai-api-key
+
+# Database settings (auto-configured)
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=linkedin_jobs
 ```
 
-**Start nu:** `make dev` 🚀
+### 3. Verify Services
+
+Check that Docker services are running:
+
+```bash
+docker-compose ps
+```
+
+You should see:
+- linkedin-web-dashboard (Up, healthy)
+- linkedin-mysql (Up, healthy)  
+- linkedin-phpmyadmin (Up)
+
+Access these URLs:
+- Web Dashboard: http://localhost:8081
+- phpMyAdmin: http://localhost:8080
+
+### 4. Run Your First Scrape
+
+```bash
+# Basic scraping (headless)
+./linkedin-scraper scrape --keywords "software engineer" --location "Copenhagen" --total-jobs 25
+
+# With visible browser (for first-time setup)
+HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "python developer" --location "remote" --total-jobs 10
+```
+
+### 5. View Results
+
+Open the web dashboard at http://localhost:8081 to see your scraped jobs.
+
+## Common Issues
+
+### LinkedIn Verification
+
+If LinkedIn asks for email verification:
+1. The scraper will pause and ask for a verification code
+2. Check your email for the LinkedIn verification code
+3. Enter the code in the terminal
+4. Scraping will continue automatically
+
+### Permission Errors
+
+On Linux/Mac, you might need to make the setup script executable:
+
+```bash
+chmod +x setup.sh
+```
+
+### Docker Issues
+
+If Docker services fail to start:
+
+```bash
+# Stop and restart
+docker-compose down
+docker-compose up -d
+
+# Check logs
+docker-compose logs
+```
+
+### Build Errors
+
+If the Go build fails:
+
+```bash
+# Clean and rebuild
+make clean
+go mod tidy
+go build -o linkedin-scraper cmd/main.go
+```
+
+## What's Next
+
+After your first successful scrape:
+
+1. **Explore the Web Dashboard** at http://localhost:8081
+2. **Run AI job matching**: `./linkedin-scraper match-jobs`
+3. **Set up regular scraping** with different keywords and locations
+4. **Use the queue system** for batch AI processing
+5. **Create database backups**: `make backup`
+
+## Daily Usage
+
+```bash
+# Start services (if not running)
+docker-compose up -d
+
+# Scrape jobs
+./linkedin-scraper scrape --keywords "your-skills" --location "your-city" --total-jobs 50
+
+# Process with AI
+./linkedin-scraper match-jobs
+
+# View in dashboard
+open http://localhost:8081
+```
+
+## Getting Help
+
+- Check the main README.md for detailed documentation
+- Use `./linkedin-scraper help` for command-line options
+- Use `make help` for available build commands
+- Check logs: `make logs` or `docker-compose logs`
+
+## Security Reminder
+
+- Never commit your `.env` file with real credentials
+- Use a strong, unique password for LinkedIn
+- Keep your OpenAI API key secure
+- Respect LinkedIn's terms of service and rate limits

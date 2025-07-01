@@ -1,19 +1,58 @@
 services:
+  # Web dashboard container (scraping runs locally)
+  web-dashboard:
+    build: 
+      context: .
+    container_name: linkedin-web-dashboard
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - DB_NAME=${DB_NAME:-linkedin_jobs}
+    ports:
+      - "8081:8081"  # Web dashboard
+    volumes:
+      - ./logs:/app/logs:ro
+      - ./backups:/app/backups:ro
+    command: ["./web-dashboard"]
+    restart: unless-stopped
+    networks:
+      - linkedin-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL database
   mysql:
     image: mysql:8.0
     container_name: linkedin-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ""
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-}"
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: linkedin_jobs
+      MYSQL_DATABASE: "${DB_NAME:-linkedin_jobs}"
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
-    command: --default-authentication-plugin=mysql_native_password
+      - ./backups:/backups
+    command: --default-authentication-plugin=mysql_native_password --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
     restart: unless-stopped
+    networks:
+      - linkedin-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # phpMyAdmin for database management
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: linkedin-phpmyadmin
@@ -21,11 +60,17 @@ services:
       - mysql
     environment:
       PMA_HOST: mysql
-      PMA_USER: root
-      PMA_PASSWORD: ""
+      PMA_USER: "${DB_USER:-root}"
+      PMA_PASSWORD: "${DB_PASSWORD:-}"
     ports:
       - "8080:80"
     restart: unless-stopped
+    networks:
+      - linkedin-network
+
+networks:
+  linkedin-network:
+    driver: bridge
 
 volumes:
   mysql_data:

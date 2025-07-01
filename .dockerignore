@@ -1,30 +1,53 @@
-# Git
-.git
+# Git files
+.git/
 .gitignore
 
-# Logs
-logs/
-*.log
-
-# Environment
-.env
-
-# Build artifacts
-linkedin-scraper
-*.exe
-
-# Chrome profile data
-chrome-profile/
-
-# Documentation
-README.md
-QUICKSTART.md
-ea_diagram.json
-
-# Scripts (not needed in container)
-scripts/
-start.sh
-
-# IDE
+# IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+logs/
+*.log
+chrome-profile/
+
+# Build artifacts (local builds, Docker will build its own)
+linkedin-scraper
+web-dashboard
+match-jobs
+queue-manager
+*.exe
+
+# Backup files
+backups/
+
+# Documentation (not needed in container)
+README.md
+QUICKSTART.md
+*.png
+*.jpg
+*.jpeg
+
+# TypeScript compiled output (Docker will compile its own)
+internal/scraper/scripts/dist/
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Environment files (will be mounted as volume)
+.env
+
+# Docker files (not needed inside container)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Database initialization (handled by volume mount)
+scripts/
