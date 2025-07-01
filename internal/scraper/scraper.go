@@ -91,7 +91,7 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	totalJobUrlsFound := 0   // Total job URLs LinkedIn has shown us (for pagination)
 	totalJobsSaved := 0      // Total jobs actually saved to database
 	page := 1
-	const maxPages = 10 // Safety limit to prevent infinite loops
+	const maxPages = 1000 // Safety limit to prevent infinite loops
 	
 	logrus.Infof("🔍 Starting scrape to collect up to %d jobs with dynamic pagination", totalJobs)
 
