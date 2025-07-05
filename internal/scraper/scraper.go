@@ -2,9 +2,11 @@ package scraper
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"linkedin-job-scraper/internal/config"
 	"linkedin-job-scraper/internal/database"
+	"linkedin-job-scraper/internal/models"
 	"strconv"
 	"strings"
 
@@ -36,6 +38,7 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	
 	// Setup Chrome options with better error handling
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath(s.config.Scraper.ChromeExecutablePath), // Use configurable Chrome path
 		chromedp.Flag("headless", s.config.Scraper.HeadlessBrowser),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
@@ -246,4 +249,212 @@ func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) 
 	}
 	
 	return savedCount
+}
+
+// RescrapeFromQueue scrapes jobs from the database queue instead of LinkedIn search
+func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
+	logrus.Infof("🚀 Initializing Chrome browser...")
+	
+	// Setup Chrome options with better error handling
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath(s.config.Scraper.ChromeExecutablePath),
+		chromedp.Flag("headless", s.config.Scraper.HeadlessBrowser),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-web-security", true),
+		chromedp.Flag("disable-features", "VizDisplayCompositor"),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-plugins", true),
+		chromedp.Flag("disable-images", true), // Speed up loading
+		chromedp.UserDataDir(s.config.Scraper.UserDataDir),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	// Add timeout context
+	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(s string, args ...interface{}) {
+		// Suppress cookie parsing errors - they're not critical
+		if !strings.Contains(s, "cookiePart") && !strings.Contains(s, "could not unmarshal event") {
+			logrus.Debugf("ChromeDP: "+s, args...)
+		}
+	}))
+	defer cancel()
+
+	// Enable console logging from JavaScript
+	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		switch ev := ev.(type) {
+		case *runtime.EventConsoleAPICalled:
+			args := make([]string, len(ev.Args))
+			for i, arg := range ev.Args {
+				if arg.Value != nil {
+					args[i] = string(arg.Value)
+				} else {
+					args[i] = "null"
+				}
+			}
+			// Only log our debug messages to avoid spam
+			message := strings.Join(args, " ")
+			if strings.Contains(message, "=== ") || strings.Contains(message, "✅ ") || strings.Contains(message, "❌ ") || strings.Contains(message, "⚠️ ") {
+				logrus.Infof("JS: %s", message)
+			}
+		}
+	})
+
+	// Login to LinkedIn
+	logrus.Info("🔐 Attempting to login to LinkedIn...")
+	if err := s.login(ctx); err != nil {
+		return fmt.Errorf("login failed: %w", err)
+	}
+	logrus.Info("✅ Login successful!")
+
+	// Get jobs from database queue instead of LinkedIn search
+	jobsToRescrape, err := s.getJobsFromQueue(limit)
+	if err != nil {
+		return fmt.Errorf("failed to get jobs from queue: %w", err)
+	}
+
+	if len(jobsToRescrape) == 0 {
+		logrus.Info("✅ No jobs found in queue to rescrape")
+		return nil
+	}
+
+	logrus.Infof("🔍 Starting rescrape of %d jobs from queue", len(jobsToRescrape))
+
+	// Process jobs from queue
+	successCount := 0
+	failCount := 0
+
+	for i, job := range jobsToRescrape {
+		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(jobsToRescrape), job.ApplyURL)
+		
+		// Use existing scrapeJobDetails method
+		jobPosting, err := s.scrapeJobDetails(ctx, job.ApplyURL)
+		if err != nil {
+			logrus.Errorf("❌ Failed to scrape job %d: %v", job.JobID, err)
+			failCount++
+			continue
+		}
+		
+		// Update existing job in database
+		if err := s.updateExistingJob(job.JobID, jobPosting); err != nil {
+			logrus.Errorf("❌ Failed to update job %d: %v", job.JobID, err)
+			failCount++
+			continue
+		}
+		
+		successCount++
+		logrus.Infof("✅ Job extraction completed successfully for: %s", jobPosting.Title)
+	}
+
+	logrus.Infof("🎉 Rescraping completed! Successful: %d, Failed: %d", successCount, failCount)
+	return nil
+}
+
+type QueueJob struct {
+	JobID    int
+	ApplyURL string
+	Title    string
+	Company  string
+}
+
+// getJobsFromQueue retrieves jobs from the database queue
+func (s *LinkedInScraper) getJobsFromQueue(limit int) ([]QueueJob, error) {
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if limit == 0 {
+		// Get all jobs with empty descriptions
+		query = `
+			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
+			FROM job_postings j
+			LEFT JOIN companies c ON j.company_id = c.company_id
+			WHERE (j.description IS NULL OR j.description = '')
+			AND j.apply_url IS NOT NULL 
+			AND j.apply_url != ''
+			ORDER BY j.created_at DESC
+		`
+		rows, err = s.db.Query(query)
+	} else {
+		// Get limited number of jobs
+		query = `
+			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
+			FROM job_postings j
+			LEFT JOIN companies c ON j.company_id = c.company_id
+			WHERE (j.description IS NULL OR j.description = '')
+			AND j.apply_url IS NOT NULL 
+			AND j.apply_url != ''
+			ORDER BY j.created_at DESC
+			LIMIT ?
+		`
+		rows, err = s.db.Query(query, limit)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query jobs from queue: %w", err)
+	}
+	defer rows.Close()
+
+	var jobs []QueueJob
+	for rows.Next() {
+		var job QueueJob
+		err := rows.Scan(&job.JobID, &job.ApplyURL, &job.Title, &job.Company)
+		if err != nil {
+			logrus.Warnf("⚠️ Error scanning job: %v", err)
+			continue
+		}
+		jobs = append(jobs, job)
+	}
+
+	return jobs, nil
+}
+
+// updateExistingJob updates an existing job with new scraped information
+func (s *LinkedInScraper) updateExistingJob(jobID int, jobPosting *models.JobPosting) error {
+	// Build update query for non-empty fields
+	updates := []string{}
+	args := []interface{}{}
+
+	if jobPosting.Description != "" {
+		updates = append(updates, "description = ?")
+		args = append(args, jobPosting.Description)
+	}
+	
+	if jobPosting.Applicants != nil {
+		updates = append(updates, "applicants = ?")
+		args = append(args, *jobPosting.Applicants)
+	}
+	
+	if jobPosting.WorkType != nil && *jobPosting.WorkType != "" {
+		updates = append(updates, "work_type = ?")
+		args = append(args, *jobPosting.WorkType)
+	}
+	
+	if jobPosting.Skills != nil && len(*jobPosting.Skills) > 0 {
+		updates = append(updates, "skills = ?")
+		args = append(args, *jobPosting.Skills)
+	}
+
+	if len(updates) == 0 {
+		logrus.Warnf("⚠️ No new information to update for job %d", jobID)
+		return nil
+	}
+
+	// Add updated_at timestamp
+	updates = append(updates, "updated_at = NOW()")
+	
+	// Add job ID for WHERE clause
+	args = append(args, jobID)
+
+	query := fmt.Sprintf("UPDATE job_postings SET %s WHERE job_id = ?", strings.Join(updates, ", "))
+	
+	_, err := s.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to update job: %w", err)
+	}
+
+	logrus.Infof("✅ Updated job %d with new information", jobID)
+	return nil
 }

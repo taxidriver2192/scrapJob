@@ -31,6 +31,7 @@ type ScraperConfig struct {
 	ConcurrentWorkers     int
 	HeadlessBrowser       bool
 	UserDataDir           string
+	ChromeExecutablePath  string
 }
 
 func Load() *Config {
@@ -52,6 +53,7 @@ func Load() *Config {
 			ConcurrentWorkers:     getEnvAsInt("CONCURRENT_WORKERS", 3),
 			HeadlessBrowser:       getEnvAsBool("HEADLESS_BROWSER", true), // Already defaults to true (headless)
 			UserDataDir:           getEnv("USER_DATA_DIR", "./chrome-profile"),
+			ChromeExecutablePath:  getEnv("CHROME_EXECUTABLE_PATH", "/usr/bin/chromium"),
 		},
 		LogLevel: getEnv("LOG_LEVEL", "info"),
 	}

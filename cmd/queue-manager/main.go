@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -96,23 +97,47 @@ func showQueueStatus(db *database.DB) {
 }
 
 func enqueueJobs(db *database.DB, limit int) {
-	fmt.Printf("📝 Enqueuing jobs for AI matching (limit: %d)...\n", limit)
+	if limit == 0 {
+		fmt.Printf("📝 Enqueuing ALL jobs for AI matching (no limit)...\n")
+	} else {
+		fmt.Printf("📝 Enqueuing jobs for AI matching (limit: %d)...\n", limit)
+	}
 
 	// Get jobs that are not already queued and don't have ratings
-	query := `
-		SELECT j.job_id
-		FROM job_postings j
-		LEFT JOIN job_queue q ON j.job_id = q.job_id
-		LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match'
-		WHERE q.job_id IS NULL 
-		AND r.job_id IS NULL
-		AND j.description IS NOT NULL 
-		AND j.description != ''
-		ORDER BY j.posted_date DESC
-		LIMIT ?
-	`
-
-	rows, err := db.Query(query, limit)
+	var query string
+	var rows *sql.Rows
+	var err error
+	
+	if limit == 0 {
+		// No limit - get all jobs
+		query = `
+			SELECT j.job_id
+			FROM job_postings j
+			LEFT JOIN job_queue q ON j.job_id = q.job_id
+			LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match'
+			WHERE q.job_id IS NULL 
+			AND r.job_id IS NULL
+			AND j.description IS NOT NULL 
+			AND j.description != ''
+			ORDER BY j.posted_date DESC
+		`
+		rows, err = db.Query(query)
+	} else {
+		// With limit
+		query = `
+			SELECT j.job_id
+			FROM job_postings j
+			LEFT JOIN job_queue q ON j.job_id = q.job_id
+			LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match'
+			WHERE q.job_id IS NULL 
+			AND r.job_id IS NULL
+			AND j.description IS NOT NULL 
+			AND j.description != ''
+			ORDER BY j.posted_date DESC
+			LIMIT ?
+		`
+		rows, err = db.Query(query, limit)
+	}
 	if err != nil {
 		log.Fatalf("Failed to get jobs for enqueuing: %v", err)
 	}

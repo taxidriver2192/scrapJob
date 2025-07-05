@@ -2,58 +2,41 @@ package scraper
 
 import (
 	"fmt"
-	"strconv"
 
 	"linkedin-job-scraper/internal/models"
 
 	"github.com/sirupsen/logrus"
 )
 
-// saveJob saves a scraped job to the database
-func (s *LinkedInScraper) saveJob(scrapedJob *models.ScrapedJob) error {
-	// Convert LinkedIn job ID from string to int64
-	jobID, err := strconv.ParseInt(scrapedJob.LinkedInJobID, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid LinkedIn job ID '%s': %w", scrapedJob.LinkedInJobID, err)
-	}
-
+// saveJob saves a job posting to the database
+func (s *LinkedInScraper) saveJob(jobPosting *models.JobPosting) error {
 	// Check if job already exists (double-check for safety)
 	// Note: This should rarely happen now due to early filtering in scrapePage
-	exists, err := s.jobRepo.ExistsLinkedInJobID(jobID)
+	exists, err := s.jobRepo.ExistsLinkedInJobID(jobPosting.LinkedInJobID)
 	if err != nil {
 		return fmt.Errorf("failed to check if job exists: %w", err)
 	}
 
 	if exists {
-		logrus.Debugf("⏭️  Job %s already exists in database, skipping save", scrapedJob.LinkedInJobID)
+		logrus.Debugf("⏭️  Job %d already exists in database, skipping save", jobPosting.LinkedInJobID)
 		return nil
 	}
 
-	// Get or create company
-	company, err := s.companyRepo.CreateOrGet(scrapedJob.CompanyName)
+	// Get or create company using CompanyName (temporary field)
+	company, err := s.companyRepo.CreateOrGet(jobPosting.CompanyName)
 	if err != nil {
 		return fmt.Errorf("failed to get/create company: %w", err)
 	}
 
-	// Create job posting
-	jobPosting := &models.JobPosting{
-		LinkedInJobID: jobID,
-		Title:         scrapedJob.Title,
-		CompanyID:     company.CompanyID,
-		Location:      scrapedJob.Location,
-		Description:   scrapedJob.Description,
-		ApplyURL:      scrapedJob.ApplyURL,
-		PostedDate:    scrapedJob.PostedDate,
-		Applicants:    scrapedJob.Applicants, // Add applicants count
-		WorkType:      scrapedJob.WorkType,   // Add work type
-		Skills:        scrapedJob.Skills,     // Add skills
-	}
+	// Set the CompanyID from the retrieved/created company
+	jobPosting.CompanyID = company.CompanyID
 
+	// Create job posting
 	_, err = s.jobRepo.Create(jobPosting)
 	if err != nil {
 		return fmt.Errorf("failed to create job posting: %w", err)
 	}
 
-	logrus.Debugf("💾 Successfully saved job: %s at %s", scrapedJob.Title, scrapedJob.CompanyName)
+	logrus.Debugf("💾 Successfully saved job: %s at %s", jobPosting.Title, jobPosting.CompanyName)
 	return nil
 }

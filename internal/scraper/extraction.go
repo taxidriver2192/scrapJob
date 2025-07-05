@@ -58,7 +58,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 }
 
 // scrapeJobDetails extracts detailed information from a single job page
-func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (*models.ScrapedJob, error) {
+func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (*models.JobPosting, error) {
 	logrus.Infof("🌐 Navigating to job page: %s", jobURL)
 	
 	// Navigate to job detail page with timeout
@@ -187,9 +187,9 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 	
 	logrus.Infof("✅ JavaScript extraction completed, data keys: %v", getMapKeys(jobData))
 
-	// Convert extracted data to ScrapedJob
-	logrus.Info("🔄 Converting extracted data to ScrapedJob...")
-	result, err := s.convertToScrapedJob(jobData, jobID, jobURL)
+	// Convert extracted data to JobPosting
+	logrus.Info("🔄 Converting extracted data to JobPosting...")
+	result, err := s.convertToJobPosting(jobData, jobID, jobURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert job data: %w", err)
 	}

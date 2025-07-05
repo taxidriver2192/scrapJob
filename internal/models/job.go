@@ -19,21 +19,6 @@ type JobPosting struct {
 	Skills        *SkillsList    `json:"skills,omitempty" db:"skills"`         // JSON list of skills
 	OpenaiAdresse *string        `json:"openai_adresse,omitempty" db:"openai_adresse"` // AI-extracted standardized address
 	
-	// Joined fields
+	// Joined fields (only used for display, not saved to DB)
 	CompanyName string `json:"company_name,omitempty" db:"company_name"`
-}
-
-// ScrapedJob represents a job found during scraping (before database insertion)
-type ScrapedJob struct {
-	LinkedInJobID string      // LinkedIn job ID as string (converted to int64 when saving)
-	Title         string
-	CompanyName   string
-	Location      string
-	Description   string
-	ApplyURL      string
-	PostedDate    time.Time
-	Applicants    *int        // Number of applicants (NULL if not found)
-	WorkType      *string     // Remote, Hybrid, On-site work type
-	Skills        *SkillsList // List of required skills
-	OpenaiAdresse *string     // AI-extracted standardized address
 }

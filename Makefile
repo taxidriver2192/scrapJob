@@ -1,4 +1,4 @@
-.PHONY: help setup setup-manual build build-ts start stop restart migrate reset backup restore db-status db-shell scrape scrape-headless scrape-visible scrape-debug show-jobs extract-addresses extract-addresses-all extract-addresses-dry match-jobs queue-status queue-enqueue queue-list queue-reset web-dashboard web-dashboard-logs test clean logs dev docker-build docker-up docker-down docker-logs
+.PHONY: help setup setup-manual build build-ts start stop restart migrate reset backup restore db-status db-shell scrape scrape-headless scrape-visible scrape-debug show-jobs extract-addresses extract-addresses-all extract-addresses-dry match-jobs rescrape-empty rescrape-empty-all rescrape-dry-run queue-status queue-check-missing queue-enqueue queue-enqueue-all queue-list queue-reset web-dashboard web-dashboard-logs test clean logs dev docker-build docker-up docker-down docker-logs
 
 # Default target
 help:
@@ -38,9 +38,16 @@ help:
 	@echo "  make extract-addresses-dry - Dry run address extraction"
 	@echo "  make match-jobs            - Find your best job matches"
 	@echo ""
+	@echo "Rescraping (runs locally):"
+	@echo "  make rescrape-empty        - Rescrape jobs with empty descriptions"
+	@echo "  make rescrape-empty-all    - Rescrape ALL jobs with empty descriptions"  
+	@echo "  make rescrape-dry-run      - Check what jobs would be rescraped"
+	@echo ""
 	@echo "Queue Management (runs locally):"
 	@echo "  make queue-status   - Show job queue status"
+	@echo "  make queue-check-missing - Check what jobs are missing from queue"
 	@echo "  make queue-enqueue  - Add jobs to queue for AI processing"
+	@echo "  make queue-enqueue-all - Add ALL remaining jobs to queue"
 	@echo "  make queue-list     - List jobs in queue"
 	@echo "  make queue-reset    - Reset queue (mark all as pending)"
 	@echo ""
@@ -166,7 +173,7 @@ scrape:
 # Scraping with different modes
 scrape-headless:
 	@echo "🔍 Starting headless scraping..."
-	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
+	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 5000
 
 scrape-visible:
 	@echo "🔍 Starting visible scraping (with browser window)..."
@@ -196,13 +203,42 @@ match-jobs:
 	@echo "🎯 Finding your best job matches with AI..."
 	go run cmd/match-jobs/main.go --limit 0 --min-score 0
 
+# Rescraping commands (use same scraping logic but get URLs from database)
+rescrape-empty:
+	@echo "🔄 Rescaping jobs with empty descriptions..."
+	go run cmd/rescraper/main.go --limit 50
+
+rescrape-empty-all:
+	@echo "🔄 Rescaping ALL jobs with empty descriptions..."
+	go run cmd/rescraper/main.go --limit 0
+
+rescrape-dry-run:
+	@echo "🔍 Checking what jobs would be rescraped..."
+	go run cmd/rescraper/main.go --limit 50 --dry-run
+
 queue-status:
 	@echo "📊 Checking job queue status..."
 	go run cmd/queue-manager/main.go --action status
 
+queue-check-missing:
+	@echo "🔍 Checking for jobs missing from queue..."
+	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Jobs without descriptions' FROM job_postings WHERE description IS NULL OR description = '';" 2>/dev/null || echo "N/A"
+	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Jobs ready for queue' FROM job_postings j LEFT JOIN job_queue q ON j.job_id = q.job_id LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match' WHERE q.job_id IS NULL AND r.job_id IS NULL AND j.description IS NOT NULL AND j.description != '';" 2>/dev/null || echo "N/A"
+
+queue-check-empty-descriptions:
+	@echo "🔍 Checking jobs with empty descriptions..."
+	@echo "📊 Jobs without descriptions:"
+	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Empty descriptions' FROM job_postings WHERE description IS NULL OR description = '';" 2>/dev/null || echo "N/A"
+	@echo "📋 Sample jobs with empty descriptions:"
+	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT job_id, title, company_name, CASE WHEN description IS NULL THEN 'NULL' WHEN description = '' THEN 'EMPTY' ELSE 'HAS_DATA' END as desc_status FROM job_postings WHERE description IS NULL OR description = '' LIMIT 10;" 2>/dev/null || echo "N/A"
+
 queue-enqueue:
 	@echo "📝 Adding jobs to queue for AI matching..."
 	go run cmd/queue-manager/main.go --action enqueue --limit 50
+
+queue-enqueue-all:
+	@echo "📝 Adding ALL remaining jobs to queue..."
+	go run cmd/queue-manager/main.go --action enqueue --limit 0
 
 queue-list:
 	@echo "📋 Listing queued jobs..."

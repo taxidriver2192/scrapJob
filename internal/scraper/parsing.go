@@ -1,23 +1,31 @@
 package scraper
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"linkedin-job-scraper/internal/models"
 )
 
-// convertToScrapedJob converts JavaScript extracted data to ScrapedJob struct
-func (s *LinkedInScraper) convertToScrapedJob(jobData map[string]interface{}, jobID, jobURL string) (*models.ScrapedJob, error) {
+// convertToJobPosting converts JavaScript extracted data to JobPosting struct
+func (s *LinkedInScraper) convertToJobPosting(jobData map[string]interface{}, jobIDStr, jobURL string) (*models.JobPosting, error) {
+	// Convert LinkedIn job ID from string to int64
+	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid LinkedIn job ID '%s': %w", jobIDStr, err)
+	}
+
 	// Parse location data to extract applicants and posted date
 	locationStr := getString(jobData, "location")
 	location, postedDate, applicants := parseLocationInfo(locationStr)
 
-	// Create the scraped job
-	job := &models.ScrapedJob{
+	// Create the job posting (CompanyID will be set when saving to DB)
+	job := &models.JobPosting{
 		LinkedInJobID: jobID,
 		Title:         getString(jobData, "title"),
-		CompanyName:   getString(jobData, "company"),
+		CompanyName:   getString(jobData, "company"), // Temporary field for company name
 		Location:      location,
 		Description:   getString(jobData, "description"),
 		ApplyURL:      getString(jobData, "applyUrl"),

@@ -24,7 +24,7 @@ func (s *LinkedInScraper) buildSearchURL(keywords, location string, start int) s
 }
 
 // scrapePage scrapes a single page of job results
-func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFromPage int) ([]*models.ScrapedJob, error) {
+func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFromPage int) ([]*models.JobPosting, error) {
 	logrus.Infof("🌐 Navigating to: %s", url)
 	
 	err := chromedp.Run(ctx,
@@ -92,7 +92,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 
 	if len(jobURLs) == 0 {
 		logrus.Warn("⚠️  No job URLs found on this page")
-		return []*models.ScrapedJob{}, nil
+		return []*models.JobPosting{}, nil
 	}
 
 	logrus.Infof("✅ Found %d job URLs on page", len(jobURLs))
@@ -140,7 +140,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 	}
 
 	// Scrape details from each job page
-	var jobs []*models.ScrapedJob
+	var jobs []*models.JobPosting
 	for i, jobURL := range filteredJobURLs {
 		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(filteredJobURLs), jobURL)
 		
