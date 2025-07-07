@@ -229,14 +229,14 @@ func getJobsForMatching(db *database.DB, limit int) ([]models.JobPosting, error)
 	query := `
 		SELECT 
 			j.job_id, j.title, j.location, j.description, j.apply_url,
-			j.posted_date, j.applicants, j.work_type,
+			j.posted_date, j.applicants, j.work_type, j.skills,
 			c.name as company_name
 		FROM job_postings j
 		LEFT JOIN companies c ON j.company_id = c.company_id
-		LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match'
-		WHERE j.description IS NOT NULL 
+		WHERE j.title IS NOT NULL
+		AND j.title != ''
+		AND j.description IS NOT NULL
 		AND j.description != ''
-		AND r.job_id IS NULL
 		ORDER BY j.posted_date DESC
 	`
 	

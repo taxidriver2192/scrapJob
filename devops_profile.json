@@ -1,0 +1,62 @@
+{
+  "candidate": {
+    "name": "DevOps Engineer",
+    "location": "Copenhagen, Denmark",
+    "years_experience": 6,
+    "primary_skills": [
+      "AWS",
+      "Docker",
+      "Kubernetes", 
+      "Terraform",
+      "Python",
+      "Linux"
+    ],
+    "secondary_skills": [
+      "Jenkins",
+      "Ansible",
+      "Monitoring",
+      "Git",
+      "Bash",
+      "PostgreSQL"
+    ],
+    "preferred_roles": [
+      "DevOps Engineer",
+      "Cloud Engineer", 
+      "Site Reliability Engineer",
+      "Platform Engineer",
+      "Infrastructure Engineer"
+    ],
+    "avoid_roles": [
+      "Manager",
+      "Director",
+      "Frontend Developer",
+      "QA Engineer",
+      "Designer"
+    ],
+    "company_size": {
+      "minimum": 100,
+      "preferred": "100+ employees with established infrastructure"
+    },
+    "work_preferences": {
+      "remote": true,
+      "hybrid": true,
+      "on_site": false,
+      "max_commute": "Not applicable - remote preferred"
+    },
+    "salary_range": {
+      "minimum": 700000,
+      "maximum": 900000
+    },
+    "languages": [
+      "Danish",
+      "English"
+    ]
+  },
+  "weights": {
+    "location": 10,
+    "tech_match": 50,
+    "company_fit": 25,
+    "seniority_fit": 10,
+    "work_type_fit": 5
+  }
+}

@@ -1,29 +1,31 @@
 services:
-  # Web dashboard container (scraping runs locally)
-  web-dashboard:
-    build: 
+  # Laravel dashboard container (new Laravel/Livewire dashboard)
+  laravel-dashboard:
+    build:
       context: .
-    container_name: linkedin-web-dashboard
+      dockerfile: Dockerfile.laravel
+    container_name: linkedin-laravel-dashboard
     depends_on:
       mysql:
         condition: service_healthy
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-root}
-      - DB_PASSWORD=${DB_PASSWORD:-}
-      - DB_NAME=${DB_NAME:-linkedin_jobs}
+      - DB_DATABASE=linkedin_jobs
+      - DB_USERNAME=root
+      - DB_PASSWORD=
+      - APP_ENV=development
+      - APP_DEBUG=true
     ports:
-      - "8081:8081"  # Web dashboard
+      - "8082:80"  # Laravel dashboard
     volumes:
-      - ./logs:/app/logs:ro
-      - ./backups:/app/backups:ro
-    command: ["./web-dashboard"]
+      - ./laravel-dashboard:/var/www/html
+    # Remove user mapping - let Docker handle permissions
     restart: unless-stopped
     networks:
       - linkedin-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,14 +35,17 @@ services:
     image: mysql:8.0
     container_name: linkedin-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-}"
+      MYSQL_ROOT_PASSWORD: ""
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: "${DB_NAME:-linkedin_jobs}"
+      MYSQL_DATABASE: "linkedin_jobs"
+      MYSQL_USER: "laravel"
+      MYSQL_PASSWORD: "laravelpass"
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/laravel-init.sql:/docker-entrypoint-initdb.d/laravel-init.sql
       - ./backups:/backups
     command: --default-authentication-plugin=mysql_native_password --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
     restart: unless-stopped
@@ -60,8 +65,9 @@ services:
       - mysql
     environment:
       PMA_HOST: mysql
-      PMA_USER: "${DB_USER:-root}"
-      PMA_PASSWORD: "${DB_PASSWORD:-}"
+      PMA_USER: root
+      PMA_PASSWORD: ""
+      MYSQL_ROOT_PASSWORD: ""
     ports:
       - "8080:80"
     restart: unless-stopped
@@ -74,3 +80,4 @@ networks:
 
 volumes:
   mysql_data:
+

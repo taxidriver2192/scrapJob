@@ -1,118 +1,92 @@
-.PHONY: help setup setup-manual build build-ts start stop restart migrate reset backup restore db-status db-shell scrape scrape-headless scrape-visible scrape-debug show-jobs extract-addresses extract-addresses-all extract-addresses-dry match-jobs rescrape-empty rescrape-empty-all rescrape-dry-run queue-status queue-check-missing queue-enqueue queue-enqueue-all queue-list queue-reset web-dashboard web-dashboard-logs test clean logs dev docker-build docker-up docker-down docker-logs
+.PHONY: help setup build start stop restart migrate reset backup restore db-status db-shell scrape show-jobs extract-addresses match-jobs analyze-data rescrape web-dashboard test clean logs dev
 
 # Default target
 help:
 	@echo "LinkedIn Job Scraper - Available Commands"
 	@echo ""
-	@echo "Quick Start:"
+	@echo "🚀 Quick Start:"
 	@echo "  make setup          - Full setup (recommended for new users)"
-	@echo "  make setup-manual   - Manual setup without running setup script"
+	@echo "  make dev            - Setup + start services + migrate"
 	@echo ""
-	@echo "Building:"
+	@echo "🏗️  Building:"
 	@echo "  make build          - Build the Go application"
-	@echo "  make build-ts       - Compile TypeScript scripts to JavaScript"
 	@echo ""
-	@echo "Docker Services (MySQL, phpMyAdmin, Web Dashboard):"
+	@echo "🐳 Services (MySQL, phpMyAdmin, Web Dashboard):"
 	@echo "  make start          - Start Docker services"
 	@echo "  make stop           - Stop Docker services"
 	@echo "  make restart        - Restart Docker services"
 	@echo ""
-	@echo "Database Management:"
+	@echo "🗄️  Database:"
 	@echo "  make migrate        - Run database migrations"
-	@echo "  make reset          - Reset database (delete all data)"
-	@echo "  make backup         - Create database backup"
-	@echo "  make restore        - Restore database from backup"
 	@echo "  make db-status      - Show database statistics"
 	@echo "  make db-shell       - Open MySQL shell"
+	@echo "  make backup         - Create database backup"
+	@echo "  make restore        - Restore database from backup"
+	@echo "  make reset          - Reset database (⚠️  DELETES ALL DATA)"
 	@echo ""
-	@echo "Local Scraping (runs on your machine):"
-	@echo "  make scrape         - Start scraping"
-	@echo "  make scrape-headless - Start headless scraping"  
-	@echo "  make scrape-visible  - Start visible scraping (with browser window)"
-	@echo "  make scrape-debug    - Start debug scraping (visible + debug logs)"
+	@echo "🔍 Job Scraping:"
+	@echo "  make scrape         - Start job scraping"
 	@echo "  make show-jobs      - Show recent scraped jobs"
+	@echo "  make rescrape       - Rescrape jobs with missing data"
 	@echo ""
-	@echo "AI Processing (runs locally):"
-	@echo "  make extract-addresses     - Extract addresses from jobs using OpenAI"
-	@echo "  make extract-addresses-all - Extract addresses from ALL jobs"
-	@echo "  make extract-addresses-dry - Dry run address extraction"
-	@echo "  make match-jobs            - Find your best job matches"
+	@echo "🤖 AI Processing:"
+	@echo "  make extract-addresses - Extract addresses using AI"
+	@echo "  make match-jobs        - Find your best job matches (RECOMMENDED)"
+	@echo "  make analyze-data      - Analyze job data quality"
 	@echo ""
-	@echo "Rescraping (runs locally):"
-	@echo "  make rescrape-empty        - Rescrape jobs with empty descriptions"
-	@echo "  make rescrape-empty-all    - Rescrape ALL jobs with empty descriptions"  
-	@echo "  make rescrape-dry-run      - Check what jobs would be rescraped"
+	@echo "🌐 Web Interface:"
+	@echo "  make web-dashboard  - Start web dashboard"
 	@echo ""
-	@echo "Queue Management (runs locally):"
-	@echo "  make queue-status   - Show job queue status"
-	@echo "  make queue-check-missing - Check what jobs are missing from queue"
-	@echo "  make queue-enqueue  - Add jobs to queue for AI processing"
-	@echo "  make queue-enqueue-all - Add ALL remaining jobs to queue"
-	@echo "  make queue-list     - List jobs in queue"
-	@echo "  make queue-reset    - Reset queue (mark all as pending)"
-	@echo ""
-	@echo "Web Dashboard (runs in Docker):"
-	@echo "  make web-dashboard-logs - Show web dashboard logs"
-	@echo ""
-	@echo "Docker Management:"
-	@echo "  make docker-build  - Build Docker containers"
-	@echo "  make docker-up     - Start all Docker services"
-	@echo "  make docker-down   - Stop all Docker services"
-	@echo "  make docker-logs   - Show Docker logs (web dashboard)"
-	@echo ""
-	@echo "Development & Testing:"
-	@echo "  make test           - Run Go tests"
+	@echo "🔧 Development:"
+	@echo "  make test           - Run tests"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make logs           - Show application logs"
 	@echo ""
-	@echo "Services after setup:"
+	@echo "📊 Access URLs after 'make start':"
 	@echo "  Web Dashboard: http://localhost:8081"
 	@echo "  phpMyAdmin: http://localhost:8080"
 	@echo "  MySQL: localhost:3307"
 
 # Setup and build
 setup:
-	@echo "Setting up LinkedIn Job Scraper..."
+	@echo "🚀 Setting up LinkedIn Job Scraper..."
 	@if [ -f "setup.sh" ]; then \
 		echo "Running comprehensive setup script..."; \
 		chmod +x setup.sh; \
 		./setup.sh; \
 	else \
 		echo "Setup script not found, running manual setup..."; \
-		$(MAKE) setup-manual; \
+		go mod tidy; \
+		mkdir -p logs chrome-profile backups; \
+		go build -o linkedin-scraper cmd/main.go; \
+		echo "Manual setup complete! Run 'make start' to start Docker services."; \
 	fi
-
-setup-manual:
-	@echo "Running manual setup..."
-	go mod tidy
-	mkdir -p logs chrome-profile backups
-	go build -o linkedin-scraper cmd/main.go
-	@echo "Manual setup complete! You may want to also run 'make start' to start Docker services."
 
 build:
 	@echo "🔨 Building application..."
-	@make build-ts
-	go build -o linkedin-scraper cmd/main.go
-
-# TypeScript compilation
-build-ts:
-	@echo "📝 Compiling TypeScript scripts..."
 	@if command -v tsc >/dev/null 2>&1; then \
+		echo "📝 Compiling TypeScript scripts..."; \
 		npm run compile-scripts; \
 	else \
-		echo "⚠️  TypeScript compiler not found. Install with: npm install -g typescript"; \
-		echo "🔄 Using existing JavaScript files as fallback"; \
+		echo "⚠️  TypeScript compiler not found. Using existing JavaScript files."; \
 	fi
+	go build -o linkedin-scraper cmd/main.go
 
 # Docker services
 start:
 	@echo "🐳 Starting services..."
 	docker-compose up -d
+	@echo "✅ Services started!"
 	@echo "📊 phpMyAdmin: http://localhost:8080"
+	@echo "🌐 Web Dashboard: http://localhost:8081"
 
 stop:
 	@echo "🛑 Stopping services..."
 	docker-compose down
+
+restart:
+	@echo "🔄 Restarting Docker services..."
+	docker-compose down && docker-compose up -d
 
 # Database
 migrate:
@@ -165,94 +139,60 @@ restore:
 		echo "❌ Backup file not found: backups/$$backup_file"; \
 	fi
 
-# Scraping
+# Job scraping
 scrape:
-	@echo "🔍 Starting scraping (edit Makefile to change keywords/location)..."
+	@echo "🔍 Starting job scraping..."
+	@echo "💡 Edit this target to change keywords/location"
 	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
-
-# Scraping with different modes
-scrape-headless:
-	@echo "🔍 Starting headless scraping..."
-	HEADLESS_BROWSER=true ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 5000
-
-scrape-visible:
-	@echo "🔍 Starting visible scraping (with browser window)..."
-	HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
-
-scrape-debug:
-	@echo "🔍 Starting debug scraping (visible browser + debug logs)..."
-	LOG_LEVEL=debug HEADLESS_BROWSER=false ./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 25
 
 show-jobs:
 	@echo "📋 Recent scraped jobs:"
 	go run cmd/show-jobs/main.go
 
+rescrape:
+	@echo "🔄 Rescaping jobs with missing data..."
+	go run cmd/rescraper/main.go --limit 50
+
+# AI processing
 extract-addresses:
-	@echo "🏠 Extracting addresses with OpenAI..."
+	@echo "🏠 Extracting addresses with AI..."
+	@echo "💡 Run with different --limit or --dry-run as needed"
 	go run cmd/extract-addresses/main.go --limit 10
-
-extract-addresses-all:
-	@echo "🏠 Extracting addresses for ALL jobs with OpenAI..."
-	go run cmd/extract-addresses/main.go --limit 0
-
-extract-addresses-dry:
-	@echo "🏠 Dry run - showing jobs that need address extraction..."
-	go run cmd/extract-addresses/main.go --limit 10 --dry-run
 
 match-jobs:
 	@echo "🎯 Finding your best job matches with AI..."
-	go run cmd/match-jobs/main.go --limit 0 --min-score 0
+	@echo "💡 This uses the optimized matching system"
+	@if [ -f "job_match_config.json" ]; then \
+		echo "📋 Using custom configuration from job_match_config.json"; \
+		go run cmd/match-jobs-optimized/main.go --config job_match_config.json --limit 10 --min-score 50; \
+	else \
+		echo "📋 Using default configuration (create custom: make match-jobs --save-config)"; \
+		go run cmd/match-jobs-optimized/main.go --limit 10 --min-score 50; \
+	fi
 
-# Rescraping commands (use same scraping logic but get URLs from database)
-rescrape-empty:
-	@echo "🔄 Rescaping jobs with empty descriptions..."
-	go run cmd/rescraper/main.go --limit 50
+analyze-data:
+	@echo "🔍 Analyzing job data quality..."
+	go run cmd/analyze-data/main.go
 
-rescrape-empty-all:
-	@echo "🔄 Rescaping ALL jobs with empty descriptions..."
-	go run cmd/rescraper/main.go --limit 0
+# Web dashboard
+web-dashboard:
+	@echo "🌐 Starting web dashboard..."
+	@echo "� Local access: http://localhost:8081"
+	@echo "🌍 Network access available on your IP"
+	go run cmd/web-dashboard/main.go
 
-rescrape-dry-run:
-	@echo "🔍 Checking what jobs would be rescraped..."
-	go run cmd/rescraper/main.go --limit 50 --dry-run
-
-queue-status:
-	@echo "📊 Checking job queue status..."
-	go run cmd/queue-manager/main.go --action status
-
-queue-check-missing:
-	@echo "🔍 Checking for jobs missing from queue..."
-	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Jobs without descriptions' FROM job_postings WHERE description IS NULL OR description = '';" 2>/dev/null || echo "N/A"
-	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Jobs ready for queue' FROM job_postings j LEFT JOIN job_queue q ON j.job_id = q.job_id LEFT JOIN job_ratings r ON j.job_id = r.job_id AND r.rating_type = 'ai_match' WHERE q.job_id IS NULL AND r.job_id IS NULL AND j.description IS NOT NULL AND j.description != '';" 2>/dev/null || echo "N/A"
-
-queue-check-empty-descriptions:
-	@echo "🔍 Checking jobs with empty descriptions..."
-	@echo "📊 Jobs without descriptions:"
-	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT COUNT(*) as 'Empty descriptions' FROM job_postings WHERE description IS NULL OR description = '';" 2>/dev/null || echo "N/A"
-	@echo "📋 Sample jobs with empty descriptions:"
-	@docker-compose exec -T mysql mysql -u root linkedin_jobs -se "SELECT job_id, title, company_name, CASE WHEN description IS NULL THEN 'NULL' WHEN description = '' THEN 'EMPTY' ELSE 'HAS_DATA' END as desc_status FROM job_postings WHERE description IS NULL OR description = '' LIMIT 10;" 2>/dev/null || echo "N/A"
-
-queue-enqueue:
-	@echo "📝 Adding jobs to queue for AI matching..."
-	go run cmd/queue-manager/main.go --action enqueue --limit 50
-
-queue-enqueue-all:
-	@echo "📝 Adding ALL remaining jobs to queue..."
-	go run cmd/queue-manager/main.go --action enqueue --limit 0
-
-queue-list:
-	@echo "📋 Listing queued jobs..."
-	go run cmd/queue-manager/main.go --action list --limit 20
-
-queue-reset:
-	@echo "🔄 Resetting job queue..."
-	go run cmd/queue-manager/main.go --action reset
-
-test:
-	@echo "🧪 Running Go tests..."
-	go test ./...
+# Development shortcuts
+dev: setup start migrate
+	@echo "🎉 Development environment ready!"
+	@echo "📊 phpMyAdmin: http://localhost:8080"
+	@echo "🌐 Web Dashboard: http://localhost:8081"
+	@echo "� Run 'make scrape' to start scraping"
 
 # Utilities
+test:
+	@echo "🧪 Running tests..."
+	go test ./...
+
 clean:
 	@echo "🧹 Cleaning build artifacts..."
 	rm -f linkedin-scraper *.exe
@@ -262,41 +202,25 @@ logs:
 	@echo "📝 Application logs:"
 	tail -f logs/scraper.log 2>/dev/null || echo "No logs found. Run scraper first."
 
-# Web Dashboard
-web-dashboard:
-	@echo "🌐 Starting web dashboard..."
-	@echo "📊 Local access: http://localhost:8081"
-	@echo "🌍 Network access: http://172.30.88.162:8081"
-	@echo "💡 Others can access via your IP address"
-	go run cmd/web-dashboard/main.go
+# Advanced commands (use carefully)
+match-jobs-verbose:
+	@echo "� Finding matches with detailed reasoning..."
+	@if [ -f "job_match_config.json" ]; then \
+		go run cmd/match-jobs-optimized/main.go --config job_match_config.json --limit 10 --min-score 50 --verbose; \
+	else \
+		go run cmd/match-jobs-optimized/main.go --limit 10 --min-score 50 --verbose; \
+	fi
 
-web-dashboard-logs:
-	@echo "Web Dashboard logs:"
-	docker-compose logs -f web-dashboard
+match-jobs-all:
+	@echo "🎯 Processing ALL jobs (this may take a while)..."
+	@if [ -f "job_match_config.json" ]; then \
+		go run cmd/match-jobs-optimized/main.go --config job_match_config.json --limit 0 --min-score 60; \
+	else \
+		go run cmd/match-jobs-optimized/main.go --limit 0 --min-score 60; \
+	fi
 
-restart:
-	@echo "Restarting Docker services..."
-	docker-compose down && docker-compose up -d
-
-# Development shortcuts
-dev: setup start migrate
-	@echo "🎉 Development environment ready!"
-	@echo "📊 phpMyAdmin: http://localhost:8080"
-	@echo "🔍 Run 'make scrape' to start scraping"
-
-# Docker Commands
-docker-build:
-	@echo "🐳 Building Docker containers..."
-	docker-compose build
-
-docker-up:
-	@echo "🚀 Starting all services with Docker..."
-	docker-compose up -d
-
-docker-down:
-	@echo "🛑 Stopping all Docker services..."
-	docker-compose down
-
-docker-logs:
-	@echo "📝 Docker logs (web dashboard):"
-	docker-compose logs -f web-dashboard
+match-jobs-config:
+	@echo "� Creating custom job matching configuration..."
+	go run cmd/match-jobs-optimized/main.go --save-config
+	@echo "✅ Configuration saved to job_match_config.json"
+	@echo "📝 Edit this file to customize your preferences"

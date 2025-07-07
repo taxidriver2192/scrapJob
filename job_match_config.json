@@ -1,0 +1,63 @@
+{
+  "candidate": {
+    "name": "Senior Developer",
+    "location": "Roskilde, Denmark",
+    "years_experience": 8,
+    "primary_skills": [
+      "PHP",
+      "Laravel",
+      "JavaScript",
+      "AWS",
+      "Docker",
+      "Git"
+    ],
+    "secondary_skills": [
+      "Python",
+      "Go",
+      "IT Security",
+      "Penetration Testing",
+      "MySQL",
+      "Linux"
+    ],
+    "preferred_roles": [
+      "Senior Developer",
+      "Lead Developer",
+      "Full-Stack Developer",
+      "Backend Developer",
+      "Principal Engineer"
+    ],
+    "avoid_roles": [
+      "Manager",
+      "Director",
+      "Head of",
+      "VP",
+      "Team Lead",
+      "Scrum Master"
+    ],
+    "company_size": {
+      "minimum": 50,
+      "preferred": "50-500 employees"
+    },
+    "work_preferences": {
+      "remote": true,
+      "hybrid": true,
+      "on_site": true,
+      "max_commute": "45 minutes from Roskilde"
+    },
+    "salary_range": {
+      "minimum": 600000,
+      "maximum": 800000
+    },
+    "languages": [
+      "Danish",
+      "English"
+    ]
+  },
+  "weights": {
+    "location": 25,
+    "tech_match": 35,
+    "company_fit": 20,
+    "seniority_fit": 15,
+    "work_type_fit": 5
+  }
+}
