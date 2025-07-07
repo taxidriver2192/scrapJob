@@ -12,9 +12,58 @@
     @livewireStyles
     @fluxAppearance
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <style>
+        /* Custom styles for formatted job description content */
+        .formatted-content {
+            line-height: 1.6;
+        }
+        .formatted-content p {
+            margin-bottom: 1rem;
+        }
+        .formatted-content h1, .formatted-content h2, .formatted-content h3,
+        .formatted-content h4, .formatted-content h5, .formatted-content h6 {
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: inherit;
+        }
+        .formatted-content h1 { font-size: 1.5rem; }
+        .formatted-content h2 { font-size: 1.375rem; }
+        .formatted-content h3 { font-size: 1.25rem; }
+        .formatted-content h4 { font-size: 1.125rem; }
+        .formatted-content h5 { font-size: 1rem; }
+        .formatted-content h6 { font-size: 0.875rem; }
+        .formatted-content ul, .formatted-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        .formatted-content li {
+            margin-bottom: 0.25rem;
+        }
+        .formatted-content strong, .formatted-content b {
+            font-weight: 600;
+        }
+        .formatted-content em, .formatted-content i {
+            font-style: italic;
+        }
+        .formatted-content a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        .formatted-content a:hover {
+            color: #1d4ed8;
+        }
+        .dark .formatted-content a {
+            color: #60a5fa;
+        }
+        .dark .formatted-content a:hover {
+            color: #93c5fd;
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-gray-50">
-    <flux:header class="bg-blue-600 text-white shadow-lg">
+<body class="min-h-screen bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+    <flux:header class="bg-blue-600 dark:bg-blue-800 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Logo -->

@@ -26,17 +26,57 @@
         <!-- Companies Table -->
         <flux:card>
             <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
-                <flux:heading size="lg">
-                    <i class="fas fa-list mr-2"></i>Company Directory
-                </flux:heading>
+                <div class="flex items-center justify-between">
+                    <flux:heading size="lg">
+                        <i class="fas fa-list mr-2"></i>Company Directory ({{ $companies->total() }} companies)
+                    </flux:heading>
+                    <div class="flex items-center space-x-2 text-sm text-zinc-500 dark:text-zinc-400">
+                        <i class="fas fa-sort mr-1"></i>
+                        <span>Sorted by:</span>
+                        <flux:badge color="blue">
+                            {{ ucfirst(str_replace('_', ' ', $sortField)) }}
+                            @if($sortDirection === 'asc')
+                                ↑
+                            @else
+                                ↓
+                            @endif
+                        </flux:badge>
+                    </div>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full divide-y divide-zinc-200 dark:divide-zinc-700">
                     <thead class="bg-zinc-50 dark:bg-zinc-800">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Company Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Job Count</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                <button wire:click="sortBy('name')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
+                                    <span>Company Name</span>
+                                    @if($sortField === 'name')
+                                        @if($sortDirection === 'asc')
+                                            <i class="fas fa-sort-up text-blue-500"></i>
+                                        @else
+                                            <i class="fas fa-sort-down text-blue-500"></i>
+                                        @endif
+                                    @else
+                                        <i class="fas fa-sort text-zinc-400"></i>
+                                    @endif
+                                </button>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                <button wire:click="sortBy('job_postings_count')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
+                                    <span>Job Count</span>
+                                    @if($sortField === 'job_postings_count')
+                                        @if($sortDirection === 'asc')
+                                            <i class="fas fa-sort-up text-blue-500"></i>
+                                        @else
+                                            <i class="fas fa-sort-down text-blue-500"></i>
+                                        @endif
+                                    @else
+                                        <i class="fas fa-sort text-zinc-400"></i>
+                                    @endif
+                                </button>
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
