@@ -1,70 +1,83 @@
 <div>
-    <div class="container mt-4">
-        <h1><i class="fas fa-building text-primary me-2"></i>Companies</h1>
-        
-        <!-- Search Bar -->
-        <div class="row mt-3">
-            <div class="col-md-8">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" wire:model.live.debounce.300ms="search" class="form-control" placeholder="Search companies...">
-                </div>
+    <flux:main class="max-w-7xl mx-auto px-4">
+        <flux:heading size="xl" class="text-blue-600 mb-6">
+            <i class="fas fa-building mr-2"></i>Companies
+        </flux:heading>
+
+        <!-- Search and Filter Row -->
+        <div class="flex gap-4 mb-6">
+            <div class="flex-1">
+                <flux:input
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="Search companies..."
+                    icon="magnifying-glass"
+                />
             </div>
-            <div class="col-md-4">
-                <select wire:model.live="perPage" class="form-select">
+            <div class="w-48">
+                <flux:select wire:model.live="perPage">
                     <option value="10">10 per page</option>
                     <option value="20">20 per page</option>
                     <option value="50">50 per page</option>
                     <option value="100">100 per page</option>
-                </select>
+                </flux:select>
             </div>
         </div>
 
         <!-- Companies Table -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5><i class="fas fa-list me-2"></i>Company Directory</h5>
+        <flux:card>
+            <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
+                <flux:heading size="lg">
+                    <i class="fas fa-list mr-2"></i>Company Directory
+                </flux:heading>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Company Name</th>
-                                <th>Job Count</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($companies as $company)
-                            <tr>
-                                <td>
-                                    <strong>{{ $company->name }}</strong>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary">{{ $company->job_postings_count }} jobs</span>
-                                </td>
-                                <td>
-                                    <a href="/jobs?search={{ urlencode($company->name) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i> View Jobs
-                                    </a>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="3" class="text-center py-4">
-                                    <i class="fas fa-search fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted">No companies found matching your search criteria.</p>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pagination -->
+
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-zinc-200 dark:divide-zinc-700">
+                    <thead class="bg-zinc-50 dark:bg-zinc-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Company Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Job Count</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-700">
+                        @forelse($companies as $company)
+                        <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                <flux:heading size="sm">{{ $company->name }}</flux:heading>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
+                                <flux:badge color="blue">{{ $company->job_postings_count }} jobs</flux:badge>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
+                                <flux:button
+                                    href="/jobs?search={{ urlencode($company->name) }}"
+                                    size="sm"
+                                    variant="outline"
+                                    icon="eye"
+                                >
+                                    View Jobs
+                                </flux:button>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="3" class="px-6 py-8 text-center">
+                                <div class="text-gray-500">
+                                    <i class="fas fa-search text-4xl mb-4"></i>
+                                    <p class="text-lg">No companies found matching your search criteria.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-6">
                 {{ $companies->links() }}
             </div>
-        </div>
-    </div>
+        </flux:card>
+    </flux:main>
 </div>
