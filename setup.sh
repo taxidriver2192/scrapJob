@@ -186,13 +186,31 @@ compile_typescript() {
 # Build Go application
 build_go_app() {
     print_status "Building Go application..."
+    
+    # Clean up vendor directory if it exists
+    if [ -d "vendor" ]; then
+        print_status "Removing existing vendor directory..."
+        rm -rf vendor
+    fi
+    
+    # Download dependencies and build with mod mode
     go mod download
-    go build -o linkedin-scraper cmd/main.go
+    go build -mod=mod -o linkedin-scraper cmd/main.go
     if [ $? -eq 0 ]; then
         print_success "Go application built successfully"
     else
         print_error "Failed to build Go application"
-        exit 1
+        print_status "Trying alternative build method..."
+        
+        # Try with tidy first
+        go mod tidy
+        go build -mod=mod -o linkedin-scraper cmd/main.go
+        if [ $? -eq 0 ]; then
+            print_success "Go application built successfully (after mod tidy)"
+        else
+            print_error "Failed to build Go application even after mod tidy"
+            exit 1
+        fi
     fi
 }
 

@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -9,7 +10,6 @@ import (
 	"linkedin-job-scraper/internal/models"
 
 	"github.com/chromedp/chromedp"
-	"github.com/sirupsen/logrus"
 )
 
 // extractJobURLs extracts job URLs from the current search results page
@@ -21,7 +21,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 	)
 
 	if err != nil {
-		logrus.Warnf("⚠️  Page analysis failed: %v", err)
+		fmt.Printf("⚠️  Page analysis failed: %v", err)
 		return nil, fmt.Errorf("page analysis failed: %w", err)
 	}
 	
@@ -30,21 +30,21 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 		var pageAnalysis map[string]interface{}
 		chromedp.Run(ctx, chromedp.Evaluate(s.buildDetailedAnalysisScript(), &pageAnalysis))
 		
-		logrus.Infof("📊 Page analysis: %+v", pageAnalysis)
+		fmt.Printf("📊 Page analysis: %+v", pageAnalysis)
 		
 		// Check if we have job links even without proper container
 		if jobLinks, ok := pageAnalysis["jobLinksCount"].(float64); ok && jobLinks > 0 {
-			logrus.Infof("✅ Found %.0f job links, proceeding with extraction...", jobLinks)
+			fmt.Printf("✅ Found %.0f job links, proceeding with extraction...", jobLinks)
 		} else {
-			logrus.Warn("❌ No job links found - page may have changed or we need login")
+			fmt.Println("❌ No job links found - page may have changed or we need login")
 			return []string{}, nil
 		}
 	} else {
-		logrus.Info("✅ Job results container found!")
+		fmt.Println("✅ Job results container found!")
 	}
 
 	// Get job URLs from search results
-	logrus.Info("🔍 Extracting job URLs...")
+	fmt.Println("🔍 Extracting job URLs...")
 	var jobURLs []string
 	err = chromedp.Run(ctx,
 		chromedp.Evaluate(s.buildExtractJobURLsScript(), &jobURLs),
@@ -59,7 +59,7 @@ func (s *LinkedInScraper) extractJobURLs(ctx context.Context) ([]string, error) 
 
 // scrapeJobDetails extracts detailed information from a single job page
 func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (*models.JobPosting, error) {
-	logrus.Infof("🌐 Navigating to job page: %s", jobURL)
+	fmt.Printf("🌐 Navigating to job page: %s\n", jobURL)
 	
 	// Navigate to job detail page with timeout
 	navCtx, navCancel := context.WithTimeout(ctx, 15*time.Second)
@@ -73,7 +73,7 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		return nil, fmt.Errorf("failed to navigate to job page: %w", err)
 	}
 	
-	logrus.Info("⏳ Waiting for job page to load...")
+	fmt.Println("⏳ Waiting for job page to load...")
 	
 	// Use smart wait with timeout
 	waitErr := smartWaitForCondition(ctx, `
@@ -88,7 +88,7 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 	
 	// If intelligent wait fails, use fallback sleep
 	if waitErr != nil {
-		logrus.Warnf("Smart wait failed for job page (%v), using fallback sleep", waitErr)
+		fmt.Printf("Smart wait failed for job page (%v), using fallback sleep", waitErr)
 		err = chromedp.Run(ctx,
 			chromedp.Sleep(3*time.Second),
 		)
@@ -97,7 +97,7 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		}
 	}
 	
-	logrus.Info("✅ Job page loaded, checking page status...")
+	fmt.Println("✅ Job page loaded, checking page status...")
 	
 	// Check page title to see if we're on the right page
 	var pageTitle string
@@ -105,11 +105,11 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		chromedp.Title(&pageTitle),
 	)
 	if err == nil {
-		logrus.Infof("📄 Job page title: %s", pageTitle)
+		fmt.Printf("📄 Job page title: %s\n", pageTitle)
 	}
 
 	// Wait for page to fully load and try to expand description if needed
-	logrus.Info("🔍 Expanding job description if needed...")
+	fmt.Println("🔍 Expanding job description if needed...")
 	
 	// Try to wait for description area with timeout - don't fail if not found
 	descWaitCtx, descCancel := context.WithTimeout(ctx, 5*time.Second)
@@ -119,7 +119,7 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		// Wait for description area to be present - use more generic selectors
 		chromedp.WaitReady(`.description, .show-more-less-html, .jobs-description, [data-test-job-description]`, chromedp.ByQuery),
 	); err != nil {
-		logrus.Infof("Description area not found with standard selectors, trying expansion anyway: %v", err)
+		fmt.Printf("Description area not found with standard selectors, trying expansion anyway: %v", err)
 	}
 	
 	// Try to click "Show more" button if it exists - don't fail if it doesn't work
@@ -128,21 +128,21 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		// Wait a brief moment for expansion to complete
 		chromedp.Sleep(500*time.Millisecond),
 	); err != nil {
-		logrus.Infof("Warning: could not expand description: %v", err)
+		fmt.Printf("Warning: could not expand description: %v", err)
 	}
 
 	// Try to click insights button and extract skills
-	logrus.Info("🔍 Trying to click insights button...")
+	fmt.Printf("🔍 Trying to click insights button...")
 	
 	insightsCtx, insightsCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer insightsCancel()
 	
 	if err := s.clickInsightsButton(insightsCtx); err != nil {
-		logrus.Infof("Failed to click insights button (timeout or not found): %v", err)
+		fmt.Printf("Failed to click insights button (timeout or not found): %v", err)
 	}
 
 	// Scroll to ensure all content is loaded
-	logrus.Info("📜 Scrolling page to load all content...")
+	fmt.Printf("📜 Scrolling page to load all content...")
 	if err = chromedp.Run(ctx,
 		chromedp.Evaluate(`window.scrollTo(0, document.body.scrollHeight);`, nil),
 		// Wait for any lazy-loaded content
@@ -151,18 +151,19 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 		// Brief pause to ensure scroll is complete
 		chromedp.Sleep(300*time.Millisecond),
 	); err != nil {
-		logrus.Warnf("Warning: scrolling failed: %v", err)
+		fmt.Printf("Warning: scrolling failed: %v", err)
 	}
 
 	// Extract job ID from URL
-	logrus.Info("🆔 Extracting job ID from URL...")
+	fmt.Printf("🆔 Extracting job ID from URL...")
+	fmt.Printf("Job URL: %s\n", jobURL)
 	jobID := s.extractJobIDFromURL(jobURL)
 	if jobID == "" {
 		return nil, fmt.Errorf("could not extract job ID from URL: %s", jobURL)
 	}
 
 	// Extract job details using JavaScript with timeout
-	logrus.Infof("📊 Extracting job data with JavaScript for job ID: %s", jobID)
+	fmt.Printf("📊 Extracting job data with JavaScript for job ID: %s", jobID)
 	var jobData map[string]interface{}
 	
 	// Create a context with timeout for the JavaScript execution
@@ -174,27 +175,37 @@ func (s *LinkedInScraper) scrapeJobDetails(ctx context.Context, jobURL string) (
 	)
 
 	if err != nil {
-		logrus.Errorf("❌ JavaScript extraction failed: %v", err)
+		fmt.Printf("❌ JavaScript extraction failed: %v", err)
 		// Try to get page source for debugging if extraction fails
 		var pageSource string
 		if pageErr := chromedp.Run(ctx, chromedp.OuterHTML("html", &pageSource)); pageErr == nil {
 			if len(pageSource) > 1000 {
-				logrus.Debugf("Page source preview: %s...", pageSource[:1000])
+				fmt.Printf("Page source preview: %s...", pageSource[:1000])
 			}
 		}
-		return nil, fmt.Errorf("failed to extract job data: %w", err)
+		return nil, fmt.Errorf("JavaScript extraction failed: %w", err)
 	}
 	
-	logrus.Infof("✅ JavaScript extraction completed, data keys: %v", getMapKeys(jobData))
+	fmt.Printf("✅ JavaScript extraction completed, data keys: %v", getMapKeys(jobData))
+
+	
+		// Always show basic data overview
+	fmt.Printf("📊 Job data overview: title=%q, company=%q, location=%q, description_length=%d, skills_count=%d",
+		getStringValue(jobData, "title"),
+		getStringValue(jobData, "company"),
+		getStringValue(jobData, "location"),
+		len(getStringValue(jobData, "description")),
+		len(getSliceValue(jobData, "skills")))
+
 
 	// Convert extracted data to JobPosting
-	logrus.Info("🔄 Converting extracted data to JobPosting...")
+	fmt.Printf("🔄 Converting extracted data to JobPosting...")
 	result, err := s.convertToJobPosting(jobData, jobID, jobURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert job data: %w", err)
 	}
 	
-	logrus.Infof("✅ Job extraction completed successfully for: %s", result.Title)
+	fmt.Printf("✅ Job extraction completed successfully for: %s", result.Title)
 	return result, nil
 }
 
@@ -213,3 +224,26 @@ func (s *LinkedInScraper) extractJobIDFromURL(jobURL string) string {
 	}
 	return ""
 }
+
+// formatJobDataForDebug formats job data for debug output with truncated description
+func (s *LinkedInScraper) formatJobDataForDebug(jobData map[string]interface{}) string {
+	// Create a copy of the data to avoid modifying the original
+	debugData := make(map[string]interface{})
+	for k, v := range jobData {
+		debugData[k] = v
+	}
+	
+	// Truncate description to first 300 characters if it exists
+	if desc, ok := debugData["description"].(string); ok && len(desc) > 300 {
+		debugData["description"] = desc[:300] + "..."
+	}
+	
+	// Format as JSON
+	jsonData, err := json.MarshalIndent(debugData, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error formatting job data: %v", err)
+	}
+	
+	return string(jsonData)
+}
+

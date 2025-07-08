@@ -12,7 +12,6 @@ import (
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
-	"github.com/sirupsen/logrus"
 )
 
 type LinkedInScraper struct {
@@ -34,7 +33,7 @@ func NewLinkedInScraper(cfg *config.Config, db *database.DB) *LinkedInScraper {
 
 // ScrapeJobs scrapes LinkedIn jobs based on search parameters
 func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) error {
-	logrus.Infof("🚀 Initializing Chrome browser...")
+	fmt.Println("🚀 Initializing Chrome browser...")
 	
 	// Setup Chrome options with better error handling
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -58,7 +57,7 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(s string, args ...interface{}) {
 		// Suppress cookie parsing errors - they're not critical
 		if !strings.Contains(s, "cookiePart") && !strings.Contains(s, "could not unmarshal event") {
-			logrus.Debugf("ChromeDP: "+s, args...)
+			fmt.Printf("ChromeDP: "+s+"\n", args...)
 		}
 	}))
 	defer cancel()
@@ -75,20 +74,18 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 					args[i] = "null"
 				}
 			}
-			// Only log our debug messages to avoid spam
+			// Log ALL console messages for debugging
 			message := strings.Join(args, " ")
-			if strings.Contains(message, "=== ") || strings.Contains(message, "✅ ") || strings.Contains(message, "❌ ") || strings.Contains(message, "⚠️ ") {
-				logrus.Infof("JS: %s", message)
-			}
+			fmt.Printf("JS: %s\n", message)
 		}
 	})
 
 	// Login to LinkedIn
-	logrus.Info("🔐 Attempting to login to LinkedIn...")
+	fmt.Println("🔐 Attempting to login to LinkedIn...")
 	if err := s.login(ctx); err != nil {
 		return fmt.Errorf("login failed: %w", err)
 	}
-	logrus.Info("✅ Login successful!")
+	fmt.Println("✅ Login successful!")
 
 	// Dynamic pagination based on job URLs FOUND on LinkedIn (not jobs saved to DB)
 	totalJobUrlsFound := 0   // Total job URLs LinkedIn has shown us (for pagination)
@@ -96,24 +93,24 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	page := 1
 	const maxPages = 1000 // Safety limit to prevent infinite loops
 	
-	logrus.Infof("🔍 Starting scrape to collect up to %d jobs with dynamic pagination", totalJobs)
+	fmt.Printf("🔍 Starting scrape to collect up to %d jobs with dynamic pagination\n", totalJobs)
 
 	for page <= maxPages && totalJobsSaved < totalJobs {
 		// Use LinkedIn's pagination: start from total job URLs we've seen
 		start := totalJobUrlsFound
 		pageURL := s.buildSearchURL(keywords, location, start)
 		
-		logrus.Infof("📄 Scraping page %d (start=%d): %s", page, start, pageURL)
+		fmt.Printf("📄 Scraping page %d (start=%d): %s\n", page, start, pageURL)
 		
 		// Scrape page and get result info
 		pageResult, err := s.scrapePageWithDetails(ctx, pageURL, 25)
 		if err != nil {
-			logrus.Errorf("❌ Error scraping page %d: %v", page, err)
+			fmt.Printf("❌ Error scraping page %d: %v\n", page, err)
 			break
 		}
 		
 		if pageResult.TotalJobsFound == 0 {
-			logrus.Warn("⚠️  No jobs found on page, stopping...")
+			fmt.Println("⚠️  No jobs found on page, stopping...")
 			break
 		}
 		
@@ -123,20 +120,20 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 		// Update saved jobs count
 		totalJobsSaved += pageResult.JobsSaved
 		
-		logrus.Infof("✅ Processed %d job URLs from page %d (saved: %d, skipped: %d, total saved: %d/%d, next start: %d)", 
+		fmt.Printf("✅ Processed %d job URLs from page %d (saved: %d, skipped: %d, total saved: %d/%d, next start: %d)\n", 
 			pageResult.TotalJobsFound, page, pageResult.JobsSaved, pageResult.JobsSkipped, 
 			totalJobsSaved, totalJobs, totalJobUrlsFound)
 		
 		// If we've reached our target, stop
 		if totalJobsSaved >= totalJobs {
-			logrus.Infof("🎯 Reached target of %d jobs, stopping", totalJobs)
+			fmt.Printf("🎯 Reached target of %d jobs, stopping\n", totalJobs)
 			break
 		}
 		
 		page++
 	}
 
-	logrus.Infof("🎉 Scraping completed! Total jobs saved: %d, total job URLs processed: %d", totalJobsSaved, totalJobUrlsFound)
+	fmt.Printf("🎉 Scraping completed! Total jobs saved: %d, total job URLs processed: %d\n", totalJobsSaved, totalJobUrlsFound)
 	return nil
 }
 
@@ -155,7 +152,7 @@ func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL str
 		return nil, fmt.Errorf("failed to navigate to page: %w", err)
 	}
 
-	logrus.Info("🔍 Extracting job URLs from current page...")
+	fmt.Println("🔍 Extracting job URLs from current page...")
 	
 	// Extract job URLs using existing function
 	jobURLs, err := s.extractJobURLs(ctx)
@@ -163,7 +160,7 @@ func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL str
 		return nil, fmt.Errorf("failed to extract job URLs: %w", err)
 	}
 	
-	logrus.Infof("✅ Found %d job URLs on page", len(jobURLs))
+	fmt.Printf("✅ Found %d job URLs on page\n", len(jobURLs))
 	
 	// Filter new vs existing jobs
 	newJobURLs, skippedCount := s.filterNewJobs(jobURLs)
@@ -175,16 +172,16 @@ func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL str
 	}
 	
 	if len(newJobURLs) == 0 {
-		logrus.Infof("⏭️  All %d jobs already exist in database", skippedCount)
+		fmt.Printf("⏭️  All %d jobs already exist in database\n", skippedCount)
 		return result, nil
 	}
 	
-	logrus.Infof("⏭️  Skipped %d existing jobs, will scrape %d new jobs", skippedCount, len(newJobURLs))
+	fmt.Printf("⏭️  Skipped %d existing jobs, will scrape %d new jobs\n", skippedCount, len(newJobURLs))
 	
 	// Process new jobs
 	result.JobsSaved = s.processNewJobs(ctx, newJobURLs)
 	
-	logrus.Infof("✅ Scraped %d job details from page", result.JobsSaved)
+	fmt.Printf("✅ Scraped %d job details from page\n", result.JobsSaved)
 	return result, nil
 }
 
@@ -208,19 +205,19 @@ func (s *LinkedInScraper) filterNewJobs(jobURLs []string) ([]string, int) {
 func (s *LinkedInScraper) isJobNew(jobURL string) bool {
 	jobID := s.extractJobIDFromURL(jobURL)
 	if jobID == "" {
-		logrus.Warnf("⚠️  Could not extract job ID from URL: %s", jobURL)
+		fmt.Printf("⚠️  Could not extract job ID from URL: %s\n", jobURL)
 		return false
 	}
 	
 	jobIDInt, err := strconv.ParseInt(jobID, 10, 64)
 	if err != nil {
-		logrus.Warnf("⚠️  Invalid job ID '%s': %v", jobID, err)
+		fmt.Printf("⚠️  Invalid job ID '%s': %v\n", jobID, err)
 		return false
 	}
 	
 	exists, err := s.jobRepo.ExistsLinkedInJobID(jobIDInt)
 	if err != nil {
-		logrus.Warnf("⚠️  Error checking if job exists: %v", err)
+		fmt.Printf("⚠️  Error checking if job exists: %v\n", err)
 		return false
 	}
 	
@@ -232,16 +229,16 @@ func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) 
 	savedCount := 0
 	
 	for i, jobURL := range jobURLs {
-		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(jobURLs), jobURL)
+		fmt.Printf("📋 Scraping job %d/%d: %s\n", i+1, len(jobURLs), jobURL)
 		
 		job, err := s.scrapeJobDetails(ctx, jobURL)
 		if err != nil {
-			logrus.Errorf("❌ Failed to scrape job %s: %v", jobURL, err)
+			fmt.Printf("❌ Failed to scrape job %s: %v\n", jobURL, err)
 			continue
 		}
 		
 		if err := s.saveJob(job); err != nil {
-			logrus.Errorf("❌ Failed to save job: %v", err)
+			fmt.Printf("❌ Failed to save job: %v\n", err)
 			continue
 		}
 		
@@ -253,7 +250,7 @@ func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) 
 
 // RescrapeFromQueue scrapes jobs from the database queue instead of LinkedIn search
 func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
-	logrus.Infof("🚀 Initializing Chrome browser...")
+	fmt.Println("🚀 Initializing Chrome browser...")
 	
 	// Setup Chrome options with better error handling
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -277,7 +274,7 @@ func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
 	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(s string, args ...interface{}) {
 		// Suppress cookie parsing errors - they're not critical
 		if !strings.Contains(s, "cookiePart") && !strings.Contains(s, "could not unmarshal event") {
-			logrus.Debugf("ChromeDP: "+s, args...)
+			fmt.Printf("ChromeDP: "+s+"\n", args...)
 		}
 	}))
 	defer cancel()
@@ -294,20 +291,18 @@ func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
 					args[i] = "null"
 				}
 			}
-			// Only log our debug messages to avoid spam
+			// Log ALL console messages for debugging
 			message := strings.Join(args, " ")
-			if strings.Contains(message, "=== ") || strings.Contains(message, "✅ ") || strings.Contains(message, "❌ ") || strings.Contains(message, "⚠️ ") {
-				logrus.Infof("JS: %s", message)
-			}
+			fmt.Printf("JS: %s\n", message)
 		}
 	})
 
 	// Login to LinkedIn
-	logrus.Info("🔐 Attempting to login to LinkedIn...")
+	fmt.Println("🔐 Attempting to login to LinkedIn...")
 	if err := s.login(ctx); err != nil {
 		return fmt.Errorf("login failed: %w", err)
 	}
-	logrus.Info("✅ Login successful!")
+	fmt.Println("✅ Login successful!")
 
 	// Get jobs from database queue instead of LinkedIn search
 	jobsToRescrape, err := s.getJobsFromQueue(limit)
@@ -316,39 +311,39 @@ func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
 	}
 
 	if len(jobsToRescrape) == 0 {
-		logrus.Info("✅ No jobs found in queue to rescrape")
+		fmt.Println("✅ No jobs found in queue to rescrape")
 		return nil
 	}
 
-	logrus.Infof("🔍 Starting rescrape of %d jobs from queue", len(jobsToRescrape))
+	fmt.Printf("🔍 Starting rescrape of %d jobs from queue\n", len(jobsToRescrape))
 
 	// Process jobs from queue
 	successCount := 0
 	failCount := 0
 
 	for i, job := range jobsToRescrape {
-		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(jobsToRescrape), job.ApplyURL)
+		fmt.Printf("📋 Scraping job %d/%d: %s\n", i+1, len(jobsToRescrape), job.ApplyURL)
 		
 		// Use existing scrapeJobDetails method
 		jobPosting, err := s.scrapeJobDetails(ctx, job.ApplyURL)
 		if err != nil {
-			logrus.Errorf("❌ Failed to scrape job %d: %v", job.JobID, err)
+			fmt.Printf("❌ Failed to scrape job %d: %v\n", job.JobID, err)
 			failCount++
 			continue
 		}
 		
 		// Update existing job in database
 		if err := s.updateExistingJob(job.JobID, jobPosting); err != nil {
-			logrus.Errorf("❌ Failed to update job %d: %v", job.JobID, err)
+			fmt.Printf("❌ Failed to update job %d: %v\n", job.JobID, err)
 			failCount++
 			continue
 		}
 		
 		successCount++
-		logrus.Infof("✅ Job extraction completed successfully for: %s", jobPosting.Title)
+		fmt.Printf("✅ Job extraction completed successfully for: %s\n", jobPosting.Title)
 	}
 
-	logrus.Infof("🎉 Rescraping completed! Successful: %d, Failed: %d", successCount, failCount)
+	fmt.Printf("🎉 Rescraping completed! Successful: %d, Failed: %d\n", successCount, failCount)
 	return nil
 }
 
@@ -402,7 +397,7 @@ func (s *LinkedInScraper) getJobsFromQueue(limit int) ([]QueueJob, error) {
 		var job QueueJob
 		err := rows.Scan(&job.JobID, &job.ApplyURL, &job.Title, &job.Company)
 		if err != nil {
-			logrus.Warnf("⚠️ Error scanning job: %v", err)
+			fmt.Printf("⚠️ Error scanning job: %v\n", err)
 			continue
 		}
 		jobs = append(jobs, job)
@@ -438,7 +433,7 @@ func (s *LinkedInScraper) updateExistingJob(jobID int, jobPosting *models.JobPos
 	}
 
 	if len(updates) == 0 {
-		logrus.Warnf("⚠️ No new information to update for job %d", jobID)
+		fmt.Printf("⚠️ No new information to update for job %d\n", jobID)
 		return nil
 	}
 
@@ -455,6 +450,6 @@ func (s *LinkedInScraper) updateExistingJob(jobID int, jobPosting *models.JobPos
 		return fmt.Errorf("failed to update job: %w", err)
 	}
 
-	logrus.Infof("✅ Updated job %d with new information", jobID)
+	fmt.Printf("✅ Updated job %d with new information\n", jobID)
 	return nil
 }

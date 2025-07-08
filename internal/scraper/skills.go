@@ -2,9 +2,9 @@ package scraper
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/chromedp/chromedp"
-	"github.com/sirupsen/logrus"
 )
 
 // clickInsightsButton attempts to find and click the job insights button to open skills modal
@@ -21,9 +21,9 @@ func (s *LinkedInScraper) clickInsightsButton(ctx context.Context) error {
 	}
 
 	if skillsModalOpened {
-		logrus.Debug("✅ Skills modal opened successfully")
+		fmt.Println("✅ Skills modal opened successfully")
 	} else {
-		logrus.Debug("⚠️ No skills modal opened")
+		fmt.Println("⚠️ No skills modal opened")
 	}
 
 	return nil

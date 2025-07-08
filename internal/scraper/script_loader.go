@@ -18,14 +18,25 @@ const (
 
 // loadScript loads a JavaScript file from the embedded filesystem
 func loadScript(filename string) (string, error) {
+	fmt.Printf("📂 Attempting to load script: %s\n", filename)
+	
 	// Try to load from dist directory first
-	content, err := scriptFiles.ReadFile("scripts/dist/" + filename)
+	distPath := "scripts/dist/" + filename
+	fmt.Printf("📂 Trying dist path: %s\n", distPath)
+	content, err := scriptFiles.ReadFile(distPath)
 	if err != nil {
+		fmt.Printf("❌ Dist path failed: %v\n", err)
 		// Fallback to old location for backwards compatibility
-		content, err = scriptFiles.ReadFile("scripts/" + filename)
+		fallbackPath := "scripts/" + filename
+		fmt.Printf("📂 Trying fallback path: %s\n", fallbackPath)
+		content, err = scriptFiles.ReadFile(fallbackPath)
 		if err != nil {
+			fmt.Printf("❌ Fallback path also failed: %v\n", err)
 			return "", fmt.Errorf("failed to load script %s: %w", filename, err)
 		}
+		fmt.Printf("✅ Loaded from fallback path (%d chars)\n", len(content))
+	} else {
+		fmt.Printf("✅ Loaded from dist path (%d chars)\n", len(content))
 	}
 	return string(content), nil
 }
@@ -56,24 +67,33 @@ func loadTypeScript(filename string) (string, error) {
 
 // buildJobExtractionScript builds the complete job extraction script
 func (s *LinkedInScraper) buildJobExtractionScript() string {
+	fmt.Println("🔧 Building job extraction script...")
+	
 	// Load utils first - required by other scripts
 	utilsScriptContent, err := loadScript(utilsScript)
 	if err != nil {
-		// Fallback to embedded script if file loading fails
+		fmt.Printf("❌ Failed to load utils script: %v\n", err)
+		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
+	fmt.Printf("✅ Loaded utils script (%d chars)\n", len(utilsScriptContent))
 	
 	jobDetailsScript, err := loadScript("job_details.js")
 	if err != nil {
-		// Fallback to embedded script if file loading fails
+		fmt.Printf("❌ Failed to load job_details.js script: %v\n", err)
+		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
+	fmt.Printf("✅ Loaded job_details script (%d chars)\n", len(jobDetailsScript))
 	
 	skillsScript, err := loadScript("skills.js")
 	if err != nil {
-		// Fallback to embedded script if file loading fails
+		fmt.Printf("❌ Failed to load skills.js script: %v\n", err)
+		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
+	fmt.Printf("✅ Loaded skills script (%d chars)\n", len(skillsScript))
+
 	
 	return fmt.Sprintf(`
 		// Utils functionality first - make it globally available
@@ -88,6 +108,9 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 		// Execute job extraction and return result
 		(function() {
 			console.log('=== STARTING JOB EXTRACTION ===');
+			
+			// First run DOM debug to see what's available
+			debugDOM();
 			
 			// Execute job details extraction
 			const jobDetails = {

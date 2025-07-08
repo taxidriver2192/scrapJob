@@ -9,7 +9,6 @@ import (
 	"linkedin-job-scraper/internal/models"
 
 	"github.com/chromedp/chromedp"
-	"github.com/sirupsen/logrus"
 )
 
 // buildSearchURL constructs the LinkedIn job search URL with additional filters
@@ -25,7 +24,7 @@ func (s *LinkedInScraper) buildSearchURL(keywords, location string, start int) s
 
 // scrapePage scrapes a single page of job results
 func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFromPage int) ([]*models.JobPosting, error) {
-	logrus.Infof("🌐 Navigating to: %s", url)
+	fmt.Printf("🌐 Navigating to: %s\n", url)
 	
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
@@ -51,7 +50,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 	
 	// If intelligent wait fails, use short fallback sleep
 	if waitErr != nil {
-		logrus.Debugf("Intelligent wait failed (%v), using fallback sleep", waitErr)
+		fmt.Printf("Intelligent wait failed (%v), using fallback sleep\n", waitErr)
 		err = chromedp.Run(ctx,
 			chromedp.Sleep(3*time.Second), // Slightly longer for job search pages
 		)
@@ -70,7 +69,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		return nil, fmt.Errorf("failed to get page title: %w", err)
 	}
 	
-	logrus.Infof("📄 Page loaded: %s", pageTitle)
+	fmt.Printf("📄 Page loaded: %s\n", pageTitle)
 
 	// Check if login is required
 	var hasLoginForm bool
@@ -84,18 +83,18 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 
 	// Wait for job results to load and extract URLs
 	// Note: We no longer scroll as we use pagination via start parameter
-	logrus.Info("🔍 Extracting job URLs from current page...")
+	fmt.Println("🔍 Extracting job URLs from current page...")
 	jobURLs, err := s.extractJobURLs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract job URLs: %w", err)
 	}
 
 	if len(jobURLs) == 0 {
-		logrus.Warn("⚠️  No job URLs found on this page")
+		fmt.Println("⚠️  No job URLs found on this page")
 		return []*models.JobPosting{}, nil
 	}
 
-	logrus.Infof("✅ Found %d job URLs on page", len(jobURLs))
+	fmt.Printf("✅ Found %d job URLs on page\n", len(jobURLs))
 
 	// Filter out jobs that already exist in database to avoid unnecessary scraping
 	var filteredJobURLs []string
@@ -105,7 +104,7 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		// Extract LinkedIn job ID from URL
 		jobID, err := extractLinkedInJobIDFromURL(jobURL)
 		if err != nil {
-			logrus.Warnf("⚠️  Could not extract job ID from URL %s: %v", jobURL, err)
+			fmt.Printf("⚠️  Could not extract job ID from URL %s: %v\n", jobURL, err)
 			// Include URL anyway - let the detailed scraper handle it
 			filteredJobURLs = append(filteredJobURLs, jobURL)
 			continue
@@ -114,14 +113,14 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		// Check if job already exists in database
 		exists, err := s.jobRepo.ExistsLinkedInJobID(jobID)
 		if err != nil {
-			logrus.Warnf("⚠️  Failed to check if job %d exists: %v", jobID, err)
+			fmt.Printf("⚠️  Failed to check if job %d exists: %v\n", jobID, err)
 			// Include URL anyway to be safe
 			filteredJobURLs = append(filteredJobURLs, jobURL)
 			continue
 		}
 		
 		if exists {
-			logrus.Debugf("⏭️  Job %d already exists, skipping URL scraping", jobID)
+			fmt.Printf("⏭️  Job %d already exists, skipping URL scraping\n", jobID)
 			skippedCount++
 			continue
 		}
@@ -130,23 +129,23 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 	}
 	
 	if skippedCount > 0 {
-		logrus.Infof("⏭️  Skipped %d existing jobs, will scrape %d new jobs", skippedCount, len(filteredJobURLs))
+		fmt.Printf("⏭️  Skipped %d existing jobs, will scrape %d new jobs\n", skippedCount, len(filteredJobURLs))
 	}
 
 	// Limit to specified max jobs from this page if needed
 	if len(filteredJobURLs) > maxJobsFromPage {
 		filteredJobURLs = filteredJobURLs[:maxJobsFromPage]
-		logrus.Infof("📊 Limited to %d jobs from this page", maxJobsFromPage)
+		fmt.Printf("📊 Limited to %d jobs from this page\n", maxJobsFromPage)
 	}
 
 	// Scrape details from each job page
 	var jobs []*models.JobPosting
 	for i, jobURL := range filteredJobURLs {
-		logrus.Infof("📋 Scraping job %d/%d: %s", i+1, len(filteredJobURLs), jobURL)
+		fmt.Printf("📋 Scraping job %d/%d: %s\n", i+1, len(filteredJobURLs), jobURL)
 		
 		job, err := s.scrapeJobDetails(ctx, jobURL)
 		if err != nil {
-			logrus.Errorf("❌ Failed to scrape job details from %s: %v", jobURL, err)
+			fmt.Printf("❌ Failed to scrape job details from %s: %v\n", jobURL, err)
 			continue
 		}
 		
@@ -161,6 +160,6 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		}
 	}
 
-	logrus.Infof("✅ Scraped %d job details from page", len(jobs))
+	fmt.Printf("✅ Scraped %d job details from page\n", len(jobs))
 	return jobs, nil
 }

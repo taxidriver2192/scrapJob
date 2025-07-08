@@ -12,6 +12,7 @@ class Ratings extends Component
     use WithPagination;
 
     public $search = '';
+    public $selectedMetric = 'overall_score';
     public $ratingTypeFilter = '';
     public $companyFilter = '';
     public $scoreRangeFilter = '';
@@ -25,7 +26,7 @@ class Ratings extends Component
     public $totalRatings = 0;
     public $currentRatings = [];
 
-    protected $queryString = ['search', 'ratingTypeFilter', 'companyFilter', 'scoreRangeFilter', 'locationFilter'];
+    protected $queryString = ['search', 'selectedMetric', 'ratingTypeFilter', 'companyFilter', 'scoreRangeFilter', 'locationFilter'];
 
     public function updatingSearch()
     {
@@ -48,6 +49,11 @@ class Ratings extends Component
     }
 
     public function updatingLocationFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSelectedMetric()
     {
         $this->resetPage();
     }
@@ -235,11 +241,21 @@ class Ratings extends Component
             });
     }
 
+    public function getRatingTypes()
+    {
+        return JobRating::distinct()
+            ->whereNotNull('rating_type')
+            ->where('rating_type', '!=', '')
+            ->pluck('rating_type')
+            ->sort()
+            ->values();
+    }
+
     public function render()
     {
         $ratings = $this->getFilteredRatings()->paginate($this->perPage);
 
-        $ratingTypes = JobRating::distinct('rating_type')->pluck('rating_type');
+        $ratingTypes = $this->getRatingTypes();
 
         $companies = JobRating::with('jobPosting.company')
             ->whereHas('jobPosting.company')

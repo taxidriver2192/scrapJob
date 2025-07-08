@@ -27,6 +27,12 @@ var scrapeCmd = &cobra.Command{
 		keywords, _ := cmd.Flags().GetString("keywords")
 		location, _ := cmd.Flags().GetString("location")
 		totalJobs, _ := cmd.Flags().GetInt("total-jobs")
+		debug, _ := cmd.Flags().GetBool("debug")
+
+		if debug {
+			logrus.SetLevel(logrus.DebugLevel)
+			logrus.Info("🐛 Debug mode enabled - will show detailed job data")
+		}
 
 		runScraper(keywords, location, totalJobs)
 	},
@@ -44,6 +50,7 @@ func init() {
 	scrapeCmd.Flags().StringP("keywords", "k", "", "Job search keywords (required)")
 	scrapeCmd.Flags().StringP("location", "l", "", "Job search location (required)")
 	scrapeCmd.Flags().IntP("total-jobs", "t", 50, "Total number of jobs to scrape (LinkedIn shows 25 jobs per page)")
+	scrapeCmd.Flags().BoolP("debug", "d", false, "Enable debug mode with detailed job data output")
 	scrapeCmd.MarkFlagRequired("keywords")
 	scrapeCmd.MarkFlagRequired("location")
 

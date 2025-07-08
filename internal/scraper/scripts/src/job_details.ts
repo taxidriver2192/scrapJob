@@ -4,6 +4,59 @@
 // LinkedIn job details extraction functions
 console.log('Loading job details extraction functions...');
 
+// Debug function to inspect the DOM
+const debugDOM = function(): void {
+    console.log('=== DOM DEBUG INSPECTION ===');
+    console.log('Current URL:', window.location.href);
+    console.log('Page title:', document.title);
+    console.log('Document ready state:', document.readyState);
+    
+    // Check for job description containers
+    const jobDescriptionContainers = document.querySelectorAll('[class*="job"], [class*="description"]');
+    console.log('Total job/description elements:', jobDescriptionContainers.length);
+    
+    // Show top 20 elements with their classes and IDs
+    for (let i = 0; i < Math.min(jobDescriptionContainers.length, 20); i++) {
+        const elem = jobDescriptionContainers[i];
+        console.log(`Element ${i + 1}:`, {
+            tag: elem.tagName,
+            id: elem.id || 'no-id',
+            className: elem.className,
+            textLength: elem.textContent?.length || 0,
+            textPreview: elem.textContent?.substring(0, 100) + '...'
+        });
+    }
+    
+    // Specifically look for job-details ID
+    const jobDetailsById = document.getElementById('job-details');
+    if (jobDetailsById) {
+        console.log('✅ Found #job-details element:', {
+            tag: jobDetailsById.tagName,
+            className: jobDetailsById.className,
+            textLength: jobDetailsById.textContent?.length || 0,
+            innerHTML: jobDetailsById.innerHTML.substring(0, 500) + '...'
+        });
+    } else {
+        console.log('❌ No element with id="job-details" found');
+    }
+    
+    // Look for jobs-box__html-content
+    const jobsBoxContent = document.querySelector('.jobs-box__html-content');
+    if (jobsBoxContent) {
+        console.log('✅ Found .jobs-box__html-content element:', {
+            tag: jobsBoxContent.tagName,
+            id: jobsBoxContent.id || 'no-id',
+            className: jobsBoxContent.className,
+            textLength: jobsBoxContent.textContent?.length || 0,
+            innerHTML: jobsBoxContent.innerHTML.substring(0, 500) + '...'
+        });
+    } else {
+        console.log('❌ No element with class="jobs-box__html-content" found');
+    }
+    
+    console.log('=== END DOM DEBUG ===');
+};
+
 // Job Title extraction
 const getTitleText = function(): string {
     const selectors = [
@@ -50,61 +103,101 @@ const getLocationData = function(): string {
         '.job-details-jobs-unified-top-card__primary-description-container .t-black--light',
         '.topcard__flavor-row .topcard__flavor--bullet',
         '.job-details-jobs-unified-top-card__primary-description-container span',
-        '.topcard__flavor-row span'
+        '.topcard__flavor-row span',
+        '.job-details-jobs-unified-top-card__primary-description .t-black--light'
     ];
     
-    for (const sel of selectors) {
+    console.log('=== SEARCHING FOR LOCATION ===');
+    console.log('Total selectors to try:', selectors.length);
+    
+    for (let i = 0; i < selectors.length; i++) {
+        const sel = selectors[i];
+        console.log(`[${i + 1}/${selectors.length}] Trying selector: ${sel}`);
         const elem = Utils.safeQuery<HTMLElement>(sel);
-        if (elem && elem.innerText) {
-            const text = elem.innerText.trim();
-            console.log('Found location element with selector:', sel, 'text:', text);
+        
+        if (elem) {
+            console.log('✅ Element found with selector:', sel);
+            console.log('Element HTML:', elem.outerHTML.substring(0, 200) + '...');
             
-            // Check if this contains location + time + applicants info
-            if (text.includes('·') && (text.includes('siden') || text.includes('ago') || text.includes('ansøgere') || text.includes('applicants'))) {
-                console.log('✅ Found full location data:', text);
-                return text;
+            if (elem.innerText) {
+                const text = elem.innerText.trim();
+                console.log('Element text:', text);
+                
+                // Check if this contains location + time + applicants info
+                if (text.includes('·') && (text.includes('siden') || text.includes('ago') || text.includes('ansøgere') || text.includes('applicants'))) {
+                    console.log('✅ Found full location data:', text);
+                    return text;
+                }
+                
+                // Filter out non-location text but keep substantial location info
+                if (!text.includes('employees') && !text.includes('followers') && text.length > 2) {
+                    console.log('✅ Found basic location with selector:', sel, 'text:', text);
+                    return text;
+                }
+            } else {
+                console.log('❌ Element has no innerText');
             }
-            
-            // Filter out non-location text but keep substantial location info
-            if (!text.includes('employees') && !text.includes('followers') && text.length > 2) {
-                console.log('Found basic location with selector:', sel, 'text:', text);
-                return text;
-            }
+        } else {
+            console.log('❌ Element not found for selector:', sel);
         }
     }
-    console.log('No location data found');
+    
+    console.log('❌ No location data found');
     return '';
 };
 
 // Description extraction
+console.log('✅ Description function is being defined!');
 const getDescriptionText = function(): string {
+    console.log('✅ getDescriptionText function called!');
+    
     const selectors = [
-        'div.description__text',
-        'div#job-details > span.formatted-content',
+        'div#job-details',
+        '.jobs-box__html-content#job-details',
+        '.jobs-box__html-content',
+        'div[data-job-id] .description',
+        '.job-description',
+        '.job-details-description',
         '.job-details-jobs-unified-top-card__job-description',
+        '.jobs-description__container',
+        '.jobs-description-content',
         '.jobs-description-content__text',
-        '.jobs-description__content',
-        '.job-details-jobs-unified-top-card__job-description .jobs-description-content__text',
-        'section[data-max-lines] .jobs-description-content__text',
-        '.jobs-description .jobs-description-content__text',
-        '[data-tracking-control-name="public_jobs_description"] .jobs-description-content__text',
-        '.jobs-unified-top-card__content .jobs-description__content',
-        'div[data-job-id] .jobs-description-content__text',
         '.show-more-less-html__markup',
-        '.jobs-box__html-content'
+        '.jobs-box__html-content .show-more-less-html__markup',
+        '.jobs-description .show-more-less-html__markup',
+        '.jobs-description-content .show-more-less-html__markup',
+        '[data-testid="job-description"]',
+        '[data-testid="job-details-description"]',
+        '.jobs-unified-top-card__job-description',
+        '.jobs-description'
     ];
     
-    console.log('=== SEARCHING FOR DESCRIPTION ===');
+    console.log('Total selectors to try:', selectors.length);
     
-    for (const sel of selectors) {
+    for (let i = 0; i < selectors.length; i++) {
+        const sel = selectors[i];
+        console.log(`[${i + 1}/${selectors.length}] Trying selector: ${sel}`);
         const elem = Utils.safeQuery<HTMLElement>(sel);
-        if (elem && elem.innerText && elem.innerText.trim().length > 50) {
-            console.log('✅ Found description with selector:', sel, 'length:', elem.innerText.length);
-            return elem.innerText.trim();
+        
+        if (elem) {
+            console.log('✅ Element found with selector:', sel);
+            
+            if (elem.textContent) {
+                const text = elem.textContent.trim();
+                console.log('Element text length:', text.length);
+                console.log('Element text preview:', text.substring(0, 200) + '...');
+                
+                if (text.length > 50) {
+                    console.log('✅ Found description with selector:', sel);
+                    return text;
+                }
+            }
+        } else {
+            console.log('❌ Element not found for selector:', sel);
         }
     }
     
-    console.log('❌ No description found');
+    console.log('❌ No description found with any selector');
     return '';
 };
 

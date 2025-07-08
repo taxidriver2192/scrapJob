@@ -89,6 +89,26 @@ func getSkillsPointer(data map[string]interface{}, key string) *models.SkillsLis
 	return nil
 }
 
+// Helper function to safely get string value from map
+func getStringValue(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+// Helper function to safely get slice value from map
+func getSliceValue(m map[string]interface{}, key string) []interface{} {
+	if val, ok := m[key]; ok {
+		if slice, ok := val.([]interface{}); ok {
+			return slice
+		}
+	}
+	return []interface{}{}
+}
+
 // Date parsing utilities
 func parseRelativeDate(dateStr string) *time.Time {
 	dateStr = strings.ToLower(strings.TrimSpace(dateStr))

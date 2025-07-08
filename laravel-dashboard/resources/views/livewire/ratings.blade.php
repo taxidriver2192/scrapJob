@@ -14,11 +14,12 @@
                 />
             </div>
             <div>
-                <flux:select wire:model.live="ratingTypeFilter">
-                    <option value="">All Rating Types</option>
-                    @foreach($ratingTypes as $type)
-                        <option value="{{ $type }}">{{ ucfirst(str_replace('_', ' ', $type)) }}</option>
-                    @endforeach
+                <flux:select wire:model.live="selectedMetric">
+                    <option value="overall_score">Overall Score</option>
+                    <option value="location_score">Location</option>
+                    <option value="tech_score">Tech</option>
+                    <option value="team_size_score">Team Size</option>
+                    <option value="leadership_score">Leadership</option>
                 </flux:select>
             </div>
             <div>
@@ -35,6 +36,14 @@
                     <option value="high">High (80-100%)</option>
                     <option value="medium">Medium (60-79%)</option>
                     <option value="low">Low (0-59%)</option>
+                </flux:select>
+            </div>
+            <div>
+                <flux:select wire:model.live="ratingTypeFilter">
+                    <option value="">All Rating Types</option>
+                    @foreach($ratingTypes as $type)
+                        <option value="{{ $type }}">{{ ucfirst(str_replace('_', ' ', $type)) }}</option>
+                    @endforeach
                 </flux:select>
             </div>
         </div>
@@ -128,65 +137,30 @@
                                 </button>
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('overall_score')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Overall Score</span>
-                                    @if($sortField === 'overall_score')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('location_score')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Location</span>
-                                    @if($sortField === 'location_score')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('tech_score')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Tech</span>
-                                    @if($sortField === 'tech_score')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('team_size_score')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Team Size</span>
-                                    @if($sortField === 'team_size_score')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('leadership_score')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Leadership</span>
-                                    @if($sortField === 'leadership_score')
+                                <button wire:click="sortBy('{{ $selectedMetric }}')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
+                                    @switch($selectedMetric)
+                                        @case('overall_score')
+                                            <i class="fas fa-trophy mr-1 text-yellow-500"></i>
+                                            <span>Primary: Overall Score</span>
+                                            @break
+                                        @case('location_score')
+                                            <i class="fas fa-map-marker-alt mr-1 text-blue-500"></i>
+                                            <span>Primary: Location</span>
+                                            @break
+                                        @case('tech_score')
+                                            <i class="fas fa-code mr-1 text-purple-500"></i>
+                                            <span>Primary: Tech</span>
+                                            @break
+                                        @case('team_size_score')
+                                            <i class="fas fa-users mr-1 text-orange-500"></i>
+                                            <span>Primary: Team Size</span>
+                                            @break
+                                        @case('leadership_score')
+                                            <i class="fas fa-crown mr-1 text-indigo-500"></i>
+                                            <span>Primary: Leadership</span>
+                                            @break
+                                    @endswitch
+                                    @if($sortField === $selectedMetric)
                                         @if($sortDirection === 'asc')
                                             <i class="fas fa-sort-up text-blue-500"></i>
                                         @else
@@ -232,71 +206,112 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->overall_score)
-                                    <button
-                                        wire:click="filterByScoreRange('{{ $rating->overall_score >= 80 ? 'high' : ($rating->overall_score >= 60 ? 'medium' : 'low') }}')"
-                                        class="cursor-pointer"
-                                        title="Filter by score range"
-                                    >
-                                        <flux:badge color="{{ $rating->overall_score >= 80 ? 'green' : ($rating->overall_score >= 60 ? 'yellow' : 'red') }}">
-                                            {{ $rating->overall_score }}%
-                                        </flux:badge>
-                                    </button>
-                                @else
-                                    <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->location_score)
-                                    <button
-                                        wire:click="filterByScoreRange('{{ $rating->location_score >= 80 ? 'high' : ($rating->location_score >= 60 ? 'medium' : 'low') }}')"
-                                        class="cursor-pointer hover:scale-105 transition-transform"
-                                        title="Filter by score range"
-                                    >
-                                        <flux:badge color="zinc">{{ $rating->location_score }}%</flux:badge>
-                                    </button>
-                                @else
-                                    <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->tech_score)
-                                    <button
-                                        wire:click="filterByScoreRange('{{ $rating->tech_score >= 80 ? 'high' : ($rating->tech_score >= 60 ? 'medium' : 'low') }}')"
-                                        class="cursor-pointer hover:scale-105 transition-transform"
-                                        title="Filter by score range"
-                                    >
-                                        <flux:badge color="zinc">{{ $rating->tech_score }}%</flux:badge>
-                                    </button>
-                                @else
-                                    <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->team_size_score)
-                                    <button
-                                        wire:click="filterByScoreRange('{{ $rating->team_size_score >= 80 ? 'high' : ($rating->team_size_score >= 60 ? 'medium' : 'low') }}')"
-                                        class="cursor-pointer hover:scale-105 transition-transform"
-                                        title="Filter by score range"
-                                    >
-                                        <flux:badge color="zinc">{{ $rating->team_size_score }}%</flux:badge>
-                                    </button>
-                                @else
-                                    <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->leadership_score)
-                                    <button
-                                        wire:click="filterByScoreRange('{{ $rating->leadership_score >= 80 ? 'high' : ($rating->leadership_score >= 60 ? 'medium' : 'low') }}')"
-                                        class="cursor-pointer hover:scale-105 transition-transform"
-                                        title="Filter by score range"
-                                    >
-                                        <flux:badge color="zinc">{{ $rating->leadership_score }}%</flux:badge>
-                                    </button>
-                                @else
-                                    <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                                @endif
+                                <div class="space-y-2">
+                                    <!-- Overall Score -->
+                                    @if($rating->overall_score)
+                                        <button
+                                            wire:click="filterByScoreRange('{{ $rating->overall_score >= 80 ? 'high' : ($rating->overall_score >= 60 ? 'medium' : 'low') }}')"
+                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'overall_score' ? 'bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg border-l-4 border-yellow-500' : '' }}"
+                                            title="Filter by overall score range"
+                                        >
+                                            <i class="fas fa-trophy text-yellow-500 {{ $selectedMetric === 'overall_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'overall_score' ? 'font-semibold' : '' }}">Overall:</span>
+                                            <flux:badge color="{{ $rating->overall_score >= 80 ? 'green' : ($rating->overall_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'overall_score' ? 'md' : 'sm' }}">
+                                                {{ $rating->overall_score }}%
+                                            </flux:badge>
+                                        </button>
+                                    @else
+                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'overall_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
+                                            <i class="fas fa-trophy text-zinc-400 {{ $selectedMetric === 'overall_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs w-16 {{ $selectedMetric === 'overall_score' ? 'font-semibold' : '' }}">Overall:</span>
+                                            <span class="text-xs">N/A</span>
+                                        </div>
+                                    @endif
+
+                                    <!-- Location Score -->
+                                    @if($rating->location_score)
+                                        <button
+                                            wire:click="filterByScoreRange('{{ $rating->location_score >= 80 ? 'high' : ($rating->location_score >= 60 ? 'medium' : 'low') }}')"
+                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'location_score' ? 'bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border-l-4 border-blue-500' : '' }}"
+                                            title="Filter by location score range"
+                                        >
+                                            <i class="fas fa-map-marker-alt text-blue-500 {{ $selectedMetric === 'location_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'location_score' ? 'font-semibold' : '' }}">Location:</span>
+                                            <flux:badge color="{{ $rating->location_score >= 80 ? 'green' : ($rating->location_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'location_score' ? 'md' : 'sm' }}">
+                                                {{ $rating->location_score }}%
+                                            </flux:badge>
+                                        </button>
+                                    @else
+                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'location_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
+                                            <i class="fas fa-map-marker-alt text-zinc-400 {{ $selectedMetric === 'location_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs w-16 {{ $selectedMetric === 'location_score' ? 'font-semibold' : '' }}">Location:</span>
+                                            <span class="text-xs">N/A</span>
+                                        </div>
+                                    @endif
+
+                                    <!-- Tech Score -->
+                                    @if($rating->tech_score)
+                                        <button
+                                            wire:click="filterByScoreRange('{{ $rating->tech_score >= 80 ? 'high' : ($rating->tech_score >= 60 ? 'medium' : 'low') }}')"
+                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'tech_score' ? 'bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg border-l-4 border-purple-500' : '' }}"
+                                            title="Filter by tech score range"
+                                        >
+                                            <i class="fas fa-code text-purple-500 {{ $selectedMetric === 'tech_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'tech_score' ? 'font-semibold' : '' }}">Tech:</span>
+                                            <flux:badge color="{{ $rating->tech_score >= 80 ? 'green' : ($rating->tech_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'tech_score' ? 'md' : 'sm' }}">
+                                                {{ $rating->tech_score }}%
+                                            </flux:badge>
+                                        </button>
+                                    @else
+                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'tech_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
+                                            <i class="fas fa-code text-zinc-400 {{ $selectedMetric === 'tech_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs w-16 {{ $selectedMetric === 'tech_score' ? 'font-semibold' : '' }}">Tech:</span>
+                                            <span class="text-xs">N/A</span>
+                                        </div>
+                                    @endif
+
+                                    <!-- Team Size Score -->
+                                    @if($rating->team_size_score)
+                                        <button
+                                            wire:click="filterByScoreRange('{{ $rating->team_size_score >= 80 ? 'high' : ($rating->team_size_score >= 60 ? 'medium' : 'low') }}')"
+                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'team_size_score' ? 'bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border-l-4 border-orange-500' : '' }}"
+                                            title="Filter by team size score range"
+                                        >
+                                            <i class="fas fa-users text-orange-500 {{ $selectedMetric === 'team_size_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'team_size_score' ? 'font-semibold' : '' }}">Team:</span>
+                                            <flux:badge color="{{ $rating->team_size_score >= 80 ? 'green' : ($rating->team_size_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'team_size_score' ? 'md' : 'sm' }}">
+                                                {{ $rating->team_size_score }}%
+                                            </flux:badge>
+                                        </button>
+                                    @else
+                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'team_size_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
+                                            <i class="fas fa-users text-zinc-400 {{ $selectedMetric === 'team_size_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs w-16 {{ $selectedMetric === 'team_size_score' ? 'font-semibold' : '' }}">Team:</span>
+                                            <span class="text-xs">N/A</span>
+                                        </div>
+                                    @endif
+
+                                    <!-- Leadership Score -->
+                                    @if($rating->leadership_score)
+                                        <button
+                                            wire:click="filterByScoreRange('{{ $rating->leadership_score >= 80 ? 'high' : ($rating->leadership_score >= 60 ? 'medium' : 'low') }}')"
+                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'leadership_score' ? 'bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg border-l-4 border-indigo-500' : '' }}"
+                                            title="Filter by leadership score range"
+                                        >
+                                            <i class="fas fa-crown text-indigo-500 {{ $selectedMetric === 'leadership_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'leadership_score' ? 'font-semibold' : '' }}">Leader:</span>
+                                            <flux:badge color="{{ $rating->leadership_score >= 80 ? 'green' : ($rating->leadership_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'leadership_score' ? 'md' : 'sm' }}">
+                                                {{ $rating->leadership_score }}%
+                                            </flux:badge>
+                                        </button>
+                                    @else
+                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'leadership_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
+                                            <i class="fas fa-crown text-zinc-400 {{ $selectedMetric === 'leadership_score' ? 'text-lg' : '' }}"></i>
+                                            <span class="text-xs w-16 {{ $selectedMetric === 'leadership_score' ? 'font-semibold' : '' }}">Leader:</span>
+                                            <span class="text-xs">N/A</span>
+                                        </div>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
                                 <button
@@ -315,7 +330,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                            <td colspan="5" class="px-6 py-8 text-center text-zinc-500 dark:text-zinc-400">
                                 <i class="fas fa-star text-4xl mb-4"></i>
                                 <p class="text-lg">No ratings found matching your criteria.</p>
                                 @if($search || $ratingTypeFilter || $companyFilter || $scoreRangeFilter || $locationFilter)
