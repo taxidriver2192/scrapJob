@@ -21,6 +21,9 @@ class JobPosting extends Model
         'work_type',
         'skills',
         'openai_adresse',
+        'lat',
+        'lon',
+        'postcode',
     ];
 
     protected $casts = [
@@ -28,6 +31,8 @@ class JobPosting extends Model
         'skills' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'lat' => 'decimal:7',
+        'lon' => 'decimal:7',
     ];
 
     public function company()

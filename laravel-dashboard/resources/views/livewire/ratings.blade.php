@@ -5,7 +5,7 @@
         </flux:heading>
 
         <!-- Advanced Search and Filter Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-6">
             <div class="lg:col-span-2">
                 <flux:input
                     wire:model.live.debounce.300ms="search"
@@ -44,6 +44,35 @@
                     @foreach($ratingTypes as $type)
                         <option value="{{ $type }}">{{ ucfirst(str_replace('_', ' ', $type)) }}</option>
                     @endforeach
+                </flux:select>
+            </div>
+        </div>
+
+        <!-- Sorting Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <i class="fas fa-sort mr-1"></i>Sort By
+                </label>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Choose which field to sort the results by</p>
+                <flux:select wire:model.live="sortField">
+                    <option value="overall_score">Overall Score</option>
+                    <option value="location_score">Location Score</option>
+                    <option value="tech_score">Tech Score</option>
+                    <option value="team_size_score">Team Size Score</option>
+                    <option value="leadership_score">Leadership Score</option>
+                    <option value="company">Company Name</option>
+                    <option value="rated_at">Rating Date</option>
+                </flux:select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <i class="fas fa-arrow-up-down mr-1"></i>Sort Direction
+                </label>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Choose ascending (lowest first) or descending (highest first)</p>
+                <flux:select wire:model.live="sortDirection">
+                    <option value="desc">Descending (High to Low)</option>
+                    <option value="asc">Ascending (Low to High)</option>
                 </flux:select>
             </div>
         </div>
@@ -117,220 +146,112 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
-                    <thead class="bg-zinc-50 dark:bg-zinc-800">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Job Title</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('company')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Company</span>
-                                    @if($sortField === 'company')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
+            <flux:table :paginate="$ratings">
+                <flux:table.columns>
+                    <flux:table.column>Job Title</flux:table.column>
+                    <flux:table.column>Company</flux:table.column>
+                    <flux:table.column>
+                        @switch($selectedMetric)
+                            @case('overall_score')
+                                <i class="fas fa-trophy mr-1 text-yellow-500"></i>
+                                <span>Primary: Overall Score</span>
+                                @break
+                            @case('location_score')
+                                <i class="fas fa-map-marker-alt mr-1 text-blue-500"></i>
+                                <span>Primary: Location</span>
+                                @break
+                            @case('tech_score')
+                                <i class="fas fa-code mr-1 text-purple-500"></i>
+                                <span>Primary: Tech</span>
+                                @break
+                            @case('team_size_score')
+                                <i class="fas fa-users mr-1 text-orange-500"></i>
+                                <span>Primary: Team Size</span>
+                                @break
+                            @case('leadership_score')
+                                <i class="fas fa-crown mr-1 text-indigo-500"></i>
+                                <span>Primary: Leadership</span>
+                                @break
+                        @endswitch
+                    </flux:table.column>
+                    <flux:table.column>Rated At</flux:table.column>
+                </flux:table.columns>
+
+                <flux:table.rows>
+                    @forelse($ratings as $index => $rating)
+                        <flux:table.row :key="$rating->id ?? $rating->rating_id" class="{{ $selectedRating && $selectedRating->id == ($rating->id ?? $rating->rating_id) ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-500' : '' }}">
+                            <flux:table.cell>
+                                <button
+                                    wire:click="viewDetails({{ $rating->id ?? $rating->rating_id }})"
+                                    class="text-left block w-full hover:opacity-80 transition-opacity"
+                                    title="Click to view details"
+                                >
+                                    <div class="font-medium text-zinc-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400">
+                                        {{ $rating->jobPosting->title ?? 'N/A' }}
+                                    </div>
+                                    @if($rating->jobPosting->description)
+                                        <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px] mt-1">
+                                            {{ Str::limit(strip_tags($rating->jobPosting->description), 100) }}
+                                        </div>
                                     @endif
                                 </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('{{ $selectedMetric }}')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    @switch($selectedMetric)
-                                        @case('overall_score')
-                                            <i class="fas fa-trophy mr-1 text-yellow-500"></i>
-                                            <span>Primary: Overall Score</span>
-                                            @break
-                                        @case('location_score')
-                                            <i class="fas fa-map-marker-alt mr-1 text-blue-500"></i>
-                                            <span>Primary: Location</span>
-                                            @break
-                                        @case('tech_score')
-                                            <i class="fas fa-code mr-1 text-purple-500"></i>
-                                            <span>Primary: Tech</span>
-                                            @break
-                                        @case('team_size_score')
-                                            <i class="fas fa-users mr-1 text-orange-500"></i>
-                                            <span>Primary: Team Size</span>
-                                            @break
-                                        @case('leadership_score')
-                                            <i class="fas fa-crown mr-1 text-indigo-500"></i>
-                                            <span>Primary: Leadership</span>
-                                            @break
-                                    @endswitch
-                                    @if($sortField === $selectedMetric)
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                <button wire:click="sortBy('rated_at')" class="flex items-center space-x-1 hover:text-zinc-700 dark:hover:text-zinc-200">
-                                    <span>Rated At</span>
-                                    @if($sortField === 'rated_at')
-                                        @if($sortDirection === 'asc')
-                                            <i class="fas fa-sort-up text-blue-500"></i>
-                                        @else
-                                            <i class="fas fa-sort-down text-blue-500"></i>
-                                        @endif
-                                    @else
-                                        <i class="fas fa-sort text-zinc-400"></i>
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-700">
-                        @forelse($ratings as $index => $rating)
-                        <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800 {{ $selectedRating && $selectedRating->id == ($rating->id ?? $rating->rating_id) ? 'bg-blue-100 dark:bg-blue-900/50 ring-2 ring-blue-500' : '' }}">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">{{ $rating->jobPosting->title ?? 'N/A' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                @if($rating->jobPosting->company->name ?? false)
-                                    <button
-                                        wire:click="filterByCompany('{{ $rating->jobPosting->company->name }}')"
-                                        class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline decoration-dotted cursor-pointer"
-                                        title="Filter by this company"
-                                    >
-                                        {{ $rating->jobPosting->company->name }}
-                                    </button>
-                                @else
-                                    N/A
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
+                            </flux:table.cell>
+
+                            <flux:table.cell>
+                                {{ $rating->jobPosting->company->name ?? 'N/A' }}
+                            </flux:table.cell>
+
+                            <flux:table.cell>
                                 <div class="space-y-2">
                                     <!-- Overall Score -->
-                                    @if($rating->overall_score)
-                                        <button
-                                            wire:click="filterByScoreRange('{{ $rating->overall_score >= 80 ? 'high' : ($rating->overall_score >= 60 ? 'medium' : 'low') }}')"
-                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'overall_score' ? 'bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg border-l-4 border-yellow-500' : '' }}"
-                                            title="Filter by overall score range"
-                                        >
-                                            <i class="fas fa-trophy text-yellow-500 {{ $selectedMetric === 'overall_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'overall_score' ? 'font-semibold' : '' }}">Overall:</span>
-                                            <flux:badge color="{{ $rating->overall_score >= 80 ? 'green' : ($rating->overall_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'overall_score' ? 'md' : 'sm' }}">
-                                                {{ $rating->overall_score }}%
-                                            </flux:badge>
-                                        </button>
-                                    @else
-                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'overall_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
-                                            <i class="fas fa-trophy text-zinc-400 {{ $selectedMetric === 'overall_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs w-16 {{ $selectedMetric === 'overall_score' ? 'font-semibold' : '' }}">Overall:</span>
-                                            <span class="text-xs">N/A</span>
-                                        </div>
-                                    @endif
+                                    <livewire:components.score-badge
+                                        :key="'overall_' . ($rating->id ?? $rating->rating_id)"
+                                        scoreType="overall_score"
+                                        :score="$rating->overall_score"
+                                        :selectedMetric="$selectedMetric"
+                                    />
 
                                     <!-- Location Score -->
-                                    @if($rating->location_score)
-                                        <button
-                                            wire:click="filterByScoreRange('{{ $rating->location_score >= 80 ? 'high' : ($rating->location_score >= 60 ? 'medium' : 'low') }}')"
-                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'location_score' ? 'bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border-l-4 border-blue-500' : '' }}"
-                                            title="Filter by location score range"
-                                        >
-                                            <i class="fas fa-map-marker-alt text-blue-500 {{ $selectedMetric === 'location_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'location_score' ? 'font-semibold' : '' }}">Location:</span>
-                                            <flux:badge color="{{ $rating->location_score >= 80 ? 'green' : ($rating->location_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'location_score' ? 'md' : 'sm' }}">
-                                                {{ $rating->location_score }}%
-                                            </flux:badge>
-                                        </button>
-                                    @else
-                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'location_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
-                                            <i class="fas fa-map-marker-alt text-zinc-400 {{ $selectedMetric === 'location_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs w-16 {{ $selectedMetric === 'location_score' ? 'font-semibold' : '' }}">Location:</span>
-                                            <span class="text-xs">N/A</span>
-                                        </div>
-                                    @endif
+                                    <livewire:components.score-badge
+                                        :key="'location_' . ($rating->id ?? $rating->rating_id)"
+                                        scoreType="location_score"
+                                        :score="$rating->location_score"
+                                        :selectedMetric="$selectedMetric"
+                                    />
 
                                     <!-- Tech Score -->
-                                    @if($rating->tech_score)
-                                        <button
-                                            wire:click="filterByScoreRange('{{ $rating->tech_score >= 80 ? 'high' : ($rating->tech_score >= 60 ? 'medium' : 'low') }}')"
-                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'tech_score' ? 'bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg border-l-4 border-purple-500' : '' }}"
-                                            title="Filter by tech score range"
-                                        >
-                                            <i class="fas fa-code text-purple-500 {{ $selectedMetric === 'tech_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'tech_score' ? 'font-semibold' : '' }}">Tech:</span>
-                                            <flux:badge color="{{ $rating->tech_score >= 80 ? 'green' : ($rating->tech_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'tech_score' ? 'md' : 'sm' }}">
-                                                {{ $rating->tech_score }}%
-                                            </flux:badge>
-                                        </button>
-                                    @else
-                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'tech_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
-                                            <i class="fas fa-code text-zinc-400 {{ $selectedMetric === 'tech_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs w-16 {{ $selectedMetric === 'tech_score' ? 'font-semibold' : '' }}">Tech:</span>
-                                            <span class="text-xs">N/A</span>
-                                        </div>
-                                    @endif
+                                    <livewire:components.score-badge
+                                        :key="'tech_' . ($rating->id ?? $rating->rating_id)"
+                                        scoreType="tech_score"
+                                        :score="$rating->tech_score"
+                                        :selectedMetric="$selectedMetric"
+                                    />
 
                                     <!-- Team Size Score -->
-                                    @if($rating->team_size_score)
-                                        <button
-                                            wire:click="filterByScoreRange('{{ $rating->team_size_score >= 80 ? 'high' : ($rating->team_size_score >= 60 ? 'medium' : 'low') }}')"
-                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'team_size_score' ? 'bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg border-l-4 border-orange-500' : '' }}"
-                                            title="Filter by team size score range"
-                                        >
-                                            <i class="fas fa-users text-orange-500 {{ $selectedMetric === 'team_size_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'team_size_score' ? 'font-semibold' : '' }}">Team:</span>
-                                            <flux:badge color="{{ $rating->team_size_score >= 80 ? 'green' : ($rating->team_size_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'team_size_score' ? 'md' : 'sm' }}">
-                                                {{ $rating->team_size_score }}%
-                                            </flux:badge>
-                                        </button>
-                                    @else
-                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'team_size_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
-                                            <i class="fas fa-users text-zinc-400 {{ $selectedMetric === 'team_size_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs w-16 {{ $selectedMetric === 'team_size_score' ? 'font-semibold' : '' }}">Team:</span>
-                                            <span class="text-xs">N/A</span>
-                                        </div>
-                                    @endif
+                                    <livewire:components.score-badge
+                                        :key="'team_' . ($rating->id ?? $rating->rating_id)"
+                                        scoreType="team_size_score"
+                                        :score="$rating->team_size_score"
+                                        :selectedMetric="$selectedMetric"
+                                    />
 
                                     <!-- Leadership Score -->
-                                    @if($rating->leadership_score)
-                                        <button
-                                            wire:click="filterByScoreRange('{{ $rating->leadership_score >= 80 ? 'high' : ($rating->leadership_score >= 60 ? 'medium' : 'low') }}')"
-                                            class="flex items-center space-x-2 cursor-pointer hover:scale-105 transition-transform w-full {{ $selectedMetric === 'leadership_score' ? 'bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg border-l-4 border-indigo-500' : '' }}"
-                                            title="Filter by leadership score range"
-                                        >
-                                            <i class="fas fa-crown text-indigo-500 {{ $selectedMetric === 'leadership_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs text-zinc-600 dark:text-zinc-400 w-16 {{ $selectedMetric === 'leadership_score' ? 'font-semibold' : '' }}">Leader:</span>
-                                            <flux:badge color="{{ $rating->leadership_score >= 80 ? 'green' : ($rating->leadership_score >= 60 ? 'yellow' : 'red') }}" size="{{ $selectedMetric === 'leadership_score' ? 'md' : 'sm' }}">
-                                                {{ $rating->leadership_score }}%
-                                            </flux:badge>
-                                        </button>
-                                    @else
-                                        <div class="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 {{ $selectedMetric === 'leadership_score' ? 'bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-lg border-l-4 border-zinc-400' : '' }}">
-                                            <i class="fas fa-crown text-zinc-400 {{ $selectedMetric === 'leadership_score' ? 'text-lg' : '' }}"></i>
-                                            <span class="text-xs w-16 {{ $selectedMetric === 'leadership_score' ? 'font-semibold' : '' }}">Leader:</span>
-                                            <span class="text-xs">N/A</span>
-                                        </div>
-                                    @endif
+                                    <livewire:components.score-badge
+                                        :key="'leadership_' . ($rating->id ?? $rating->rating_id)"
+                                        scoreType="leadership_score"
+                                        :score="$rating->leadership_score"
+                                        :selectedMetric="$selectedMetric"
+                                    />
                                 </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                <button
-                                    wire:click="filterByDate('{{ $rating->rated_at->format('Y-m-d') }}')"
-                                    class="text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer"
-                                    title="Filter by this date"
-                                >
-                                    {{ $rating->rated_at->format('Y-m-d H:i') }}
-                                </button>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-zinc-100">
-                                <flux:button size="sm" wire:click="viewDetails({{ $rating->id ?? $rating->rating_id }})" icon="eye">
-                                    View Details
-                                </flux:button>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                            </flux:table.cell>
+
+                            <flux:table.cell class="whitespace-nowrap">
+                                {{ $rating->rated_at->format('Y-m-d H:i') }}
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @empty
+                        <flux:table.row>
+                            <flux:table.cell colspan="4" class="text-center text-zinc-500 dark:text-zinc-400 py-8">
                                 <i class="fas fa-star text-4xl mb-4"></i>
                                 <p class="text-lg">No ratings found matching your criteria.</p>
                                 @if($search || $ratingTypeFilter || $companyFilter || $scoreRangeFilter || $locationFilter)
@@ -338,338 +259,21 @@
                                     Clear all filters
                                 </flux:button>
                                 @endif
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforelse
+                </flux:table.rows>
+            </flux:table>
 
-            <!-- Pagination -->
-            <div class="border-t border-zinc-200 dark:border-zinc-700 pt-4 mt-6">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400">Show:</span>
-                        <flux:select wire:model.live="perPage" class="w-20">
-                            <option value="10">10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </flux:select>
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400">per page</span>
-                    </div>
-                    <div>
-                        {{ $ratings->links() }}
-                    </div>
-                </div>
-            </div>
         </flux:card>
 
-        <!-- Job Details Modal -->
-        <flux:modal name="job-details-modal" class="max-w-7xl w-full mx-4"
-                    x-data="{
-                        init() {
-                            this.$watch('show', value => {
-                                if (value) {
-                                    this.$nextTick(() => {
-                                        this.$el.focus();
-                                    });
-                                }
-                            });
-                        }
-                    }"
-                    x-on:keydown.arrow-left.prevent="$wire.previousRating()"
-                    x-on:keydown.arrow-right.prevent="$wire.nextRating()"
-                    x-on:keydown.arrow-up.prevent="$wire.previousRating()"
-                    x-on:keydown.arrow-down.prevent="$wire.nextRating()"
-                    tabindex="0">
-            @if($selectedRating)
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center space-x-4">
-                        <flux:heading size="lg">
-                            <i class="fas fa-star mr-2 text-yellow-500"></i>Job Rating Details
-                        </flux:heading>
-                        <div class="flex items-center space-x-2">
-                            <flux:button size="sm" wire:click="previousRating" variant="outline" icon="chevron-left">
-                                Previous
-                            </flux:button>
-                            <span class="text-sm text-zinc-500 px-2">{{ $currentRatingIndex + 1 }} of {{ $totalRatings }}</span>
-                            <flux:button size="sm" wire:click="nextRating" variant="outline" icon="chevron-right">
-                                Next
-                            </flux:button>
-                        </div>
-                    </div>
-                    <flux:modal.close>
-                        <flux:button variant="ghost" icon="x" size="sm">
-                        </flux:button>
-                    </flux:modal.close>
-                </div>
+        <!-- Job Modal Component -->
+        <livewire:job-modal
+            wire:key="job-modal-{{ $selectedRating?->id ?? 'none' }}"
+            :rating="null"
+            :currentIndex="0"
+            :total="0"
+        />
 
-                <!-- Job Information -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <flux:card>
-                        <div class="p-4">
-                            <flux:heading size="md" class="mb-4 text-blue-600">
-                                <i class="fas fa-briefcase mr-2"></i>Job Information
-                            </flux:heading>
-                            <div class="space-y-3">
-                                <div>
-                                    <flux:subheading class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Title</flux:subheading>
-                                    <p class="text-zinc-900 dark:text-zinc-100">{{ $selectedRating->jobPosting->title ?? 'N/A' }}</p>
-                                </div>
-                                <div>
-                                    <flux:subheading class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Company</flux:subheading>
-                                    <p class="text-zinc-900 dark:text-zinc-100">{{ $selectedRating->jobPosting->company->name ?? 'N/A' }}</p>
-                                </div>
-                                <div>
-                                    <flux:subheading class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Location</flux:subheading>
-                                    <p class="text-zinc-900 dark:text-zinc-100">{{ $selectedRating->jobPosting->location ?? 'N/A' }}</p>
-                                </div>
-                                <div>
-                                    <flux:subheading class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Posted Date</flux:subheading>
-                                    <p class="text-zinc-900 dark:text-zinc-100">{{ $selectedRating->jobPosting->posted_date ?? 'N/A' }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </flux:card>
-
-                    <flux:card>
-                        <div class="p-4 relative">
-                            <!-- Confidence Level Sticky Note -->
-                            @php
-                                $criteria = is_string($selectedRating->criteria ?? '')
-                                    ? json_decode($selectedRating->criteria, true)
-                                    : ($selectedRating->criteria ?? []);
-                                $confidence = $criteria['confidence'] ?? 0;
-                                $confidenceColor = $confidence >= 80 ? 'bg-green-100 border-green-300 text-green-800' :
-                                                  ($confidence >= 60 ? 'bg-yellow-100 border-yellow-300 text-yellow-800' :
-                                                   'bg-red-100 border-red-300 text-red-800');
-                            @endphp
-
-
-                            <flux:heading size="md" class="mb-6 text-green-600">
-                                <i class="fas fa-bullseye mr-2"></i>Skills Radar Chart
-                            </flux:heading>
-
-                            <!-- Overall Score Progress Bar -->
-                            <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
-                                <div class="flex justify-between items-center mb-4">
-                                    <span class="text-lg font-bold text-zinc-800 dark:text-zinc-200">Overall Score</span>
-                                    <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ $selectedRating->overall_score ?? 0 }}%</span>
-                                </div>
-
-                                <div class="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-4">
-                                    <div class="h-4 rounded-full transition-all duration-300 {{ $selectedRating->overall_score >= 80 ? 'bg-green-500' : ($selectedRating->overall_score >= 60 ? 'bg-yellow-500' : 'bg-red-500') }}"
-                                         style="width: {{ $selectedRating->overall_score ?? 0 }}%"></div>
-                                </div>
-                            </div>
-
-                            <!-- AI Analysis Summary -->
-                            <div class="mb-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                                <div class="text-sm text-zinc-700 dark:text-zinc-300">
-                                    <div class="font-medium">AI Analysis Summary</div>
-                                    @if(isset($criteria['confidence']))
-                                    <div class="text-zinc-600 dark:text-zinc-400 mt-1">
-                                        {{ $criteria['confidence'] }}% confidence
-                                    </div>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <!-- Radar Chart (FIFA-style) -->
-                            <div class="flex flex-col items-center">
-                                @php
-                                    $criteria = is_string($selectedRating->criteria ?? '')
-                                        ? json_decode($selectedRating->criteria, true)
-                                        : ($selectedRating->criteria ?? []);
-
-                                    // Prepare scores (0-100 scale)
-                                    $locationScore = $selectedRating->location_score ?? 0;
-                                    $techScore = $selectedRating->tech_score ?? 0;
-                                    $teamSizeScore = $selectedRating->team_size_score ?? 0;
-                                    $leadershipScore = $selectedRating->leadership_score ?? 0;
-
-                                    // Chart dimensions
-                                    $size = 240;
-                                    $center = $size / 2;
-                                    $maxRadius = 90;
-
-                                    // Calculate positions for 4 axes (top, right, bottom, left)
-                                    $axes = [
-                                        ['name' => 'Location', 'score' => $locationScore, 'color' => '#3b82f6', 'icon' => 'fas fa-map-marker-alt', 'tooltip' => $criteria['location'] ?? 'Location analysis not available'],
-                                        ['name' => 'Tech Skills', 'score' => $techScore, 'color' => '#8b5cf6', 'icon' => 'fas fa-code', 'tooltip' => $criteria['tech_match'] ?? 'Technical skills analysis not available'],
-                                        ['name' => 'Team Size', 'score' => $teamSizeScore, 'color' => '#f97316', 'icon' => 'fas fa-users', 'tooltip' => $criteria['company_fit'] ?? 'Company culture and team size analysis not available'],
-                                        ['name' => 'Leadership', 'score' => $leadershipScore, 'color' => '#6366f1', 'icon' => 'fas fa-crown', 'tooltip' => $criteria['seniority_fit'] ?? 'Leadership and seniority level analysis not available']
-                                    ];
-
-                                    // Calculate polygon points
-                                    $points = [];
-                                    for ($i = 0; $i < 4; $i++) {
-                                        $angle = ($i * 90 - 90) * pi() / 180; // Start from top and go clockwise
-                                        $radius = ($axes[$i]['score'] / 100) * $maxRadius;
-                                        $x = $center + cos($angle) * $radius;
-                                        $y = $center + sin($angle) * $radius;
-                                        $points[] = "$x,$y";
-                                    }
-                                    $polygonPoints = implode(' ', $points);
-                                @endphp
-
-                                <!-- Radar Chart SVG with Interactive Points -->
-                                <div class="relative mb-6" x-data="{ hoveredPoint: null }">
-                                    <svg width="{{ $size }}" height="{{ $size }}" class="drop-shadow-lg transition-all duration-300">
-                                        <!-- Background circles (grid) -->
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <circle cx="{{ $center }}" cy="{{ $center }}" r="{{ ($i * $maxRadius) / 5 }}"
-                                                   fill="none" stroke="currentColor" stroke-width="{{ $i == 5 ? '2' : '1' }}"
-                                                   class="text-zinc-200 dark:text-zinc-700" opacity="{{ $i == 5 ? '0.8' : '0.4' }}"/>
-                                        @endfor
-
-                                        <!-- Axis lines -->
-                                        @for($i = 0; $i < 4; $i++)
-                                            @php
-                                                $angle = ($i * 90 - 90) * pi() / 180;
-                                                $endX = $center + cos($angle) * $maxRadius;
-                                                $endY = $center + sin($angle) * $maxRadius;
-                                            @endphp
-                                            <line x1="{{ $center }}" y1="{{ $center }}"
-                                                  x2="{{ $endX }}" y2="{{ $endY }}"
-                                                  stroke="currentColor" stroke-width="1"
-                                                  class="text-zinc-300 dark:text-zinc-600" opacity="0.6"/>
-                                        @endfor
-
-                                        <!-- Data polygon with gradient -->
-                                        <defs>
-                                            <radialGradient id="radarGradient" cx="50%" cy="50%" r="50%">
-                                                <stop offset="0%" style="stop-color:rgba(59, 130, 246, 0.4);stop-opacity:1" />
-                                                <stop offset="100%" style="stop-color:rgba(59, 130, 246, 0.1);stop-opacity:1" />
-                                            </radialGradient>
-                                        </defs>
-
-                                        <polygon points="{{ $polygonPoints }}"
-                                                fill="url(#radarGradient)"
-                                                stroke="rgb(59, 130, 246)"
-                                                stroke-width="3"
-                                                class="transition-all duration-300"/>
-
-                                        <!-- Interactive Data points with icons and percentages -->
-                                        @foreach($axes as $index => $axis)
-                                            @php
-                                                $angle = ($index * 90 - 90) * pi() / 180;
-                                                $radius = ($axis['score'] / 100) * $maxRadius;
-                                                $x = $center + cos($angle) * $radius;
-                                                $y = $center + sin($angle) * $radius;
-                                                $pointId = 'point-' . $index;
-                                            @endphp
-
-                                            <!-- Larger invisible hover area -->
-                                            <circle cx="{{ $x }}" cy="{{ $y }}" r="20"
-                                                   fill="transparent"
-                                                   class="cursor-pointer"
-                                                   x-on:mouseenter="hoveredPoint = {{ $index }}"
-                                                   x-on:mouseleave="hoveredPoint = null"/>
-
-                                            <!-- Background circle for icon -->
-                                            <circle cx="{{ $x }}" cy="{{ $y }}"
-                                                   :r="hoveredPoint === {{ $index }} ? '18' : '16'"
-                                                   fill="white"
-                                                   stroke="{{ $axis['color'] }}"
-                                                   stroke-width="3"
-                                                   class="transition-all duration-200 cursor-pointer drop-shadow-lg"
-                                                   :class="hoveredPoint === {{ $index }} ? 'animate-pulse' : ''"
-                                                   x-on:mouseenter="hoveredPoint = {{ $index }}"
-                                                   x-on:mouseleave="hoveredPoint = null"/>
-
-                                            <!-- Icon (using FontAwesome Unicode) -->
-                                            <text x="{{ $x }}" y="{{ $y + 2 }}"
-                                                  text-anchor="middle"
-                                                  dominant-baseline="central"
-                                                  font-family="FontAwesome"
-                                                  font-size="12"
-                                                  fill="{{ $axis['color'] }}"
-                                                  class="cursor-pointer transition-all duration-200"
-                                                  :class="hoveredPoint === {{ $index }} ? 'animate-pulse' : ''"
-                                                  x-on:mouseenter="hoveredPoint = {{ $index }}"
-                                                  x-on:mouseleave="hoveredPoint = null">
-                                                @switch($index)
-                                                    @case(0) &#xf3c5; @break {{-- map-marker-alt --}}
-                                                    @case(1) &#xf121; @break {{-- code --}}
-                                                    @case(2) &#xf0c0; @break {{-- users --}}
-                                                    @case(3) &#xf521; @break {{-- crown --}}
-                                                @endswitch
-                                            </text>
-
-                                            <!-- Percentage text below icon -->
-                                            <text x="{{ $x }}" y="{{ $y + 25 }}"
-                                                  text-anchor="middle"
-                                                  dominant-baseline="central"
-                                                  font-family="Arial, sans-serif"
-                                                  font-size="10"
-                                                  font-weight="bold"
-                                                  fill="{{ $axis['color'] }}"
-                                                  class="cursor-pointer transition-all duration-200"
-                                                  x-on:mouseenter="hoveredPoint = {{ $index }}"
-                                                  x-on:mouseleave="hoveredPoint = null">
-                                                {{ $axis['score'] }}%
-                                            </text>
-                                        @endforeach
-                                    </svg>
-
-                                    <!-- Floating tooltips for each point -->
-                                    @foreach($axes as $index => $axis)
-                                    <div x-show="hoveredPoint === {{ $index }}"
-                                         x-transition:enter="transition ease-out duration-200"
-                                         x-transition:enter-start="opacity-0 transform scale-95"
-                                         x-transition:enter-end="opacity-100 transform scale-100"
-                                         x-transition:leave="transition ease-in duration-150"
-                                         x-transition:leave-start="opacity-100 transform scale-100"
-                                         x-transition:leave-end="opacity-0 transform scale-95"
-                                         class="absolute top-2 left-1/2 transform -translate-x-1/2 bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-800 px-3 py-2 rounded-lg shadow-lg z-10 pointer-events-none">
-                                        <div class="flex items-center space-x-2 text-sm">
-                                            <i class="{{ $axis['icon'] }}" style="color: {{ $axis['color'] }}"></i>
-                                            <span class="font-semibold">{{ $axis['name'] }}</span>
-                                            <span class="font-bold">{{ $axis['score'] }}%</span>
-                                        </div>
-                                        <div class="text-xs mt-1 text-zinc-300 dark:text-zinc-600">{{ $axis['tooltip'] }}</div>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                    </flux:card>
-                </div>
-
-                <!-- Job Description -->
-                <div class="mt-6">
-                    <flux:card>
-                        <div class="p-4">
-                            <flux:heading size="md" class="mb-4 text-purple-600">
-                                <i class="fas fa-file-text mr-2"></i>Job Description
-                            </flux:heading>
-                            <div class="prose prose-sm max-w-none text-zinc-700 dark:text-zinc-300 max-h-96 overflow-y-auto">
-                                @if($selectedRating->jobPosting->description)
-                                    <div class="formatted-content">{!! nl2br(strip_tags($selectedRating->jobPosting->description, '<p><br><strong><b><em><i><ul><ol><li><h1><h2><h3><h4><h5><h6><a><span><div>')) !!}</div>
-                                @else
-                                    <p class="text-gray-500 italic">No job description available.</p>
-                                @endif
-                            </div>
-                        </div>
-                    </flux:card>
-                </div>
-
-                <!-- Rating Metadata -->
-                <div class="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                    <div class="flex justify-between items-center text-sm text-zinc-500 dark:text-zinc-400">
-                        <span>Rated on: {{ $selectedRating->rated_at->format('F j, Y \a\t g:i A') }}</span>
-                        @if($selectedRating->jobPosting->job_url)
-                        <flux:button size="sm" href="{{ $selectedRating->jobPosting->job_url }}" target="_blank" icon="external-link">
-                            View Original Job
-                        </flux:button>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-        </flux:modal>
     </flux:main>
 </div>

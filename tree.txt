@@ -1,0 +1,188 @@
+.
+├── cmd
+│   ├── analyze-data
+│   │   ├── data.txt
+│   │   └── main.go
+│   ├── extract-addresses
+│   │   └── main.go
+│   ├── format-jobs
+│   │   └── main.go
+│   ├── match-jobs
+│   │   ├── main.go
+│   │   └── main_improved.go
+│   ├── match-jobs-optimized
+│   │   └── main.go
+│   ├── match-jobs-v2
+│   │   └── main.go
+│   ├── match-jobs-v3
+│   │   └── main.go
+│   ├── queue-manager
+│   │   └── main.go
+│   ├── rescraper
+│   │   └── main.go
+│   ├── show-jobs
+│   │   └── main.go
+│   ├── web-dashboard
+│   │   └── main.go
+│   ├── main.go
+│   └── main_test.go
+├── internal
+│   ├── config
+│   │   └── config.go
+│   ├── database
+│   │   ├── database.go
+│   │   └── repositories.go
+│   ├── models
+│   │   ├── company.go
+│   │   ├── job.go
+│   │   ├── job_test.go
+│   │   ├── queue.go
+│   │   ├── rating.go
+│   │   ├── search.go
+│   │   └── skills.go
+│   ├── scraper
+│   │   ├── scripts
+│   │   ├── auth.go
+│   │   ├── database.go
+│   │   ├── extraction.go
+│   │   ├── navigation.go
+│   │   ├── parsing.go
+│   │   ├── parsing_test.go
+│   │   ├── scraper.go
+│   │   ├── script_loader.go
+│   │   ├── skills.go
+│   │   └── utils.go
+│   └── utils
+│       └── helpers.go
+├── laravel-dashboard
+│   ├── app
+│   │   ├── Http
+│   │   ├── Livewire
+│   │   ├── Models
+│   │   └── Providers
+│   ├── bootstrap
+│   │   ├── cache
+│   │   ├── app.php
+│   │   └── providers.php
+│   ├── config
+│   │   ├── app.php
+│   │   ├── auth.php
+│   │   ├── cache.php
+│   │   ├── database.php
+│   │   ├── debugbar.php
+│   │   ├── filesystems.php
+│   │   ├── livewire.php
+│   │   ├── logging.php
+│   │   ├── mail.php
+│   │   ├── queue.php
+│   │   ├── services.php
+│   │   └── session.php
+│   ├── database
+│   │   ├── factories
+│   │   ├── migrations
+│   │   ├── seeders
+│   │   ├── .gitignore
+│   │   └── database.sqlite
+│   ├── public
+│   │   ├── build
+│   │   ├── .htaccess
+│   │   ├── favicon.ico
+│   │   ├── index.php
+│   │   └── robots.txt
+│   ├── resources
+│   │   ├── css
+│   │   ├── js
+│   │   └── views
+│   ├── routes
+│   │   ├── console.php
+│   │   └── web.php
+│   ├── storage
+│   │   ├── app
+│   │   ├── debugbar
+│   │   ├── framework
+│   │   └── logs
+│   ├── tests
+│   │   ├── Feature
+│   │   ├── Unit
+│   │   └── TestCase.php
+│   ├── vendor
+│   │   ├── barryvdh
+│   │   ├── brick
+│   │   ├── carbonphp
+│   │   ├── composer
+│   │   ├── dflydev
+│   │   ├── doctrine
+│   │   ├── dragonmantank
+│   │   ├── egulias
+│   │   ├── fakerphp
+│   │   ├── filp
+│   │   ├── fruitcake
+│   │   ├── graham-campbell
+│   │   ├── guzzlehttp
+│   │   ├── hamcrest
+│   │   ├── laravel
+│   │   ├── league
+│   │   ├── livewire
+│   │   ├── mockery
+│   │   ├── monolog
+│   │   ├── myclabs
+│   │   ├── nesbot
+│   │   ├── nette
+│   │   ├── nikic
+│   │   ├── nunomaduro
+│   │   ├── phar-io
+│   │   ├── php-debugbar
+│   │   ├── phpoption
+│   │   ├── phpunit
+│   │   ├── psr
+│   │   ├── psy
+│   │   ├── ralouphie
+│   │   ├── ramsey
+│   │   ├── sebastian
+│   │   ├── staabm
+│   │   ├── symfony
+│   │   ├── theseer
+│   │   ├── tijsverkoyen
+│   │   ├── vlucas
+│   │   ├── voku
+│   │   ├── webmozart
+│   │   └── autoload.php
+│   ├── .editorconfig
+│   ├── .env
+│   ├── .env.example
+│   ├── .gitattributes
+│   ├── .gitignore
+│   ├── README.md
+│   ├── artisan
+│   ├── auth.json
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── docker-compose.yml
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── phpunit.xml
+│   └── vite.config.js
+├── logs
+├── scripts
+│   ├── init.sql
+│   └── laravel-init.sql
+├── .dockerignore
+├── .env
+├── .env.example
+├── .gitignore
+├── Dockerfile
+├── Dockerfile.laravel
+├── Dockerfile.web
+├── Makefile
+├── apache-laravel.conf
+├── devops_profile.json
+├── docker-compose.yml
+├── go.mod
+├── go.sum
+├── job_match_config.json
+├── linkedin-scraper
+├── package-lock.json
+├── package.json
+├── setup.sh
+├── tree.txt
+└── tsconfig.json

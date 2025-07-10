@@ -26,7 +26,12 @@ class Ratings extends Component
     public $totalRatings = 0;
     public $currentRatings = [];
 
-    protected $queryString = ['search', 'selectedMetric', 'ratingTypeFilter', 'companyFilter', 'scoreRangeFilter', 'locationFilter'];
+    protected $queryString = ['search', 'selectedMetric', 'ratingTypeFilter', 'companyFilter', 'scoreRangeFilter', 'locationFilter', 'sortField', 'sortDirection'];
+
+    protected $listeners = [
+        'previousRating' => 'previousRating',
+        'nextRating' => 'nextRating'
+    ];
 
     public function updatingSearch()
     {
@@ -58,6 +63,16 @@ class Ratings extends Component
         $this->resetPage();
     }
 
+    public function updatingSortField()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSortDirection()
+    {
+        $this->resetPage();
+    }
+
     public function filterByCompany($companyName)
     {
         $this->companyFilter = $companyName;
@@ -79,19 +94,6 @@ class Ratings extends Component
     public function filterByRatingType($type)
     {
         $this->ratingTypeFilter = $type;
-        $this->resetPage();
-    }
-
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            // Toggle direction if same field
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            // Set new field with default direction
-            $this->sortField = $field;
-            $this->sortDirection = 'desc';
-        }
         $this->resetPage();
     }
 
@@ -149,7 +151,14 @@ class Ratings extends Component
         });
 
         if ($this->selectedRating) {
-            Flux::modal('job-details-modal')->show();
+            // Convert the selected rating to array format for the modal
+            $ratingArray = $this->selectedRating->toArray();
+
+            $this->dispatch('openJobModal',
+                $ratingArray,
+                $this->currentRatingIndex,
+                $this->totalRatings
+            );
         }
     }
 
@@ -159,6 +168,14 @@ class Ratings extends Component
             $this->currentRatingIndex++;
             $nextRatingId = $this->currentRatings[$this->currentRatingIndex]['id'] ?? $this->currentRatings[$this->currentRatingIndex]['rating_id'];
             $this->selectedRating = JobRating::with(['jobPosting.company'])->find($nextRatingId);
+
+            // Refresh the modal with new data
+            $ratingArray = $this->selectedRating->toArray();
+            $this->dispatch('refreshJobModal',
+                $ratingArray,
+                $this->currentRatingIndex,
+                $this->totalRatings
+            );
         }
     }
 
@@ -168,6 +185,14 @@ class Ratings extends Component
             $this->currentRatingIndex--;
             $prevRatingId = $this->currentRatings[$this->currentRatingIndex]['id'] ?? $this->currentRatings[$this->currentRatingIndex]['rating_id'];
             $this->selectedRating = JobRating::with(['jobPosting.company'])->find($prevRatingId);
+
+            // Refresh the modal with new data
+            $ratingArray = $this->selectedRating->toArray();
+            $this->dispatch('refreshJobModal',
+                $ratingArray,
+                $this->currentRatingIndex,
+                $this->totalRatings
+            );
         }
     }
 

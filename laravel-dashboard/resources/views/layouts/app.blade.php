@@ -9,9 +9,11 @@
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
+
     @livewireStyles
     @fluxAppearance
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 
     <style>
         /* Custom styles for formatted job description content */
@@ -109,6 +111,7 @@
 
     @livewireScripts
     @fluxScripts
+    @stack('scripts')
     <script>
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');

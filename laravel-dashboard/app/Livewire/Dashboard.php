@@ -3,17 +3,13 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use App\Models\JobPosting;
 use App\Models\Company;
 use App\Models\JobRating;
 use App\Models\JobQueue;
-use Illuminate\Support\Facades\DB;
 
 class Dashboard extends Component
 {
-    use WithPagination;
-
     // Dashboard stats
     public $totalJobs;
     public $totalCompanies;
@@ -21,75 +17,39 @@ class Dashboard extends Component
     public $queuedJobs;
     public $avgScore;
 
-    // Search and filter properties
-    public $search = '';
-    public $companyFilter = '';
-    public $locationFilter = '';
-    public $dateFromFilter = '';
-    public $dateToFilter = '';
-    public $sortField = 'created_at';
-    public $sortDirection = 'desc';
-    public $perPage = 10;
-
-    // Autocomplete data
+    // Data for components
     public $companies = [];
     public $locations = [];
 
-    protected $queryString = [
-        'search', 'companyFilter', 'locationFilter',
-        'dateFromFilter', 'dateToFilter', 'sortField', 'sortDirection'
+    // Current filters
+    public $currentFilters = [
+        'search' => '',
+        'companyFilter' => '',
+        'locationFilter' => '',
+        'dateFromFilter' => '',
+        'dateToFilter' => '',
+        'perPage' => 10,
+    ];
+
+    protected $listeners = [
+        'refreshJobTable' => 'updateFilters',
+        'filterUpdated' => 'handleFilterUpdate',
     ];
 
     public function mount()
     {
+        // Initialize filters from URL parameters
+        $this->currentFilters = [
+            'search' => request()->get('search', ''),
+            'companyFilter' => request()->get('companyFilter', ''),
+            'locationFilter' => request()->get('locationFilter', ''),
+            'dateFromFilter' => request()->get('dateFromFilter', ''),
+            'dateToFilter' => request()->get('dateToFilter', ''),
+            'perPage' => request()->get('perPage', 10),
+        ];
+
         $this->loadDashboardData();
-        $this->loadFilterOptions();
-    }
-
-    public function updatingSearch()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingCompanyFilter()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingLocationFilter()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingDateFromFilter()
-    {
-        $this->resetPage();
-    }
-
-    public function updatingDateToFilter()
-    {
-        $this->resetPage();
-    }
-
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortDirection = 'asc';
-        }
-        $this->sortField = $field;
-        $this->resetPage();
-    }
-
-    public function clearFilters()
-    {
-        $this->search = '';
-        $this->companyFilter = '';
-        $this->locationFilter = '';
-        $this->dateFromFilter = '';
-        $this->dateToFilter = '';
-        $this->resetPage();
+        $this->loadComponentData();
     }
 
     public function loadDashboardData()
@@ -101,10 +61,9 @@ class Dashboard extends Component
 
         $this->avgScore = JobRating::whereNotNull('overall_score')
             ->avg('overall_score');
-    }
-
-    public function loadFilterOptions()
+    }    public function loadComponentData()
     {
+        // Load data for child components
         $this->companies = Company::orderBy('name')->pluck('name', 'company_id')->toArray();
         $this->locations = JobPosting::whereNotNull('location')
             ->distinct()
@@ -113,42 +72,20 @@ class Dashboard extends Component
             ->toArray();
     }
 
-    public function getFilteredJobs()
+    public function updateFilters($filters)
     {
-        return JobPosting::with(['company', 'jobRatings'])
-            ->when($this->search, function ($query) {
-                $query->where(function ($q) {
-                    $q->where('title', 'like', '%' . $this->search . '%')
-                      ->orWhere('description', 'like', '%' . $this->search . '%')
-                      ->orWhereHas('company', function ($companyQuery) {
-                          $companyQuery->where('name', 'like', '%' . $this->search . '%');
-                      });
-                });
-            })
-            ->when($this->companyFilter, function ($query) {
-                $query->whereHas('company', function ($companyQuery) {
-                    $companyQuery->where('name', 'like', '%' . $this->companyFilter . '%');
-                });
-            })
-            ->when($this->locationFilter, function ($query) {
-                $query->where('location', 'like', '%' . $this->locationFilter . '%');
-            })
-            ->when($this->dateFromFilter, function ($query) {
-                $query->whereDate('posted_date', '>=', $this->dateFromFilter);
-            })
-            ->when($this->dateToFilter, function ($query) {
-                $query->whereDate('posted_date', '<=', $this->dateToFilter);
-            })
-            ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate($this->perPage);
+        $this->currentFilters = array_merge($this->currentFilters, $filters);
+    }
+
+    public function handleFilterUpdate($data)
+    {
+        if (isset($data['filters'])) {
+            $this->currentFilters = array_merge($this->currentFilters, $data['filters']);
+        }
     }
 
     public function render()
     {
-        $jobs = $this->getFilteredJobs();
-
-        return view('livewire.dashboard', [
-            'jobs' => $jobs
-        ]);
+        return view('livewire.dashboard');
     }
 }
