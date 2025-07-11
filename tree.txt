@@ -42,6 +42,26 @@
 │   │   └── skills.go
 │   ├── scraper
 │   │   ├── scripts
+│   │   │   ├── dist
+│   │   │   │   ├── click_insights.js
+│   │   │   │   ├── detailed_analysis.js
+│   │   │   │   ├── expand_description.js
+│   │   │   │   ├── extract_job_urls.js
+│   │   │   │   ├── job_details.js
+│   │   │   │   ├── page_analysis.js
+│   │   │   │   ├── skills.js
+│   │   │   │   ├── types.js
+│   │   │   │   └── utils.js
+│   │   │   └── src
+│   │   │       ├── click_insights.ts
+│   │   │       ├── detailed_analysis.ts
+│   │   │       ├── expand_description.ts
+│   │   │       ├── extract_job_urls.ts
+│   │   │       ├── job_details.ts
+│   │   │       ├── page_analysis.ts
+│   │   │       ├── skills.ts
+│   │   │       ├── types.ts
+│   │   │       └── utils.ts
 │   │   ├── auth.go
 │   │   ├── database.go
 │   │   ├── extraction.go
@@ -56,12 +76,37 @@
 │       └── helpers.go
 ├── laravel-dashboard
 │   ├── app
+│   │   ├── Console
+│   │   │   └── Commands
+│   │   │       └── GeocodeJobPostings.php
 │   │   ├── Http
+│   │   │   └── Controllers
+│   │   │       └── Controller.php
 │   │   ├── Livewire
+│   │   │   ├── Components
+│   │   │   │   ├── JobTable.php
+│   │   │   │   ├── ScoreBadge.php
+│   │   │   │   ├── SearchFilters.php
+│   │   │   │   └── StatisticsCards.php
+│   │   │   ├── Companies.php
+│   │   │   ├── Dashboard.php
+│   │   │   ├── JobModal.php
+│   │   │   ├── Jobs.php
+│   │   │   ├── Queue.php
+│   │   │   └── Ratings.php
 │   │   ├── Models
+│   │   │   ├── Company.php
+│   │   │   ├── JobPosting.php
+│   │   │   ├── JobQueue.php
+│   │   │   ├── JobRating.php
+│   │   │   └── User.php
 │   │   └── Providers
+│   │       └── AppServiceProvider.php
 │   ├── bootstrap
 │   │   ├── cache
+│   │   │   ├── .gitignore
+│   │   │   ├── packages.php
+│   │   │   └── services.php
 │   │   ├── app.php
 │   │   └── providers.php
 │   ├── config
@@ -79,80 +124,119 @@
 │   │   └── session.php
 │   ├── database
 │   │   ├── factories
+│   │   │   └── UserFactory.php
 │   │   ├── migrations
+│   │   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   │   └── 2025_07_10_072123_add_geo_fields_to_job_postings.php
 │   │   ├── seeders
+│   │   │   └── DatabaseSeeder.php
 │   │   ├── .gitignore
 │   │   └── database.sqlite
 │   ├── public
 │   │   ├── build
+│   │   │   ├── assets
+│   │   │   │   ├── app-C1-KjzlB.css
+│   │   │   │   └── app-DNxiirP_.js
+│   │   │   └── manifest.json
 │   │   ├── .htaccess
 │   │   ├── favicon.ico
 │   │   ├── index.php
 │   │   └── robots.txt
 │   ├── resources
 │   │   ├── css
+│   │   │   └── app.css
 │   │   ├── js
+│   │   │   ├── app.js
+│   │   │   └── bootstrap.js
 │   │   └── views
+│   │       ├── flux
+│   │       │   ├── accordion
+│   │       │   ├── autocomplete
+│   │       │   ├── avatar
+│   │       │   ├── badge
+│   │       │   ├── breadcrumbs
+│   │       │   ├── button
+│   │       │   ├── calendar
+│   │       │   ├── callout
+│   │       │   ├── card
+│   │       │   ├── chart
+│   │       │   ├── checkbox
+│   │       │   ├── command
+│   │       │   ├── date-picker
+│   │       │   ├── editor
+│   │       │   ├── icon
+│   │       │   ├── input
+│   │       │   ├── menu
+│   │       │   ├── modal
+│   │       │   ├── navbar
+│   │       │   ├── navlist
+│   │       │   ├── navmenu
+│   │       │   ├── radio
+│   │       │   ├── select
+│   │       │   ├── sidebar
+│   │       │   ├── tab
+│   │       │   ├── table
+│   │       │   ├── toast
+│   │       │   ├── tooltip
+│   │       │   ├── accent.blade.php
+│   │       │   ├── aside.blade.php
+│   │       │   ├── brand.blade.php
+│   │       │   ├── container.blade.php
+│   │       │   ├── context.blade.php
+│   │       │   ├── description.blade.php
+│   │       │   ├── dropdown.blade.php
+│   │       │   ├── error.blade.php
+│   │       │   ├── field.blade.php
+│   │       │   ├── fieldset.blade.php
+│   │       │   ├── footer.blade.php
+│   │       │   ├── header.blade.php
+│   │       │   ├── heading.blade.php
+│   │       │   ├── label.blade.php
+│   │       │   ├── legend.blade.php
+│   │       │   ├── link.blade.php
+│   │       │   ├── main.blade.php
+│   │       │   ├── pagination.blade.php
+│   │       │   ├── profile.blade.php
+│   │       │   ├── separator.blade.php
+│   │       │   ├── spacer.blade.php
+│   │       │   ├── subheading.blade.php
+│   │       │   ├── switch.blade.php
+│   │       │   ├── tabs.blade.php
+│   │       │   ├── text.blade.php
+│   │       │   └── textarea.blade.php
+│   │       ├── layouts
+│   │       │   └── app.blade.php
+│   │       ├── livewire
+│   │       │   ├── components
+│   │       │   ├── companies.blade.php
+│   │       │   ├── dashboard.blade.php
+│   │       │   ├── job-modal.blade.php
+│   │       │   ├── jobs.blade.php
+│   │       │   ├── queue.blade.php
+│   │       │   └── ratings.blade.php
+│   │       ├── companies.blade.php
+│   │       ├── dashboard.blade.php
+│   │       ├── jobs.blade.php
+│   │       ├── map.blade.php
+│   │       ├── queue.blade.php
+│   │       ├── ratings.blade.php
+│   │       └── welcome.blade.php
 │   ├── routes
 │   │   ├── console.php
 │   │   └── web.php
-│   ├── storage
-│   │   ├── app
-│   │   ├── debugbar
-│   │   ├── framework
-│   │   └── logs
 │   ├── tests
 │   │   ├── Feature
+│   │   │   └── ExampleTest.php
 │   │   ├── Unit
+│   │   │   └── ExampleTest.php
 │   │   └── TestCase.php
-│   ├── vendor
-│   │   ├── barryvdh
-│   │   ├── brick
-│   │   ├── carbonphp
-│   │   ├── composer
-│   │   ├── dflydev
-│   │   ├── doctrine
-│   │   ├── dragonmantank
-│   │   ├── egulias
-│   │   ├── fakerphp
-│   │   ├── filp
-│   │   ├── fruitcake
-│   │   ├── graham-campbell
-│   │   ├── guzzlehttp
-│   │   ├── hamcrest
-│   │   ├── laravel
-│   │   ├── league
-│   │   ├── livewire
-│   │   ├── mockery
-│   │   ├── monolog
-│   │   ├── myclabs
-│   │   ├── nesbot
-│   │   ├── nette
-│   │   ├── nikic
-│   │   ├── nunomaduro
-│   │   ├── phar-io
-│   │   ├── php-debugbar
-│   │   ├── phpoption
-│   │   ├── phpunit
-│   │   ├── psr
-│   │   ├── psy
-│   │   ├── ralouphie
-│   │   ├── ramsey
-│   │   ├── sebastian
-│   │   ├── staabm
-│   │   ├── symfony
-│   │   ├── theseer
-│   │   ├── tijsverkoyen
-│   │   ├── vlucas
-│   │   ├── voku
-│   │   ├── webmozart
-│   │   └── autoload.php
 │   ├── .editorconfig
 │   ├── .env
 │   ├── .env.example
 │   ├── .gitattributes
 │   ├── .gitignore
-│   ├── README.md
 │   ├── artisan
 │   ├── auth.json
 │   ├── composer.json

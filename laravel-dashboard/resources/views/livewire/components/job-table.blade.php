@@ -12,6 +12,11 @@
 
     <flux:table :paginate="$jobs">
         <flux:table.columns>
+
+            @if($showRating)
+                <flux:table.column>AI Rating</flux:table.column>
+            @endif
+
             @foreach($columns as $field => $label)
                 <flux:table.column
                     sortable
@@ -23,10 +28,6 @@
                 </flux:table.column>
             @endforeach
 
-            @if($showRating)
-                <flux:table.column>AI Rating</flux:table.column>
-            @endif
-
             @if($showActions)
                 <flux:table.column>Actions</flux:table.column>
             @endif
@@ -35,10 +36,34 @@
         <flux:table.rows>
             @forelse($jobs as $job)
                 <flux:table.row :key="$job->job_id">
+
+                    @if($showRating)
+                        <flux:table.cell class="whitespace-nowrap">
+                            @if($job->jobRatings && $job->jobRatings->isNotEmpty())
+                                @php $latestRating = $job->jobRatings->first(); @endphp
+                                <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:scale-105 transition-transform">
+                                    <flux:badge color="{{ $latestRating->overall_score >= 80 ? 'green' : ($latestRating->overall_score >= 60 ? 'yellow' : 'red') }}">
+                                        {{ $latestRating->overall_score }}%
+                                    </flux:badge>
+                                </button>
+                            @else
+                                <button wire:click="viewJobRating({{ $job->job_id }})" class="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+                                    Not rated
+                                </button>
+                            @endif
+                        </flux:table.cell>
+                    @endif
+
                     @if(isset($columns['title']))
                         <flux:table.cell>
                             <div>
-                                <div class="font-medium">{{ $job->title }}</div>
+                                @if(strlen($job->title) > 50)
+                                    <flux:tooltip :content="$job->title">
+                                        <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
+                                    </flux:tooltip>
+                                @else
+                                    <div class="font-medium">{{ $job->title }}</div>
+                                @endif
                                 @if($job->description)
                                     <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
                                 @endif
@@ -73,21 +98,6 @@
                                 </div>
                             @else
                                 <span class="text-zinc-500 dark:text-zinc-400">N/A</span>
-                            @endif
-                        </flux:table.cell>
-                    @endif
-
-                    @if($showRating)
-                        <flux:table.cell class="whitespace-nowrap">
-                            @if($job->jobRatings && $job->jobRatings->isNotEmpty())
-                                @php $latestRating = $job->jobRatings->first(); @endphp
-                                <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:scale-105 transition-transform">
-                                    <flux:badge color="{{ $latestRating->overall_score >= 80 ? 'green' : ($latestRating->overall_score >= 60 ? 'yellow' : 'red') }}">
-                                        {{ $latestRating->overall_score }}%
-                                    </flux:badge>
-                                </button>
-                            @else
-                                <span class="text-zinc-500 dark:text-zinc-400">Not rated</span>
                             @endif
                         </flux:table.cell>
                     @endif

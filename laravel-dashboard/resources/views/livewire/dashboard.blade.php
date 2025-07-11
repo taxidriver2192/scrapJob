@@ -27,7 +27,7 @@
         <livewire:components.job-table
             :options="[
                 'title' => 'Jobs',
-                'showActions' => true,
+                'showActions' => false,
                 'showRating' => true,
                 'columns' => [
                     'title' => 'Title',
