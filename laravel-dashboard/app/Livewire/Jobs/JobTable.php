@@ -4,6 +4,7 @@ namespace App\Livewire\Jobs;
 
 use Livewire\Component;
 use App\Models\JobPosting;
+use App\Models\JobRating;
 
 class JobTable extends Component
 {
@@ -13,8 +14,14 @@ class JobTable extends Component
     public $sortDirection = 'desc';
     public $showActions = true;
     public $showRating = true;
-    public $columns = [];
+    public $showDetailedRatings = false;
     public $title = 'Jobs';
+
+    // New configuration structure
+    public $tableConfig = [];
+    public $enabledColumns = [];
+    public $ratingColumns = [];
+    public $regularColumns = [];
 
     // Current filters
     public $search = '';
@@ -44,17 +51,31 @@ class JobTable extends Component
         'dateToFilter' => ['except' => ''],
     ];
 
-    public function mount($options = [])
+    public function mount($options = [], $tableConfig = [])
     {
-        $this->showActions = $options['showActions'] ?? true;
-        $this->showRating = $options['showRating'] ?? true;
-        $this->title = $options['title'] ?? 'Jobs';
-        $this->columns = $options['columns'] ?? [
-            'title' => 'Title',
-            'company' => 'Company',
-            'location' => 'Location',
-            'posted_date' => 'Posted Date'
-        ];
+        // Handle legacy options format or new tableConfig format
+        if (!empty($tableConfig)) {
+            $this->tableConfig = $tableConfig;
+            $this->title = $tableConfig['title'] ?? 'Jobs';
+            $this->showActions = $tableConfig['showActions'] ?? true;
+            $this->showRating = $tableConfig['showRating'] ?? true;
+            $this->showDetailedRatings = $tableConfig['showDetailedRatings'] ?? false;
+
+            // Process columns configuration
+            $this->processColumnConfiguration();
+        } else {
+            // Legacy format for backward compatibility
+            $this->showActions = $options['showActions'] ?? true;
+            $this->showRating = $options['showRating'] ?? true;
+            $this->showDetailedRatings = $options['showDetailedRatings'] ?? false;
+            $this->title = $options['title'] ?? 'Jobs';
+            $this->regularColumns = $options['columns'] ?? [
+                'title' => 'Title',
+                'company' => 'Company',
+                'location' => 'Location',
+                'posted_date' => 'Posted Date'
+            ];
+        }
 
         // Initialize filters from URL parameters
         $this->page = request()->get('page', 1);
@@ -64,6 +85,27 @@ class JobTable extends Component
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->perPage = request()->get('perPage', 10);
+    }
+
+    private function processColumnConfiguration()
+    {
+        $this->enabledColumns = [];
+        $this->ratingColumns = [];
+        $this->regularColumns = [];
+
+        if (isset($this->tableConfig['columns'])) {
+            foreach ($this->tableConfig['columns'] as $field => $config) {
+                if ($config['enabled']) {
+                    $this->enabledColumns[$field] = $config['label'];
+
+                    if ($config['type'] === 'rating') {
+                        $this->ratingColumns[$field] = $config['label'];
+                    } else {
+                        $this->regularColumns[$field] = $config['label'];
+                    }
+                }
+            }
+        }
     }
 
     public function sortBy($field)
@@ -161,7 +203,16 @@ class JobTable extends Component
         }
 
         // Apply sorting
-        $query->orderBy($this->sortField, $this->sortDirection);
+        if (in_array($this->sortField, ['overall_score', 'location_score', 'tech_score', 'team_size_score', 'leadership_score'])) {
+            // Sorting by rating fields - join with job_ratings table
+            $query->leftJoin('job_ratings', 'job_postings.job_id', '=', 'job_ratings.job_id')
+                  ->select('job_postings.*')
+                  ->orderBy("job_ratings.{$this->sortField}", $this->sortDirection)
+                  ->orderBy('job_postings.posted_date', 'desc'); // Secondary sort
+        } else {
+            // Regular sorting
+            $query->orderBy($this->sortField, $this->sortDirection);
+        }
 
         // Load jobs with pagination
         $jobs = $query->paginate($this->perPage, ['*'], 'page', $this->page);
@@ -208,5 +259,54 @@ class JobTable extends Component
     public function getPage($pageName = 'page')
     {
         return $this->page ?? 1;
+    }
+
+    // Helper methods for ratings
+    public function getRatingTooltip($job, $type)
+    {
+        if (!$job->jobRatings || $job->jobRatings->isEmpty()) {
+            return "This job hasn't been rated yet. Click to get an AI-powered analysis.";
+        }
+
+        $rating = $job->jobRatings->first();
+        $criteria = $rating->criteria;
+
+        if (is_string($criteria)) {
+            $criteria = json_decode($criteria, true) ?: [];
+        }
+
+        switch ($type) {
+            case 'overall_score':
+                return "Overall match score based on combined analysis of location, technical skills, team size, and leadership requirements.";
+            case 'location_score':
+                return data_get($criteria, 'location', 'Location preference analysis based on your settings and job location.');
+            case 'tech_score':
+                return data_get($criteria, 'tech_match', 'Technical skills match based on job requirements and your expertise.');
+            case 'team_size_score':
+                return data_get($criteria, 'company_fit', 'Company culture and team size analysis based on your preferences.');
+            case 'leadership_score':
+                return data_get($criteria, 'seniority_fit', 'Leadership and seniority level analysis based on job requirements.');
+            default:
+                return "AI-powered job rating analysis.";
+        }
+    }
+
+    public function getRatingScore($job, $type)
+    {
+        if (!$job->jobRatings || $job->jobRatings->isEmpty()) {
+            return null;
+        }
+
+        $rating = $job->jobRatings->first();
+        return data_get($rating, $type, 0);
+    }
+
+    public function getRatingColor($score)
+    {
+        if ($score === null) return 'zinc';
+        if ($score >= 80) return 'green';
+        if ($score >= 60) return 'yellow';
+        if ($score >= 40) return 'orange';
+        return 'red';
     }
 }

@@ -25,18 +25,11 @@
 
         <!-- Advanced Jobs Table -->
         <livewire:jobs.job-table
-            :options="[
-                'title' => 'Jobs',
-                'showActions' => false,
-                'showRating' => true,
-                'columns' => [
-                    'title' => 'Title',
-                    'company' => 'Company',
-                    'location' => 'Location',
-                    'posted_date' => 'Posted Date'
-                ]
-            ]"
+            :tableConfig="$tableConfig"
         />
+
+        <!-- Job Modal Component -->
+        <livewire:jobs.job-modal />
 
     </flux:main>
 </div>

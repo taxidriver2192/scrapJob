@@ -21,6 +21,28 @@ class Dashboard extends Component
     public $companies = [];
     public $locations = [];
 
+    // Column configuration for easy customization
+    public $tableConfig = [
+        'title' => 'Jobs Dashboard',
+        'showActions' => false,
+        'showRating' => false,
+        'showDetailedRatings' => true,
+        'columns' => [
+            // Rating columns - these appear first in the order defined
+            'overall_score' => ['enabled' => true, 'label' => 'Overall Score', 'type' => 'rating'],
+            'location_score' => ['enabled' => true, 'label' => 'Location', 'type' => 'rating'],
+            'tech_score' => ['enabled' => true, 'label' => 'Tech Skills', 'type' => 'rating'],
+            'team_size_score' => ['enabled' => true, 'label' => 'Team Size', 'type' => 'rating'],
+            'leadership_score' => ['enabled' => true, 'label' => 'Leadership', 'type' => 'rating'], // Disabled example
+
+            // Regular columns - these appear after rating columns in the order defined
+            'title' => ['enabled' => true, 'label' => 'Title', 'type' => 'regular'],
+            'company' => ['enabled' => true, 'label' => 'Company', 'type' => 'regular'],
+            'location' => ['enabled' => true, 'label' => 'Location', 'type' => 'regular'],
+            'posted_date' => ['enabled' => true, 'label' => 'Posted Date', 'type' => 'regular'],
+        ]
+    ];
+
     // Current filters
     public $currentFilters = [
         'search' => '',
