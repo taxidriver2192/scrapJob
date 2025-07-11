@@ -2,7 +2,7 @@
     <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
         <div class="flex justify-between items-center">
             <flux:heading size="lg" class="text-zinc-900 dark:text-zinc-100">
-                <i class="fas fa-table mr-2 text-zinc-600 dark:text-zinc-400"></i>{{ $title }} ({{ $totalResults }} results)
+                <flux:icon.table-cells class="mr-2 text-zinc-600 dark:text-zinc-400" />{{ $title }} ({{ $totalResults }} results)
             </flux:heading>
             <div class="text-sm text-zinc-500 dark:text-zinc-400">
                 {{ $jobs->count() }} results displayed
@@ -74,7 +74,7 @@
                     @if(isset($columns['company']))
                         <flux:table.cell class="whitespace-nowrap">
                             <div class="flex items-center">
-                                <i class="fas fa-building mr-2 text-zinc-400 dark:text-zinc-500"></i>
+                                <flux:icon.building-office class="mr-2 text-zinc-400 dark:text-zinc-500" />
                                 {{ $job->company->name ?? 'N/A' }}
                             </div>
                         </flux:table.cell>
@@ -83,7 +83,7 @@
                     @if(isset($columns['location']))
                         <flux:table.cell class="whitespace-nowrap">
                             <div class="flex items-center">
-                                <i class="fas fa-map-marker-alt mr-2 text-zinc-400 dark:text-zinc-500"></i>
+                                <flux:icon.map-pin class="mr-2 text-zinc-400 dark:text-zinc-500" />
                                 {{ $job->location ?? 'Not specified' }}
                             </div>
                         </flux:table.cell>
@@ -93,7 +93,7 @@
                         <flux:table.cell class="whitespace-nowrap">
                             @if($job->posted_date)
                                 <div class="flex items-center">
-                                    <i class="fas fa-calendar mr-2 text-zinc-400 dark:text-zinc-500"></i>
+                                    <flux:icon.calendar class="mr-2 text-zinc-400 dark:text-zinc-500" />
                                     {{ $job->posted_date->format('M j, Y') }}
                                 </div>
                             @else
@@ -111,7 +111,7 @@
                                         target="_blank"
                                         size="sm"
                                         variant="primary"
-                                        icon="external-link"
+                                        icon="arrow-top-right-on-square"
                                     >
                                         Apply
                                     </flux:button>
@@ -136,7 +136,7 @@
                 <flux:table.row>
                     <flux:table.cell colspan="{{ count($columns) + ($showRating ? 1 : 0) + ($showActions ? 1 : 0) }}">
                         <div class="text-center text-zinc-500 dark:text-zinc-400 py-8">
-                            <i class="fas fa-search text-4xl mb-4"></i>
+                            <flux:icon.magnifying-glass class="text-4xl mb-4" />
                             <p class="text-lg">No jobs found matching your criteria.</p>
                             <p class="text-sm">Try adjusting your search or filters.</p>
                         </div>
@@ -146,12 +146,9 @@
         </flux:table.rows>
     </flux:table>
 
-    <!-- Job Modal Component (embedded in job table) -->
-    <livewire:job-modal
-        wire:key="job-table-modal"
-        :rating="null"
-        :currentIndex="0"
-        :total="0"
-    />
+    <!-- Job Modal Component -->
+    <livewire:jobs.job-modal />
 
 </flux:card>
+
+

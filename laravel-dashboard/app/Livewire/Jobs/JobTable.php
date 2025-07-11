@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components;
+namespace App\Livewire\Jobs;
 
 use Livewire\Component;
 use App\Models\JobPosting;
@@ -179,7 +179,7 @@ class JobTable extends Component
             'sortDirection' => $this->sortDirection,
         ]);
 
-        return view('livewire.components.job-table', [
+        return view('livewire.jobs.job-table', [
             'jobs' => $jobs,
             'totalResults' => $jobs->total(),
         ]);

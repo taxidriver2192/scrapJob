@@ -3,5 +3,5 @@
 @section('title', 'Jobs - LinkedIn Job Scraper')
 
 @section('content')
-    <livewire:jobs />
+    <livewire:jobs.index />
 @endsection

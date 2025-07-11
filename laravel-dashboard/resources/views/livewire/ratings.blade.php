@@ -268,7 +268,7 @@
         </flux:card>
 
         <!-- Job Modal Component -->
-        <livewire:job-modal
+        <livewire:jobs.job-modal
             wire:key="job-modal-{{ $selectedRating?->id ?? 'none' }}"
             :rating="null"
             :currentIndex="0"

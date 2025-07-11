@@ -24,7 +24,7 @@
         />
 
         <!-- Advanced Jobs Table -->
-        <livewire:components.job-table
+        <livewire:jobs.job-table
             :options="[
                 'title' => 'Jobs',
                 'showActions' => false,
@@ -37,5 +37,6 @@
                 ]
             ]"
         />
+
     </flux:main>
 </div>

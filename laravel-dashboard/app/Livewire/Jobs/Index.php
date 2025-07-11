@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Jobs;
 
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\JobPosting;
 
-class Jobs extends Component
+class Index extends Component
 {
     use WithPagination;
 
@@ -70,6 +70,6 @@ class Jobs extends Component
 
         $jobs = $jobs->paginate($this->perPage);
 
-        return view('livewire.jobs', compact('jobs'));
+        return view('livewire.jobs.index', compact('jobs'));
     }
 }
