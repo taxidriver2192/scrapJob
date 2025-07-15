@@ -6,6 +6,7 @@ use App\Livewire\Jobs\Index as JobsIndex;
 use App\Livewire\Companies;
 use App\Livewire\Queue;
 use App\Livewire\Ratings;
+use App\Livewire\ProfileEdit;
 use Illuminate\Support\Facades\DB;
 
 // Public routes (no authentication required)
@@ -43,6 +44,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Profile route (from Breeze)
     Route::view('profile', 'profile')->name('profile');
+
+    // Profile edit route
+    Route::get('/profile/edit', ProfileEdit::class)->name('profile.edit');
 });
 
 // Include Breeze authentication routes

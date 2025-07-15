@@ -15,12 +15,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('🔍 Checking for backup SQL files...');
+        $this->command->info('🔍 Starting database seeding...');
 
-        // Try to import latest backup first
-        $this->importLatestBackup();
-
-        // Create default user if it doesn't exist
+        // Create default user first
         $this->command->info('👤 Creating default user...');
         if (!User::where('email', 'mr.lukas.schmidt@gmail.com')->exists()) {
             User::factory()->create([
@@ -32,6 +29,13 @@ class DatabaseSeeder extends Seeder
         } else {
             $this->command->info('👤 User already exists, skipping...');
         }
+
+        // Import backup data (INSERT statements only)
+        $this->importLatestBackup();
+
+        // Seed addresses from CSV (run this last as it takes a long time)
+        $this->command->info('📍 Seeding addresses...');
+        $this->call(AddressSeeder::class);
 
         $this->command->info('✅ Database seeding completed!');
     }
@@ -113,89 +117,143 @@ class DatabaseSeeder extends Seeder
      */
     private function importSqlFile(string $filePath): void
     {
+        $this->command->info('⚡ Importing SQL backup using direct MySQL import...');
+
+        try {
+            // Use direct MySQL import via command line for better handling of complex SQL
+            $host = config('database.connections.mysql.host');
+            $username = config('database.connections.mysql.username');
+            $password = config('database.connections.mysql.password');
+            $database = config('database.connections.mysql.database');
+
+            // Build the mysql command with proper password handling
+            $command = sprintf(
+                'mysql -h%s -u%s -p%s %s < %s',
+                escapeshellarg($host),
+                escapeshellarg($username),
+                escapeshellarg($password),
+                escapeshellarg($database),
+                escapeshellarg($filePath)
+            );
+
+            // Execute the command and capture output
+            $output = [];
+            $returnCode = 0;
+            exec($command . ' 2>&1', $output, $returnCode);
+
+            if ($returnCode === 0) {
+                $this->command->info('✅ SQL backup imported successfully via direct MySQL import!');
+            } else {
+                throw new \RuntimeException('MySQL import failed with return code ' . $returnCode . ': ' . implode("\n", $output));
+            }
+
+        } catch (\Exception $e) {
+            $this->command->warn("⚠️  Direct import failed: {$e->getMessage()}");
+            $this->command->info("🔄 Falling back to Laravel DB import...");
+            $this->importSqlFileViaLaravel($filePath);
+        }
+    }
+
+    /**
+     * Fallback: Import SQL file using Laravel's DB facade with proper transaction handling
+     * Only executes INSERT statements, skips CREATE TABLE statements
+     */
+    private function importSqlFileViaLaravel(string $filePath): void
+    {
+        $this->command->info('📂 Reading SQL backup file...');
         $sql = File::get($filePath);
 
-        // Remove MySQL dump comments and split into statements
-        $sql = preg_replace('/\/\*!\d+.*?\*\/;?/', '', $sql);
+        // Remove MySQL dump comments and settings
+        $sql = preg_replace('/\/\*!\d+.*?\*\//s', '', $sql);
         $sql = preg_replace('/--.*$/m', '', $sql);
 
-        // Split by semicolons but be careful with quoted strings
-        $statements = collect(explode(';', $sql))
-            ->map(fn($stmt) => trim($stmt))
-            ->filter(fn($stmt) => !empty($stmt) && !str_starts_with($stmt, '/*') && !str_starts_with($stmt, '--'));
+        // Split SQL into individual statements
+        $statements = array_filter(
+            array_map('trim', preg_split('/;[\r\n]+/', $sql)),
+            function($statement) {
+                return !empty($statement);
+            }
+        );
 
-        $this->command->info("📊 Processing {$statements->count()} SQL statements...");
-
-        // Disable foreign key checks during import
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-
-        $counters = $this->processStatements($statements);
-
-        // Re-enable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-
-        $this->command->info("✅ Processed {$counters['success']} data statements, skipped {$counters['skip']} schema statements");
-    }
-
-    /**
-     * Process SQL statements and return counters
-     */
-    private function processStatements($statements): array
-    {
-        $successCount = 0;
-        $skipCount = 0;
-
-        foreach ($statements as $statement) {
-            if (!trim($statement)) {
-                continue;
+        // Filter to only include INSERT statements for tables that exist
+        $insertStatements = array_filter($statements, function($statement) {
+            $statement = trim($statement);
+            // Only allow INSERT statements
+            if (!preg_match('/^INSERT\s+INTO\s+`?([^`\s]+)`?/i', $statement, $matches)) {
+                return false;
             }
 
-            if ($this->shouldSkipStatement($statement)) {
-                $skipCount++;
-                continue;
-            }
+            $tableName = $matches[1];
 
-            try {
-                if ($this->isDataStatement($statement)) {
-                    DB::statement($statement);
-                    $successCount++;
-                } else {
-                    $skipCount++;
-                }
-            } catch (\Exception $e) {
-                if (!$this->isExpectedError($e)) {
-                    $this->command->warn("⚠️  SQL Warning: " . substr($e->getMessage(), 0, 100) . '...');
-                }
-                $skipCount++;
-            }
+            // List of tables that exist in your current database schema
+            $allowedTables = [
+                'companies',
+                'job_postings',
+                'job_queue',
+                'job_ratings',
+                'users',
+                'addresses'
+            ];
+
+            return in_array($tableName, $allowedTables);
+        });
+
+        if (empty($insertStatements)) {
+            $this->command->warn('📄 No INSERT statements found in the backup file.');
+            return;
         }
 
-        return ['success' => $successCount, 'skip' => $skipCount];
-    }
+        $this->command->info("📊 Found " . count($insertStatements) . " INSERT statements to execute...");
 
-    /**
-     * Check if statement should be skipped
-     */
-    private function shouldSkipStatement(string $statement): bool
-    {
-        return preg_match('/^\s*(DROP TABLE|CREATE TABLE)/i', $statement);
-    }
+        // Execute as a single transaction using Laravel's unprepared method
+        try {
+            DB::beginTransaction();
 
-    /**
-     * Check if statement is a data operation
-     */
-    private function isDataStatement(string $statement): bool
-    {
-        return preg_match('/^\s*(INSERT|UPDATE|DELETE|SET|LOCK|UNLOCK)/i', $statement);
-    }
+            // Disable foreign key checks to handle dependency order issues
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
-    /**
-     * Check if error is expected and can be ignored
-     */
-    private function isExpectedError(\Exception $e): bool
-    {
-        return str_contains($e->getMessage(), 'already exists') ||
-               str_contains($e->getMessage(), "doesn't exist");
+            $this->command->info('⚡ Executing INSERT statements...');
+
+            $successCount = 0;
+            $skipCount = 0;
+
+            foreach ($insertStatements as $index => $statement) {
+                try {
+                    // Add semicolon if missing
+                    $statement = rtrim($statement, ';') . ';';
+
+                    DB::unprepared($statement);
+                    $successCount++;
+
+                    // Show progress every 10 statements
+                    if (($index + 1) % 10 === 0) {
+                        $this->command->info("   Executed " . ($index + 1) . " of " . count($insertStatements) . " statements...");
+                    }
+                } catch (\Exception $e) {
+                    // Skip statements that fail (e.g., duplicate entries)
+                    $skipCount++;
+                    $this->command->warn("   Skipped statement " . ($index + 1) . ": " . substr($e->getMessage(), 0, 100) . "...");
+                }
+            }
+
+            // Re-enable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+            DB::commit();
+            $this->command->info("✅ SQL data imported successfully! Executed: {$successCount}, Skipped: {$skipCount}");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->command->error("❌ Laravel import failed: {$e->getMessage()}");
+
+            // Provide helpful debugging information
+            $this->command->warn("💡 This might be due to:");
+            $this->command->warn("   • Data integrity constraint violations");
+            $this->command->warn("   • Character encoding issues");
+            $this->command->warn("   • Foreign key dependency issues");
+
+            throw $e;
+        }
     }
 
     /**

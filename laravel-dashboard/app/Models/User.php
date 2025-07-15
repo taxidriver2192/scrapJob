@@ -21,6 +21,46 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        // Basic Profile Info
+        'phone',
+        'date_of_birth',
+        'bio',
+        'website',
+        'linkedin_url',
+        'github_url',
+        // Professional Info
+        'current_job_title',
+        'current_company',
+        'industry',
+        'years_of_experience',
+        'skills',
+        'career_summary',
+        // Job Preferences
+        'preferred_job_type',
+        'remote_work_preference',
+        'preferred_location',
+        'salary_expectation_min',
+        'salary_expectation_max',
+        'currency',
+        'willing_to_relocate',
+        'open_to_management',
+        // Education
+        'highest_education',
+        'field_of_study',
+        'university',
+        'graduation_year',
+        'certifications',
+        // Contact Preferences
+        'email_notifications',
+        'job_alerts',
+        'preferred_contact_times',
+        // Additional Info
+        'languages',
+        'availability',
+        'additional_notes',
+        // Profile Completion
+        'profile_completed',
+        'profile_updated_at',
     ];
 
     /**
@@ -43,6 +83,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'date_of_birth' => 'date',
+            'skills' => 'array',
+            'certifications' => 'array',
+            'preferred_contact_times' => 'array',
+            'languages' => 'array',
+            'remote_work_preference' => 'boolean',
+            'willing_to_relocate' => 'boolean',
+            'open_to_management' => 'boolean',
+            'email_notifications' => 'boolean',
+            'job_alerts' => 'boolean',
+            'profile_completed' => 'boolean',
+            'profile_updated_at' => 'datetime',
         ];
     }
 }
