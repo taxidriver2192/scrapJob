@@ -5,7 +5,9 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Company;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.app')]
 class Companies extends Component
 {
     use WithPagination;

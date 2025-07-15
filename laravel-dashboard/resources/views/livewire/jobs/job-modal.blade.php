@@ -1,11 +1,15 @@
 <div>
     <!-- Job Details Modal -->
-    <flux:modal name="job-details-modal" class="max-w-7xl w-full mx-4"
+    <flux:modal name="job-rating-modal"
+                class="max-w-7xl w-full mx-4"
+                wire:model.self="showModal"
+                tabindex="0"
                 x-on:keydown.arrow-left.prevent="$wire.previousRating()"
                 x-on:keydown.arrow-right.prevent="$wire.nextRating()"
                 x-on:keydown.arrow-up.prevent="$wire.previousRating()"
                 x-on:keydown.arrow-down.prevent="$wire.nextRating()"
-                tabindex="0">
+                x-on:close="$wire.closeModal()"
+    >
         @if($jobPosting)
         <div class="p-6">
             <div class="flex items-center justify-between mb-6">
@@ -36,10 +40,6 @@
                         </flux:button>
                     </div>
                 </div>
-                <flux:modal.close>
-                    <flux:button variant="ghost" icon="x-mark" size="sm">
-                    </flux:button>
-                </flux:modal.close>
             </div>
 
             <!-- Job Information and Rating Cards -->

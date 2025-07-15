@@ -11,11 +11,13 @@
         "laravel/tinker": "^2.10",
         "livewire/flux": "^2.2",
         "livewire/flux-pro": "^2.2",
-        "livewire/livewire": "^3.5"
+        "livewire/livewire": "^3.4",
+        "livewire/volt": "^1.7.0"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.14",
         "fakerphp/faker": "^1.23",
+        "laravel/breeze": "^2.3",
         "laravel/pint": "^1.18",
         "laravel/sail": "^1.43",
         "mockery/mockery": "^1.6",

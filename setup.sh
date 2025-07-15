@@ -1,388 +1,147 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# LinkedIn Job Scraper - Setup Script
-# This script sets up the development environment for the LinkedIn Job Scraper
+RED='\033[0;31m'   GREEN='\033[0;32m'   YELLOW='\033[1;33m'
+BLUE='\033[0;34m'  NC='\033[0m'
 
-set -e
+info()    { echo -e "${BLUE}[INFO]${NC} $*"; }
+success() { echo -e "${GREEN}[OK]${NC}   $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
+error()   { echo -e "${RED}[ERR]${NC}  $*"; exit 1; }
 
-echo "==========================================="
-echo "  LinkedIn Job Scraper - Setup Script"
-echo "==========================================="
-echo ""
+# 1) Preconditions: Docker & Compose
+info "Verifying Docker..."
+command -v docker >/dev/null || error "Docker not found. Install Docker Desktop."
+info "$(docker --version)"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if running on Windows (WSL/Git Bash)
-if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || -n "$WSL_DISTRO_NAME" ]]; then
-    WINDOWS=true
-    print_status "Detected Windows environment"
+info "Verifying Docker Compose..."
+if command -v docker-compose &>/dev/null; then
+  COMPOSE_CMD="docker-compose"
+  info "$(docker-compose --version)"
+elif docker compose version &>/dev/null; then
+  COMPOSE_CMD="docker compose"
+  info "$(docker compose version)"
 else
-    WINDOWS=false
-    print_status "Detected Unix-like environment"
+  error "Docker Compose not found. It should ship with Docker Desktop."
 fi
 
-# Check if Docker is installed
-check_docker() {
-    print_status "Checking Docker installation..."
-    if command -v docker &> /dev/null; then
-        print_success "Docker is installed"
-        docker --version
-    else
-        print_error "Docker is not installed"
-        echo "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
-        if [ "$WINDOWS" = true ]; then
-            echo "For Windows: Download Docker Desktop for Windows"
-        else
-            echo "For Linux: Follow instructions at https://docs.docker.com/engine/install/"
-            echo "For macOS: Download Docker Desktop for Mac"
-        fi
-        exit 1
+# 2) Check for Go application
+info "Checking for Go application..."
+if [ ! -f "cmd/main.go" ]; then
+  warn "Go application not found. Building with 'go build'..."
+  go build -o linkedin-scraper cmd/main.go && success "Go application built"
+else
+  info "Go application source found"
+fi
+
+# 3) Ensure .env is present for Laravel
+if [ ! -f "./laravel-dashboard/.env" ]; then
+  info "Creating .env from template"
+  cp ./laravel-dashboard/.env.example ./laravel-dashboard/.env
+  success ".env created"
+else
+  info ".env already exists"
+fi
+
+# 🔑 2b) Always regenerate a proper APP_KEY on the host
+info "Generating a fresh APP_KEY in laravel-dashboard/.env (host)…"
+docker run --rm \
+  -v "$PWD/laravel-dashboard":/app \
+  -w /app \
+  php:8.3-cli \
+  php artisan key:generate --ansi --force
+success "Host .env now has a valid 32-byte key"
+
+# 4) Build & start containers
+info "Building & starting Docker containers…"
+$COMPOSE_CMD up -d --build
+success "Containers are starting"
+
+# 5) Wait for main database (for Go app)
+info "Waiting for main MySQL database (port 3307)..."
+max_attempts=60
+attempt=0
+while [ $attempt -lt $max_attempts ]; do
+  if $COMPOSE_CMD exec -T db mysql -u root -prootpass -e "SELECT 1;" >/dev/null 2>&1; then
+    success "Main MySQL database is ready"
+    break
+  fi
+  sleep 2
+  attempt=$((attempt + 1))
+  info "Waiting for database... ($attempt/$max_attempts)"
+done
+
+if [ $attempt -eq $max_attempts ]; then
+  error "Main MySQL database failed to start after $max_attempts attempts"
+fi
+
+# 6) Create database for Go application if it doesn't exist
+info "Setting up linkedin_jobs database for Go application..."
+$COMPOSE_CMD exec -T db mysql -u root -prootpass -e "CREATE DATABASE IF NOT EXISTS linkedin_jobs;" || warn "Database creation failed"
+success "linkedin_jobs database ready"
+
+# 7) Build Go application if needed
+if [ ! -f "linkedin-scraper" ]; then
+  info "Building Go application..."
+  go build -o linkedin-scraper cmd/main.go && success "Go application built"
+fi
+
+# 8) Run Go migrations
+info "Running Go application migrations..."
+if [ -f "linkedin-scraper" ]; then
+  ./linkedin-scraper migrate && success "Go migrations complete"
+else
+  warn "linkedin-scraper binary not found, skipping migrations"
+fi
+
+# helper: wait for health
+wait_for() {
+  local svc=$1; local max=${2:-30}
+  info "Waiting for [$svc] to be healthy…"
+  for i in $(seq 1 $max); do
+    if [ "$(docker inspect --format='{{.State.Health.Status}}' $svc 2>/dev/null)" = "healthy" ]; then
+      success "[$svc] is healthy"; return
     fi
+    sleep 1
+  done
+  warn "[$svc] never became healthy"
 }
 
-# Check if Docker Compose is installed
-check_docker_compose() {
-    print_status "Checking Docker Compose installation..."
-    if command -v docker-compose &> /dev/null; then
-        print_success "Docker Compose is installed"
-        docker-compose --version
-    else
-        print_error "Docker Compose is not installed"
-        echo "Docker Compose should come with Docker Desktop"
-        echo "If you installed Docker separately, install Docker Compose from:"
-        echo "https://docs.docker.com/compose/install/"
-        exit 1
-    fi
-}
+# 9) Handle Laravel setup if containers exist
+if docker ps --format "table {{.Names}}" | grep -q "scrapjob-app"; then
+  wait_for "scrapjob-db" 60
+  wait_for "scrapjob-app" 60
 
-# Check if Node.js and npm are installed
-check_nodejs() {
-    print_status "Checking Node.js installation..."
-    if command -v node &> /dev/null; then
-        NODE_VERSION=$(node --version)
-        print_success "Node.js is installed: $NODE_VERSION"
+  APP_SVC="scrapjob-app"
+  exec_in_app="docker exec -u www-data $APP_SVC bash -lc"
 
-        if command -v npm &> /dev/null; then
-            NPM_VERSION=$(npm --version)
-            print_success "npm is installed: $NPM_VERSION"
-        else
-            print_error "npm is not installed"
-            exit 1
-        fi
-    else
-        print_error "Node.js is not installed"
-        echo "Please install Node.js from: https://nodejs.org/"
-        echo "Recommended version: 18.x or later"
-        exit 1
-    fi
-}
+  # 5) Composer install & key
+  info "Installing Composer deps…"
+  $exec_in_app "cd /var/www/html && composer install --no-dev --no-interaction --no-scripts"
+  success "Composer deps installed"
 
-# Check if TypeScript is installed
-check_typescript() {
-    print_status "Checking TypeScript installation..."
-    if command -v tsc &> /dev/null; then
-        TS_VERSION=$(tsc --version)
-        print_success "TypeScript is installed: $TS_VERSION"
-    else
-        print_warning "TypeScript is not installed globally"
-        print_status "Installing TypeScript globally..."
-        npm install -g typescript
-        if [ $? -eq 0 ]; then
-            print_success "TypeScript installed successfully"
-        else
-            print_error "Failed to install TypeScript"
-            exit 1
-        fi
-    fi
-}
+  info "Generating APP_KEY…"
+  $exec_in_app "cd /var/www/html && php artisan key:generate --force"
+  success "APP_KEY set"
 
-# Check if Go is installed
-check_go() {
-    print_status "Checking Go installation..."
-    if command -v go &> /dev/null; then
-        GO_VERSION=$(go version)
-        print_success "Go is installed: $GO_VERSION"
-    else
-        print_error "Go is not installed"
-        echo "Please install Go from: https://golang.org/dl/"
-        echo "Recommended version: 1.21 or later"
-        exit 1
-    fi
-}
+  info "Clearing Laravel caches…"
+  $exec_in_app "cd /var/www/html && php artisan config:clear && php artisan cache:clear && php artisan view:clear && php artisan route:clear"
+  success "Caches cleared"
 
-# Check if PHP and Composer are installed for Laravel
-check_php_composer() {
-    print_status "Checking PHP and Composer installation..."
-    if command -v php &> /dev/null; then
-        PHP_VERSION=$(php --version | head -n 1)
-        print_success "PHP is installed: $PHP_VERSION"
-    else
-        print_error "PHP is not installed"
-        echo "Please install PHP 8.2 or later"
-        exit 1
-    fi
+  # 6) Fix permissions
+  info "Fixing storage/bootstrap permissions…"
+  docker exec $APP_SVC bash -lc "chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache"
+  success "Permissions fixed"
 
-    if command -v composer &> /dev/null; then
-        COMPOSER_VERSION=$(composer --version | head -n 1)
-        print_success "Composer is installed: $COMPOSER_VERSION"
-    else
-        print_error "Composer is not installed"
-        echo "Please install Composer from: https://getcomposer.org/"
-        exit 1
-    fi
-}
+  # 7) Run migrations
+  info "Running migrations…"
+  $exec_in_app "cd /var/www/html && php artisan migrate --force"
+  success "Migrations complete"
+else
+  info "Laravel containers not found, skipping Laravel setup"
+fi
 
-# Install Node.js dependencies
-install_node_dependencies() {
-    print_status "Installing Node.js dependencies..."
-    if [ -f "package.json" ]; then
-        npm install
-        if [ $? -eq 0 ]; then
-            print_success "Node.js dependencies installed"
-        else
-            print_error "Failed to install Node.js dependencies"
-            exit 1
-        fi
-    else
-        print_error "package.json not found"
-        exit 1
-    fi
-}
-
-# Compile TypeScript
-compile_typescript() {
-    print_status "Compiling TypeScript scripts..."
-    npm run compile-scripts
-    if [ $? -eq 0 ]; then
-        print_success "TypeScript compilation completed"
-    else
-        print_error "TypeScript compilation failed"
-        exit 1
-    fi
-}
-
-# Build Go application
-build_go_app() {
-    print_status "Building Go application..."
-    
-    # Clean up vendor directory if it exists
-    if [ -d "vendor" ]; then
-        print_status "Removing existing vendor directory..."
-        rm -rf vendor
-    fi
-    
-    # Download dependencies and build with mod mode
-    go mod download
-    go build -mod=mod -o linkedin-scraper cmd/main.go
-    if [ $? -eq 0 ]; then
-        print_success "Go application built successfully"
-    else
-        print_error "Failed to build Go application"
-        print_status "Trying alternative build method..."
-        
-        # Try with tidy first
-        go mod tidy
-        go build -mod=mod -o linkedin-scraper cmd/main.go
-        if [ $? -eq 0 ]; then
-            print_success "Go application built successfully (after mod tidy)"
-        else
-            print_error "Failed to build Go application even after mod tidy"
-            exit 1
-        fi
-    fi
-}
-
-# Create necessary directories
-create_directories() {
-    print_status "Creating necessary directories..."
-    mkdir -p logs
-    mkdir -p chrome-profile
-    mkdir -p backups
-    print_success "Directories created"
-}
-
-# Setup environment file
-setup_env_file() {
-    print_status "Setting up environment file..."
-    if [ ! -f ".env" ]; then
-        if [ -f ".env.example" ]; then
-            cp .env.example .env
-            print_success "Environment file created from template"
-            print_warning "Please edit .env file with your LinkedIn credentials and OpenAI API key"
-        else
-            print_error ".env.example file not found"
-            exit 1
-        fi
-    else
-        print_success "Environment file already exists"
-    fi
-}
-
-# Setup Laravel dependencies
-setup_laravel() {
-    print_status "Setting up Laravel dashboard..."
-
-    if [ -d "laravel-dashboard" ]; then
-        print_status "Laravel dashboard directory found"
-        
-        # Don't run composer install on host - Docker will handle it
-        print_status "Skipping host composer install (Docker will handle dependencies)"
-        
-        # Don't run Laravel commands on host - Docker will handle them
-        print_status "Skipping host Laravel commands (Docker will handle setup)"
-        
-        print_success "Laravel dashboard setup prepared for Docker"
-    else
-        print_error "laravel-dashboard directory not found"
-        exit 1
-    fi
-}
-
-# Start Docker services
-start_docker_services() {
-    print_status "Starting Docker services (MySQL, phpMyAdmin, Go Dashboard, Laravel Dashboard)..."
-    docker-compose up -d
-    if [ $? -eq 0 ]; then
-        print_success "Docker services started successfully"
-        echo ""
-        echo "Services available at:"
-        echo "  - Laravel Dashboard (NEW): http://localhost:8082"
-        echo "  - Go Web Dashboard: http://localhost:8081"
-        echo "  - phpMyAdmin: http://localhost:8080"
-        echo "  - MySQL: localhost:3307"
-    else
-        print_error "Failed to start Docker services"
-        exit 1
-    fi
-}
-
-# Fix Laravel permissions after Docker starts
-fix_laravel_permissions() {
-    print_status "Fixing Laravel permissions in Docker container..."
-    
-    # Wait for container to be ready
-    sleep 10
-    
-    # Check if container is running
-    if docker ps | grep -q "linkedin-laravel-dashboard"; then
-        print_status "Running permission fix in Docker container..."
-        
-        # Fix permissions inside the container
-        docker exec linkedin-laravel-dashboard bash -c "
-            mkdir -p /var/www/html/storage/framework/{cache,sessions,views}
-            mkdir -p /var/www/html/bootstrap/cache
-            chmod -R 777 /var/www/html/storage
-            chmod -R 777 /var/www/html/bootstrap/cache
-        "
-        
-        if [ $? -eq 0 ]; then
-            print_success "Laravel permissions fixed"
-        else
-            print_warning "Could not fix Laravel permissions automatically"
-        fi
-    else
-        print_error "Laravel container not running"
-        exit 1
-    fi
-}
-
-# Run database migrations
-run_migrations() {
-    print_status "Running database migrations..."
-    sleep 5  # Wait for MySQL to be ready
-    ./linkedin-scraper migrate
-    if [ $? -eq 0 ]; then
-        print_success "Database migrations completed"
-    else
-        print_error "Database migrations failed"
-        exit 1
-    fi
-}
-
-# Main setup process
-main() {
-    echo "Starting setup process..."
-    echo ""
-
-    # Check prerequisites
-    check_docker
-    check_docker_compose
-    check_nodejs
-    check_go
-    check_typescript
-    # Remove PHP/Composer check since we use Docker
-    # check_php_composer
-
-    echo ""
-    print_status "All prerequisites are installed"
-    echo ""
-
-    # Setup project
-    create_directories
-    setup_env_file
-    install_node_dependencies
-    compile_typescript
-    build_go_app
-    setup_laravel
-
-    echo ""
-    print_status "Starting services..."
-    start_docker_services
-
-    echo ""
-    print_status "Fixing Laravel permissions..."
-    fix_laravel_permissions
-
-    echo ""
-    print_status "Setting up database..."
-    run_migrations
-
-    echo ""
-    echo "==========================================="
-    print_success "Setup completed successfully!"
-    echo "==========================================="
-    echo ""
-    echo "Next steps:"
-    echo "1. Edit .env file with your credentials:"
-    echo "   - LINKEDIN_EMAIL=your-email@example.com"
-    echo "   - LINKEDIN_PASSWORD=your-password"
-    echo "   - OPENAI_API_KEY=your-openai-api-key"
-    echo ""
-    echo "2. Start scraping:"
-    echo "   ./linkedin-scraper scrape --keywords \"software engineer\" --location \"Copenhagen\" --total-jobs 50"
-    echo ""
-    echo "3. View results in the new Laravel dashboard:"
-    echo "   http://localhost:8082"
-    echo ""
-    echo "4. Or view results in the original Go dashboard:"
-    echo "   http://localhost:8081"
-    echo ""
-    echo "5. Manage database with phpMyAdmin:"
-    echo "   http://localhost:8080"
-    echo ""
-}
-
-# Run main function
-main "$@"
+echo; echo "✅  Setup complete!"; echo
+info "🔍 To start scraping: make scrape"
+info "📊 phpMyAdmin: http://localhost:8080"
+info "🌐 scrapjob-app: http://localhost:8082"

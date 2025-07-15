@@ -65,7 +65,7 @@ CANDIDATE PROFILE:
 
 SCORING GUIDELINES (0-100, be REALISTIC and use available data):
 
-**LOCATION MATCH (25%% weight):**
+**LOCATION MATCH :**
 • Roskilde: 100 (perfect)
 • Copenhagen/København/Måløv/Hillerød: 85-95 (commutable)
 • Other Region Hovedstaden: 70-85 (acceptable)
@@ -73,7 +73,7 @@ SCORING GUIDELINES (0-100, be REALISTIC and use available data):
 • Sweden/Norway: 30-50 (only if remote work mentioned)
 • Empty/unclear location: 40 (unknown, assume average)
 
-**TECH MATCH (35%% weight - most important):**
+**TECH MATCH :**
 Analyze job title + skills array + any description for: PHP, Laravel, JavaScript, Python, Go, AWS, Docker, Git, backend, full-stack, web development
 • 5+ technology matches: 90-100 (excellent match)
 • 3-4 technology matches: 75-85 (good match)
@@ -82,7 +82,7 @@ Analyze job title + skills array + any description for: PHP, Laravel, JavaScript
 • No clear tech match but development role: 20-40 (unlikely)
 • Non-technical role: 0-20 (poor match)
 
-**COMPANY FIT (20%% weight):**
+**COMPANY FIT :**
 Base on company name and applicant count:
 • Large known companies (Novo Nordisk, Danske Bank, TDC, Maersk): 90-100
 • Medium established companies (50-200 applicants suggests good size): 80-90
@@ -90,7 +90,7 @@ Base on company name and applicant count:
 • Very small (1-10 applicants) or unknown: 40-60
 • Retail/non-tech companies (unless tech role): 30-50
 
-**SENIORITY MATCH (15%% weight):**
+**SENIORITY MATCH :**
 Analyze job title for seniority level:
 • Senior Developer/Lead Developer/Principal: 90-100 (perfect)
 • Developer/Software Engineer (experienced level): 80-90 (good)
@@ -100,7 +100,7 @@ Analyze job title for seniority level:
 • Junior/Graduate/Trainee: 20-40 (below experience level)
 • Consultant/Contractor: 70-80 (depends on project)
 
-**WORK TYPE MATCH (5%% weight):**
+**WORK TYPE MATCH :**
 • Remote/Hybrid mentioned: 90-100 (perfect)
 • Flexible work mentioned: 80-90 (good)
 • On-site but Copenhagen area: 60-70 (commutable)
@@ -325,6 +325,8 @@ func optimizedMatchJobWithAI(client *openai.Client, job models.JobPosting) (*Opt
 		applicants, workType, skills, descriptionAvailable,
 		job.JobID)
 
+	fmt.Println("Prompt sent to ChatGPT:\n", prompt)
+
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
@@ -349,7 +351,9 @@ func optimizedMatchJobWithAI(client *openai.Client, job models.JobPosting) (*Opt
 	}
 
 	responseText := strings.TrimSpace(resp.Choices[0].Message.Content)
-	
+
+	fmt.Println("Response from ChatGPT:\n", responseText)
+
 	// Clean up response (remove any markdown formatting)
 	responseText = strings.TrimPrefix(responseText, "```json")
 	responseText = strings.TrimSuffix(responseText, "```")

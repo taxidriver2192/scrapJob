@@ -26,10 +26,8 @@
         <!-- Advanced Jobs Table -->
         <livewire:jobs.job-table
             :tableConfig="$tableConfig"
+            :jobId="$jobId"
         />
-
-        <!-- Job Modal Component -->
-        <livewire:jobs.job-modal />
 
     </flux:main>
 </div>

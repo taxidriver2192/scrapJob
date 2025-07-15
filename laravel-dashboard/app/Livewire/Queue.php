@@ -5,7 +5,9 @@ namespace App\Livewire;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\JobQueue;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.app')]
 class Queue extends Component
 {
     use WithPagination;

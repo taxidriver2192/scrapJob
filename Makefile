@@ -50,17 +50,9 @@ help:
 # Setup and build
 setup:
 	@echo "🚀 Setting up LinkedIn Job Scraper..."
-	@if [ -f "setup.sh" ]; then \
-		echo "Running comprehensive setup script..."; \
-		chmod +x setup.sh; \
-		./setup.sh; \
-	else \
-		echo "Setup script not found, running manual setup..."; \
-		go mod tidy; \
-		mkdir -p logs chrome-profile backups; \
-		go build -o linkedin-scraper cmd/main.go; \
-		echo "Manual setup complete! Run 'make start' to start Docker services."; \
-	fi
+	@chmod +x setup.sh
+	@./setup.sh
+
 
 build:
 	@echo "🔨 Building application..."

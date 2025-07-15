@@ -71,7 +71,6 @@ docker-compose ps
 ```
 
 You should see:
-- linkedin-web-dashboard (Up, healthy)
 - linkedin-mysql (Up, healthy)  
 - linkedin-phpmyadmin (Up)
 

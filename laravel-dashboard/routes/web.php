@@ -2,32 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
-use App\Livewire\Jobs;
+use App\Livewire\Jobs\Index as JobsIndex;
 use App\Livewire\Companies;
 use App\Livewire\Queue;
 use App\Livewire\Ratings;
 use Illuminate\Support\Facades\DB;
 
-Route::get('/', function () {
-    return view('dashboard');
-});
-
-Route::get('/jobs', function () {
-    return view('jobs');
-});
-
-Route::get('/companies', function () {
-    return view('companies');
-});
-
-Route::get('/queue', function () {
-    return view('queue');
-});
-
-Route::get('/ratings', function () {
-    return view('ratings');
-});
-
+// Public routes (no authentication required)
 Route::get('/test', function () {
     return response('Laravel is working!');
 });
@@ -46,3 +27,23 @@ Route::get('/test-db', function () {
         return response("Database error: " . $e->getMessage(), 500);
     }
 });
+
+// Protected routes (require authentication)
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Dashboard (main page)
+    Route::get('/', Dashboard::class)->name('dashboard');
+
+    // Job-related routes
+    Route::get('/jobs', JobsIndex::class)->name('jobs');
+
+    // Other application routes
+    Route::get('/companies', Companies::class)->name('companies');
+    Route::get('/queue', Queue::class)->name('queue');
+    Route::get('/ratings', Ratings::class)->name('ratings');
+
+    // Profile route (from Breeze)
+    Route::view('profile', 'profile')->name('profile');
+});
+
+// Include Breeze authentication routes
+require __DIR__.'/auth.php';

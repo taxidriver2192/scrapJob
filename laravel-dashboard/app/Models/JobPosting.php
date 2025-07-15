@@ -21,18 +21,17 @@ class JobPosting extends Model
         'work_type',
         'skills',
         'openai_adresse',
-        'lat',
-        'lon',
-        'postcode',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
-        'posted_date' => 'date',
+        'posted_date' => 'datetime',
         'skills' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'lat' => 'decimal:7',
-        'lon' => 'decimal:7',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
     ];
 
     public function company()

@@ -6,7 +6,9 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\JobRating;
 use Flux\Flux;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.app')]
 class Ratings extends Component
 {
     use WithPagination;

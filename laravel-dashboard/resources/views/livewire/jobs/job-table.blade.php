@@ -54,11 +54,9 @@
                                 @php $score = $this->getRatingScore($job, $field); @endphp
                                 @if($score !== null)
                                     <flux:tooltip :content="$this->getRatingTooltip($job, $field)">
-                                        <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:scale-105 transition-transform">
-                                            <flux:badge color="{{ $this->getRatingColor($score) }}" size="sm">
-                                                {{ $score }}%
-                                            </flux:badge>
-                                        </button>
+                                        <flux:badge color="{{ $this->getRatingColor($score) }}" size="sm">
+                                            {{ $score }}%
+                                        </flux:badge>
                                     </flux:tooltip>
                                 @else
                                     <flux:tooltip content="This job hasn't been rated yet.">
@@ -74,16 +72,20 @@
                             @if($field === 'title')
                                 <flux:table.cell>
                                     <div>
-                                        @if(strlen($job->title) > 50)
-                                            <flux:tooltip :content="$job->title">
-                                                <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
-                                            </flux:tooltip>
-                                        @else
-                                            <div class="font-medium">{{ $job->title }}</div>
-                                        @endif
-                                        @if($job->description)
-                                            <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
-                                        @endif
+                                        <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:scale-105 transition-transform">
+
+                                            @if(strlen($job->title) > 50)
+                                                <flux:tooltip :content="$job->title">
+                                                    <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
+                                                </flux:tooltip>
+                                            @else
+                                                <div class="font-medium">{{ $job->title }}</div>
+                                            @endif
+                                            @if($job->description)
+                                                <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
+                                            @endif
+
+                                        </button>
                                     </div>
                                 </flux:table.cell>
                             @elseif($field === 'company')
@@ -160,7 +162,7 @@
     </flux:table>
 
     <!-- Job Modal Component -->
-    <livewire:jobs.job-modal />
+    <livewire:jobs.job-modal :jobId="$jobId" :key="'job-modal-' . ($jobId ?? 'default')" />
 
 </flux:card>
 

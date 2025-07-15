@@ -5,7 +5,9 @@ namespace App\Livewire\Jobs;
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\JobPosting;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.app')]
 class Index extends Component
 {
     use WithPagination;

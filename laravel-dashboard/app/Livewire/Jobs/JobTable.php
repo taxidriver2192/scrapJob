@@ -5,6 +5,7 @@ namespace App\Livewire\Jobs;
 use Livewire\Component;
 use App\Models\JobPosting;
 use App\Models\JobRating;
+use Illuminate\Support\Facades\Log;
 
 class JobTable extends Component
 {
@@ -33,6 +34,7 @@ class JobTable extends Component
     // Modal state
     public $selectedJobId = null;
     public $showModal = false;
+    public $jobId = null; // URL parameter for modal
 
     protected $listeners = [
         'filterUpdated' => 'handleFilterUpdate',
@@ -49,10 +51,29 @@ class JobTable extends Component
         'locationFilter' => ['except' => ''],
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
+        'jobId' => ['except' => null],
     ];
 
-    public function mount($options = [], $tableConfig = [])
+    public function mount($options = [], $tableConfig = [], $jobId = null)
     {
+        Log::info('JobTable mount - received parameters:');
+        Log::info('JobTable mount - options: ' . json_encode($options));
+        Log::info('JobTable mount - tableConfig keys: ' . json_encode(array_keys($tableConfig)));
+        Log::info('JobTable mount - received jobId parameter: ' . ($jobId ?? 'null'));
+
+        // Set jobId if passed from parent
+        if ($jobId) {
+            $this->jobId = $jobId;
+            Log::info('JobTable mount - set jobId to: ' . $this->jobId);
+        } else {
+            Log::info('JobTable mount - no jobId parameter, checking URL');
+            $urlJobId = request()->get('jobId');
+            if ($urlJobId) {
+                $this->jobId = $urlJobId;
+                Log::info('JobTable mount - set jobId from URL to: ' . $this->jobId);
+            }
+        }
+
         // Handle legacy options format or new tableConfig format
         if (!empty($tableConfig)) {
             $this->tableConfig = $tableConfig;
@@ -85,6 +106,8 @@ class JobTable extends Component
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->perPage = request()->get('perPage', 10);
+
+        Log::info('JobTable mount - final jobId: ' . ($this->jobId ?? 'null'));
     }
 
     private function processColumnConfiguration()
@@ -125,11 +148,9 @@ class JobTable extends Component
 
     public function viewJobRating($jobId)
     {
-        $this->selectedJobId = $jobId;
-        $this->showModal = true;
-
-        // Dispatch event to open the modal
-        $this->dispatch('openJobModal', ['jobId' => $jobId]);
+        // Simply dispatch to parent to update URL parameter
+        // Let the parent handle all the modal logic
+        $this->dispatch('updateJobId', $jobId);
     }
 
     public function closeModal()

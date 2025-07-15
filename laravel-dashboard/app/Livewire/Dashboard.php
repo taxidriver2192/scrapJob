@@ -7,7 +7,10 @@ use App\Models\JobPosting;
 use App\Models\Company;
 use App\Models\JobRating;
 use App\Models\JobQueue;
+use Livewire\Attributes\Layout;
+use Illuminate\Support\Facades\Log;
 
+#[Layout('layouts.app')]
 class Dashboard extends Component
 {
     // Dashboard stats
@@ -16,6 +19,7 @@ class Dashboard extends Component
     public $totalRatings;
     public $queuedJobs;
     public $avgScore;
+    public $jobId = null; // URL parameter for modal
 
     // Data for components
     public $companies = [];
@@ -56,10 +60,20 @@ class Dashboard extends Component
     protected $listeners = [
         'refreshJobTable' => 'updateFilters',
         'filterUpdated' => 'handleFilterUpdate',
+        'modalClosed' => 'handleModalClosed',
+        'updateJobId' => 'updateJobId',
     ];
+
+    protected $queryString = ['jobId'];
 
     public function mount()
     {
+        // Initialize jobId from URL
+        $this->jobId = request()->get('jobId');
+        Log::info('Dashboard mount - URL: ' . request()->fullUrl());
+        Log::info('Dashboard mount - jobId from URL: ' . ($this->jobId ?? 'null'));
+        Log::info('Dashboard mount - all URL params: ' . json_encode(request()->all()));
+
         // Initialize filters from URL parameters
         $this->currentFilters = [
             'search' => request()->get('search', ''),
@@ -104,6 +118,36 @@ class Dashboard extends Component
         if (isset($data['filters'])) {
             $this->currentFilters = array_merge($this->currentFilters, $data['filters']);
         }
+    }
+
+    public function updated($property, $value)
+    {
+        Log::info('Dashboard updated - property: ' . $property . ', value: ' . ($value ?? 'null'));
+
+        if ($property === 'jobId') {
+            Log::info('Dashboard updated - jobId changed to: ' . ($value ?? 'null'));
+            // The child components will automatically receive the updated value
+            // through their normal Livewire property binding
+        }
+    }
+
+    public function handleModalClosed()
+    {
+        Log::info('Dashboard handleModalClosed - clearing jobId');
+        $this->jobId = null;
+
+        // Don't dispatch jobIdUpdated here to prevent loop
+        // The modal is already closed, no need to notify it again
+    }
+
+    public function updateJobId($newJobId)
+    {
+        Log::info('Dashboard updateJobId - received: ' . ($newJobId ?? 'null'));
+        $this->jobId = $newJobId;
+        Log::info('Dashboard updateJobId - set to: ' . ($this->jobId ?? 'null'));
+
+        // Dispatch event to notify child components of the jobId change
+        $this->dispatch('jobIdUpdated', $newJobId);
     }
 
     public function render()

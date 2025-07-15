@@ -1,0 +1,48 @@
+# Dockerfile.dev  — for local Laravel development
+
+# 1) Base image
+FROM php:8.3-apache
+
+# 2) System dependencies + PHP extensions + Apache mod_rewrite
+RUN apt-get update && \
+    apt-get install -y \
+      git \
+      zip \
+      unzip \
+      libpng-dev \
+      libonig-dev \
+      libxml2-dev && \
+    docker-php-ext-install \
+      pdo_mysql \
+      mbstring \
+      bcmath \
+      gd && \
+    a2enmod rewrite && \
+    rm -rf /var/lib/apt/lists/*
+
+# 3) Composer (copy from the official Composer image)
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# 4) Set Apache to serve from /public
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri \
+      -e 's!DocumentRoot /var/www/html!DocumentRoot ${APACHE_DOCUMENT_ROOT}!g' \
+      -e 's!</Directory /var/www/>!</Directory ${APACHE_DOCUMENT_ROOT}/>!g' \
+      /etc/apache2/sites-available/000-default.conf \
+      /etc/apache2/apache2.conf
+
+# 5) Copy app code into the image (for cached vendor install)
+WORKDIR /var/www/html
+COPY --chown=www-data:www-data laravel-dashboard/ .
+
+# 6) Install PHP dependencies
+RUN composer install \
+      --prefer-dist \
+      --no-dev \
+      --no-scripts \
+      --no-interaction && \
+    chown -R www-data:www-data /var/www/html
+
+# 7) Switch to unprivileged user and bootstrap Apache
+USER www-data
+CMD ["apache2-foreground"]

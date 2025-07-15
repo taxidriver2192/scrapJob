@@ -188,9 +188,6 @@ make stop
 
 # Restart services
 make restart
-
-# View web dashboard logs
-make web-dashboard-logs
 ```
 
 ## Project Structure
@@ -198,7 +195,6 @@ make web-dashboard-logs
 ```
 ├── cmd/                    # Go applications
 │   ├── main.go            # Main scraper application
-│   ├── web-dashboard/     # Web dashboard server
 │   ├── match-jobs/        # AI job matching
 │   └── queue-manager/     # Queue management
 ├── internal/              # Internal Go packages
