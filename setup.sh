@@ -132,9 +132,23 @@ if docker ps --format "table {{.Names}}" | grep -q "scrapjob-app"; then
   success "Caches cleared"
 
   # 6) Fix permissions with proper UID/GID
-  info "Fixing storage/bootstrap permissions…"
-  docker exec $APP_SVC bash -lc "chown -R ${HOST_UID}:${HOST_GID} /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true"
-  success "Permissions fixed"
+  info "Creating Laravel storage directories and fixing permissions…"
+  
+  # Create all required Laravel storage directories
+  docker exec $APP_SVC bash -lc "
+    mkdir -p /var/www/html/storage/framework/{cache/data,sessions,views,testing} && \
+    mkdir -p /var/www/html/storage/{app/public,logs} && \
+    mkdir -p /var/www/html/bootstrap/cache
+  "
+  
+  # Set proper ownership and permissions
+  docker exec $APP_SVC bash -lc "
+    chown -R ${HOST_UID}:${HOST_GID} /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true && \
+    chmod -R g+s /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+  "
+  
+  success "Storage directories created and permissions fixed"
 
 else
   info "Laravel containers not found, skipping Laravel setup"

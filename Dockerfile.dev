@@ -51,8 +51,11 @@ RUN composer install \
       --no-interaction && \
     chown -R ${HOST_UID}:${HOST_GID} /var/www/html
 
-# 8) Ensure storage and bootstrap/cache are writable
-RUN chmod -R 775 storage bootstrap/cache && \
+# 8) Create all required Laravel directories and ensure they are writable
+RUN mkdir -p storage/framework/{cache/data,sessions,views,testing} && \
+    mkdir -p storage/{app/public,logs} && \
+    mkdir -p bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache && \
     chown -R ${HOST_UID}:${HOST_GID} storage bootstrap/cache
 
 # 9) Configure Apache to run as the docker user
@@ -61,9 +64,15 @@ RUN sed -i "s/User www-data/User dockeruser/" /etc/apache2/apache2.conf && \
 
 # 10) Create an entrypoint script
 RUN echo '#!/bin/bash\n\
+# Create all required Laravel directories if they don'\''t exist\n\
+mkdir -p /var/www/html/storage/framework/{cache/data,sessions,views,testing}\n\
+mkdir -p /var/www/html/storage/{app/public,logs}\n\
+mkdir -p /var/www/html/bootstrap/cache\n\
 # Ensure proper permissions on mounted volumes\n\
 chown -R ${HOST_UID}:${HOST_GID} /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true\n\
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true\n\
+# Set sticky bit for group inheritance\n\
+chmod -R g+s /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true\n\
 # Start Apache\n\
 exec apache2-foreground\n\
 ' > /usr/local/bin/docker-entrypoint.sh && \
