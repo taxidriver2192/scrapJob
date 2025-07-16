@@ -11,6 +11,8 @@ class SearchFilters extends Component
     public $locationFilter = '';
     public $dateFromFilter = '';
     public $dateToFilter = '';
+    public $datePreset = ''; // New property for date presets
+    public $viewedStatusFilter = ''; // New filter for viewed status
     public $perPage = 10;
 
     public $companies = [];
@@ -27,6 +29,8 @@ class SearchFilters extends Component
         'locationFilter' => ['except' => ''],
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
+        'datePreset' => ['except' => ''],
+        'viewedStatusFilter' => ['except' => ''],
         'perPage' => ['except' => 10],
     ];
 
@@ -46,6 +50,8 @@ class SearchFilters extends Component
         $this->locationFilter = request()->get('locationFilter', '');
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
+        $this->datePreset = request()->get('datePreset', '');
+        $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
         $this->perPage = request()->get('perPage', 10);
 
         // Dispatch initial values to parent components
@@ -58,6 +64,7 @@ class SearchFilters extends Component
                 'locationFilter' => $this->locationFilter,
                 'dateFromFilter' => $this->dateFromFilter,
                 'dateToFilter' => $this->dateToFilter,
+                'viewedStatusFilter' => $this->viewedStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
             ]
@@ -67,10 +74,15 @@ class SearchFilters extends Component
     public function clearFilters()
     {
         $this->search = '';
-        $this->companyFilter = '';
+        // Don't clear companyFilter if we have a scopedCompanyId (company details page)
+        if (!$this->scopedCompanyId) {
+            $this->companyFilter = '';
+        }
         $this->locationFilter = '';
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
+        $this->datePreset = '';
+        $this->viewedStatusFilter = '';
         $this->perPage = 10;
 
         $this->dispatch('filtersCleared');
@@ -87,8 +99,53 @@ class SearchFilters extends Component
                 'locationFilter' => $this->locationFilter,
                 'dateFromFilter' => $this->dateFromFilter,
                 'dateToFilter' => $this->dateToFilter,
+                'viewedStatusFilter' => $this->viewedStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId, // Add scoped company ID
+            ]
+        ]);
+    }
+
+    public function setDatePreset($preset)
+    {
+        $this->datePreset = $preset;
+
+        switch ($preset) {
+            case 'last_24_hours':
+                $this->dateFromFilter = now()->subDay()->format('Y-m-d');
+                $this->dateToFilter = now()->format('Y-m-d');
+                break;
+            case 'last_week':
+                $this->dateFromFilter = now()->subWeek()->format('Y-m-d');
+                $this->dateToFilter = now()->format('Y-m-d');
+                break;
+            case 'last_month':
+                $this->dateFromFilter = now()->subMonth()->format('Y-m-d');
+                $this->dateToFilter = now()->format('Y-m-d');
+                break;
+            case 'last_3_months':
+                $this->dateFromFilter = now()->subMonths(3)->format('Y-m-d');
+                $this->dateToFilter = now()->format('Y-m-d');
+                break;
+            default:
+                $this->dateFromFilter = '';
+                $this->dateToFilter = '';
+                break;
+        }
+
+        // Trigger filter update
+        $this->dispatch('filterUpdated', [
+            'property' => 'datePreset',
+            'value' => $this->datePreset,
+            'filters' => [
+                'search' => $this->search,
+                'companyFilter' => $this->scopedCompanyId ? null : $this->companyFilter,
+                'locationFilter' => $this->locationFilter,
+                'dateFromFilter' => $this->dateFromFilter,
+                'dateToFilter' => $this->dateToFilter,
+                'viewedStatusFilter' => $this->viewedStatusFilter,
+                'perPage' => $this->perPage,
+                'scopedCompanyId' => $this->scopedCompanyId,
             ]
         ]);
     }

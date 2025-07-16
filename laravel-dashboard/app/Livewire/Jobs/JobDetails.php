@@ -5,8 +5,10 @@ namespace App\Livewire\Jobs;
 use Livewire\Component;
 use App\Models\JobRating;
 use App\Models\JobPosting;
+use App\Models\UserJobView;
 use Livewire\Attributes\Layout;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 #[Layout('layouts.app')]
 class JobDetails extends Component
@@ -55,6 +57,11 @@ class JobDetails extends Component
             // Job not found, log the error but let the view handle it
             Log::warning('JobDetails loadJobFromId - job not found for ID: ' . $jobId);
             return;
+        }
+
+        // Mark job as viewed if user is authenticated
+        if (Auth::check()) {
+            UserJobView::markAsViewed(Auth::id(), $jobId);
         }
 
         // Try to load existing job rating (optional)

@@ -21,6 +21,13 @@
             <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <!-- Search Input -->
                 <div class="md:col-span-2">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Search Companies</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Find companies by name or description"
+                        />
+                    </div>
                     <flux:input
                         wire:model.live.debounce.300ms="search"
                         placeholder="Search companies..."
@@ -30,7 +37,14 @@
 
                 <!-- City Filter -->
                 <div>
-                    <flux:select wire:model.live="cityFilter">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>City</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Filter by company location"
+                        />
+                    </div>
+                    <flux:select wire:model.live="cityFilter" icon="map-pin">
                         <option value="">All Cities</option>
                         @foreach($locations as $location)
                         <option value="{{ $location }}">{{ $location }}</option>
@@ -41,7 +55,14 @@
                 <!-- Status Filter -->
                 @if($options['showStatusFilter'] ?? false)
                 <div>
-                    <flux:select wire:model.live="statusFilter">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Status</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Filter by company status"
+                        />
+                    </div>
+                    <flux:select wire:model.live="statusFilter" icon="check-circle">
                         @foreach($statusOptions as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
@@ -52,7 +73,14 @@
                 <!-- VAT Filter -->
                 @if($options['showVatFilter'] ?? false)
                 <div>
-                    <flux:select wire:model.live="hasVatFilter">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>VAT</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Filter by VAT registration status"
+                        />
+                    </div>
+                    <flux:select wire:model.live="hasVatFilter" icon="receipt-tax">
                         @foreach($vatOptions as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
@@ -63,7 +91,14 @@
                 <!-- Job Postings Filter -->
                 @if($options['showJobsFilter'] ?? false)
                 <div>
-                    <flux:select wire:model.live="hasJobsFilter">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Job Postings</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Filter by companies with job postings"
+                        />
+                    </div>
+                    <flux:select wire:model.live="hasJobsFilter" icon="briefcase">
                         @foreach($jobsOptions as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
@@ -74,7 +109,14 @@
                 <!-- Minimum Employees Filter -->
                 @if($options['showEmployeesFilter'] ?? false)
                 <div>
-                    <flux:select wire:model.live="minEmployeesFilter">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Team Size</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Filter by minimum number of employees"
+                        />
+                    </div>
+                    <flux:select wire:model.live="minEmployeesFilter" icon="user-group">
                         @foreach($employeeRangeOptions as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
@@ -85,7 +127,14 @@
                 <!-- Per Page -->
                 @if($options['showPerPage'] ?? false)
                 <div class="@if(!($options['showStatusFilter'] ?? false) && !($options['showVatFilter'] ?? false) && !($options['showJobsFilter'] ?? false) && !($options['showEmployeesFilter'] ?? false)) md:col-start-4 @endif">
-                    <flux:select wire:model.live="perPage">
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Results per Page</flux:label>
+                        <flux:icon.question-mark-circle
+                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
+                            tooltip="Number of companies to display per page"
+                        />
+                    </div>
+                    <flux:select wire:model.live="perPage" icon="queue-list">
                         <option value="5">5 per page</option>
                         <option value="10">10 per page</option>
                         <option value="25">25 per page</option>

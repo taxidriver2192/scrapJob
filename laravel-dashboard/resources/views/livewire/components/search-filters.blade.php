@@ -1,25 +1,48 @@
 <flux:card class="mb-8">
-    <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
-        <flux:heading size="lg" class="mb-4 text-zinc-900 dark:text-zinc-100">
-            <i class="fas fa-search mr-2 text-zinc-600 dark:text-zinc-400"></i>{{ $title }}
-        </flux:heading>
+    <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+            <flux:heading size="md" class="text-purple-600">
+                <flux:icon.funnel class="mr-2" />
+                {{ $title }}
+            </flux:heading>
+            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset)
+            <flux:button
+                size="sm"
+                variant="ghost"
+                wire:click="clearFilters"
+                icon="x-circle"
+            >
+                Clear Filters
+            </flux:button>
+            @endif
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
             <!-- Global Search -->
-            <div>
-                <flux:label>Search</flux:label>
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Search Jobs</flux:label>
+                    <flux:tooltip content="Find jobs by title, description, or company name" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
                 <flux:input
                     wire:model.live.debounce.300ms="search"
                     placeholder="Search jobs, companies, descriptions..."
-                    icon="search"
+                    icon="magnifying-glass"
                 />
             </div>
 
             <!-- Company Filter with Autocomplete -->
             @if($showCompanyFilter)
             <div>
-                <flux:label>Company</flux:label>
-                <flux:autocomplete wire:model.live="companyFilter" placeholder="Select or type company...">
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Company</flux:label>
+                    <flux:tooltip content="Filter by specific company" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:autocomplete wire:model.live="companyFilter" placeholder="Select or type company..." icon="building-office">
                     @foreach($companies as $companyId => $companyName)
                         <flux:autocomplete.item value="{{ $companyName }}">
                             {{ $companyName }}
@@ -31,8 +54,13 @@
 
             <!-- Location Filter with Autocomplete -->
             <div>
-                <flux:label>Location</flux:label>
-                <flux:autocomplete wire:model.live="locationFilter" placeholder="Select or type location...">
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Location</flux:label>
+                    <flux:tooltip content="Filter by job location or city" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:autocomplete wire:model.live="locationFilter" placeholder="Select or type location..." icon="map-pin">
                     @foreach($locations as $location)
                         <flux:autocomplete.item value="{{ $location }}">
                             {{ $location }}
@@ -41,11 +69,33 @@
                 </flux:autocomplete>
             </div>
 
+            <!-- Viewed Status Filter -->
+            @auth
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Viewed Status</flux:label>
+                    <flux:tooltip content="Show jobs you've seen or not seen" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="viewedStatusFilter" icon="eye">
+                    <option value="">All Jobs</option>
+                    <option value="viewed">Viewed Only</option>
+                    <option value="not_viewed">Not Viewed</option>
+                </flux:select>
+            </div>
+            @endauth
+
             <!-- Items per page -->
             @if($showPerPage)
             <div>
-                <flux:label>Items per page</flux:label>
-                <flux:select wire:model.live="perPage">
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Results per Page</flux:label>
+                    <flux:tooltip content="Number of jobs to display per page" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="perPage" icon="queue-list">
                     <option value="5">5 per page</option>
                     <option value="10">10 per page</option>
                     <option value="20">20 per page</option>
@@ -53,40 +103,86 @@
                 </flux:select>
             </div>
             @endif
+
+            @if($showDateFilters)
+            <!-- Date Presets -->
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Posted Date Range</flux:label>
+                    <flux:tooltip content="Filter jobs by when they were posted" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="datePreset" icon="calendar">
+                    <option value="">Posted: All Time</option>
+                    <option value="last_24_hours">Posted: Last 24 Hours</option>
+                    <option value="last_week">Posted: Last Week</option>
+                    <option value="last_month">Posted: Last Month</option>
+                    <option value="last_3_months">Posted: Last 3 Months</option>
+                </flux:select>
+            </div>
+            @endif
         </div>
 
-        @if($showDateFilters)
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Date From -->
-            <div>
-                <flux:label>Posted From</flux:label>
-                <flux:input
-                    type="date"
-                    wire:model.live="dateFromFilter"
-                />
-            </div>
+        <!-- Active Filters Display -->
+        @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset)
+        <div class="pt-4 border-t border-zinc-200 dark:border-zinc-700">
+            <div class="flex flex-wrap gap-2">
+                @if($search)
+                <flux:badge variant="outline" size="sm">
+                    Search: "{{ $search }}"
+                    <flux:button size="xs" variant="ghost" wire:click="$set('search', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
 
-            <!-- Date To -->
-            <div>
-                <flux:label>Posted To</flux:label>
-                <flux:input
-                    type="date"
-                    wire:model.live="dateToFilter"
-                />
-            </div>
+                @if($companyFilter && $showCompanyFilter)
+                <flux:badge variant="outline" size="sm">
+                    Company: {{ $companyFilter }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('companyFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
 
-            <!-- Clear Filters -->
-            <div class="flex items-end">
-                <flux:button wire:click="clearFilters" variant="outline" icon="x">
-                    Clear Filters
-                </flux:button>
+                @if($locationFilter)
+                <flux:badge variant="outline" size="sm">
+                    Location: {{ $locationFilter }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('locationFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
+
+                @auth
+                @if($viewedStatusFilter)
+                <flux:badge variant="outline" size="sm">
+                    Status: {{ $viewedStatusFilter === 'viewed' ? 'Viewed Only' : 'Not Viewed' }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('viewedStatusFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
+                @endauth
+
+                @if($datePreset)
+                <flux:badge variant="outline" size="sm">
+                    @php
+                        $dateLabels = [
+                            'last_24_hours' => 'Last 24 Hours',
+                            'last_week' => 'Last Week',
+                            'last_month' => 'Last Month',
+                            'last_3_months' => 'Last 3 Months'
+                        ];
+                    @endphp
+                    Posted: {{ $dateLabels[$datePreset] ?? $datePreset }}
+                    <flux:button size="xs" variant="ghost" wire:click="setDatePreset('')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
             </div>
-        </div>
-        @else
-        <div class="flex justify-end">
-            <flux:button wire:click="clearFilters" variant="outline" icon="x">
-                Clear Filters
-            </flux:button>
         </div>
         @endif
     </div>

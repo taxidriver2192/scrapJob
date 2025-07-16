@@ -74,29 +74,47 @@
                                     <div>
                                         @if($linkToDetailsPage)
                                             <a href="{{ route('job.details', ['jobId' => $job->job_id]) }}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left block">
-                                                @if(strlen($job->title) > 50)
-                                                    <flux:tooltip :content="$job->title">
-                                                        <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
-                                                    </flux:tooltip>
-                                                @else
-                                                    <div class="font-medium">{{ $job->title }}</div>
-                                                @endif
-                                                @if($job->description)
-                                                    <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
-                                                @endif
+                                                <div class="flex items-center gap-2">
+                                                    @if(auth()->check() && $this->isJobViewed($job->job_id))
+                                                        <flux:badge color="zinc" size="sm" class="shrink-0">
+                                                            Seen
+                                                        </flux:badge>
+                                                    @endif
+                                                    <div class="min-w-0">
+                                                        @if(strlen($job->title) > 50)
+                                                            <flux:tooltip :content="$job->title">
+                                                                <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
+                                                            </flux:tooltip>
+                                                        @else
+                                                            <div class="font-medium">{{ $job->title }}</div>
+                                                        @endif
+                                                        @if($job->description)
+                                                            <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
+                                                        @endif
+                                                    </div>
+                                                </div>
                                             </a>
                                         @else
                                             <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left">
-                                                @if(strlen($job->title) > 50)
-                                                    <flux:tooltip :content="$job->title">
-                                                        <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
-                                                    </flux:tooltip>
-                                                @else
-                                                    <div class="font-medium">{{ $job->title }}</div>
-                                                @endif
-                                                @if($job->description)
-                                                    <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
-                                                @endif
+                                                <div class="flex items-center gap-2">
+                                                    @if(auth()->check() && $this->isJobViewed($job->job_id))
+                                                        <flux:badge color="zinc" size="sm" class="shrink-0">
+                                                            Seen
+                                                        </flux:badge>
+                                                    @endif
+                                                    <div class="min-w-0">
+                                                        @if(strlen($job->title) > 50)
+                                                            <flux:tooltip :content="$job->title">
+                                                                <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
+                                                            </flux:tooltip>
+                                                        @else
+                                                            <div class="font-medium">{{ $job->title }}</div>
+                                                        @endif
+                                                        @if($job->description)
+                                                            <div class="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-[300px]">{{ Str::limit(strip_tags($job->description), 100) }}</div>
+                                                        @endif
+                                                    </div>
+                                                </div>
                                             </button>
                                         @endif
                                     </div>
@@ -190,9 +208,10 @@
             'companyFilter' => $companyFilter,
             'locationFilter' => $locationFilter,
             'dateFromFilter' => $dateFromFilter,
-            'dateToFilter' => $dateToFilter
+            'dateToFilter' => $dateToFilter,
+            'viewedStatusFilter' => $viewedStatusFilter
         ]"
-        :key="'job-modal-' . ($jobId ?? 'default') . '-' . ($companyFilter ?? 'all') . '-' . md5(json_encode([$search, $companyFilter, $locationFilter, $dateFromFilter, $dateToFilter]))"
+        :key="'job-modal-' . ($jobId ?? 'default') . '-' . ($companyFilter ?? 'all') . '-' . md5(json_encode([$search, $companyFilter, $locationFilter, $dateFromFilter, $dateToFilter, $viewedStatusFilter]))"
     />
 
 </flux:card>

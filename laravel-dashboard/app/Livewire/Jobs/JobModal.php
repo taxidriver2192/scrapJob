@@ -5,8 +5,10 @@ namespace App\Livewire\Jobs;
 use Livewire\Component;
 use App\Models\JobRating;
 use App\Models\JobPosting;
+use App\Models\UserJobView;
 use Flux\Flux;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class JobModal extends Component
 {
@@ -306,6 +308,11 @@ class JobModal extends Component
             ->first();
 
         if ($this->jobPosting) {
+            // Mark job as viewed if user is authenticated
+            if (Auth::check()) {
+                UserJobView::markAsViewed(Auth::id(), $jobId);
+            }
+
             // Try to load existing job rating
             $this->rating = JobRating::where('job_id', $jobId)->first();
             Log::info('JobModal loadJobFromId - rating found: ' . ($this->rating ? 'yes' : 'no'));

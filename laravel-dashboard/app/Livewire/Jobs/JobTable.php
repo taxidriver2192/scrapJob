@@ -5,7 +5,10 @@ namespace App\Livewire\Jobs;
 use Livewire\Component;
 use App\Models\JobPosting;
 use App\Models\JobRating;
+use App\Models\UserJobView;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class JobTable extends Component
 {
@@ -31,6 +34,7 @@ class JobTable extends Component
     public $locationFilter = '';
     public $dateFromFilter = '';
     public $dateToFilter = '';
+    public $viewedStatusFilter = '';
 
     // Modal state
     public $selectedJobId = null;
@@ -52,6 +56,7 @@ class JobTable extends Component
         'locationFilter' => ['except' => ''],
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
+        'viewedStatusFilter' => ['except' => ''],
         'jobId' => ['except' => null],
     ];
 
@@ -99,6 +104,7 @@ class JobTable extends Component
         $this->locationFilter = request()->get('locationFilter', '');
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
+        $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
         $this->perPage = request()->get('perPage', 10);
 
         // Override companyFilter if specified in tableConfig
@@ -174,6 +180,7 @@ class JobTable extends Component
             $this->locationFilter = $data['filters']['locationFilter'] ?? '';
             $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
+            $this->viewedStatusFilter = $data['filters']['viewedStatusFilter'] ?? '';
             $this->perPage = $data['filters']['perPage'] ?? 10;
 
             // Reset to first page when filters change
@@ -184,10 +191,14 @@ class JobTable extends Component
     public function handleFiltersCleared()
     {
         $this->search = '';
-        $this->companyFilter = '';
+        // Don't clear companyFilter if it's set via tableConfig (company details page)
+        if (!isset($this->tableConfig['companyFilter'])) {
+            $this->companyFilter = '';
+        }
         $this->locationFilter = '';
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
+        $this->viewedStatusFilter = '';
         $this->perPage = 10;
         $this->page = 1;
     }
@@ -233,6 +244,29 @@ class JobTable extends Component
 
         if (!empty($this->dateToFilter)) {
             $query->whereDate('posted_date', '<=', $this->dateToFilter);
+        }
+
+        // Apply viewed status filter (only for authenticated users)
+        if (!empty($this->viewedStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
+            
+            if ($this->viewedStatusFilter === 'viewed') {
+                // Show only jobs that have been viewed
+                $query->whereExists(function ($subQuery) use ($userId) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('user_job_views')
+                        ->whereColumn('user_job_views.job_id', 'job_postings.job_id')
+                        ->where('user_job_views.user_id', $userId);
+                });
+            } elseif ($this->viewedStatusFilter === 'not_viewed') {
+                // Show only jobs that have NOT been viewed
+                $query->whereNotExists(function ($subQuery) use ($userId) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('user_job_views')
+                        ->whereColumn('user_job_views.job_id', 'job_postings.job_id')
+                        ->where('user_job_views.user_id', $userId);
+                });
+            }
         }
 
         // Apply sorting
@@ -341,5 +375,17 @@ class JobTable extends Component
         if ($score >= 60) return 'yellow';
         if ($score >= 40) return 'orange';
         return 'red';
+    }
+
+    /**
+     * Check if a job has been viewed by the current authenticated user
+     */
+    public function isJobViewed($jobId): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+        
+        return UserJobView::hasUserViewed(Auth::id(), $jobId);
     }
 }
