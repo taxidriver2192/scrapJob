@@ -1,5 +1,5 @@
-<flux:card class="mb-8 bg-white dark:bg-zinc-900">
-    <div class="p-6">
+<flux:card class="mb-8">
+    <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
         <flux:heading size="lg" class="mb-4 text-zinc-900 dark:text-zinc-100">
             <i class="fas fa-search mr-2 text-zinc-600 dark:text-zinc-400"></i>{{ $title }}
         </flux:heading>
@@ -16,6 +16,7 @@
             </div>
 
             <!-- Company Filter with Autocomplete -->
+            @if($showCompanyFilter)
             <div>
                 <flux:label>Company</flux:label>
                 <flux:autocomplete wire:model.live="companyFilter" placeholder="Select or type company...">
@@ -26,6 +27,7 @@
                     @endforeach
                 </flux:autocomplete>
             </div>
+            @endif
 
             <!-- Location Filter with Autocomplete -->
             <div>

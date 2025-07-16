@@ -1,4 +1,4 @@
-<flux:card class="bg-white dark:bg-zinc-900">
+<flux:card>
     <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
         <div class="flex justify-between items-center">
             <flux:heading size="lg" class="text-zinc-900 dark:text-zinc-100">
@@ -73,7 +73,7 @@
                                 <flux:table.cell>
                                     <div>
                                         @if($linkToDetailsPage)
-                                            <a href="{{ route('job.details', ['jobId' => $job->job_id]) }}" class="hover:scale-105 transition-transform block">
+                                            <a href="{{ route('job.details', ['jobId' => $job->job_id]) }}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left block">
                                                 @if(strlen($job->title) > 50)
                                                     <flux:tooltip :content="$job->title">
                                                         <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
@@ -86,7 +86,7 @@
                                                 @endif
                                             </a>
                                         @else
-                                            <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:scale-105 transition-transform">
+                                            <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left">
                                                 @if(strlen($job->title) > 50)
                                                     <flux:tooltip :content="$job->title">
                                                         <div class="font-medium cursor-help">{{ Str::limit($job->title, 50) }}</div>
@@ -103,10 +103,17 @@
                                 </flux:table.cell>
                             @elseif($field === 'company')
                                 <flux:table.cell class="whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <flux:icon.building-office class="mr-2 text-zinc-400 dark:text-zinc-500" />
-                                        {{ $job->company->name ?? 'N/A' }}
-                                    </div>
+                                    @if($job->company)
+                                        <a href="{{ route('company.details', ['companyId' => $job->company->company_id]) }}" class="flex items-center hover:text-blue-600 dark:hover:text-blue-400 transition-colors group">
+                                            <flux:icon.building-office class="mr-2 text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                                            {{ $job->company->name }}
+                                        </a>
+                                    @else
+                                        <div class="flex items-center text-zinc-500 dark:text-zinc-400">
+                                            <flux:icon.building-office class="mr-2" />
+                                            N/A
+                                        </div>
+                                    @endif
                                 </flux:table.cell>
                             @elseif($field === 'location')
                                 <flux:table.cell class="whitespace-nowrap">
@@ -175,7 +182,18 @@
     </flux:table>
 
     <!-- Job Modal Component -->
-    <livewire:jobs.job-modal :jobId="$jobId" :key="'job-modal-' . ($jobId ?? 'default')" />
+    <livewire:jobs.job-modal
+        :jobId="$jobId"
+        :companyId="$companyFilter"
+        :filterScope="[
+            'search' => $search,
+            'companyFilter' => $companyFilter,
+            'locationFilter' => $locationFilter,
+            'dateFromFilter' => $dateFromFilter,
+            'dateToFilter' => $dateToFilter
+        ]"
+        :key="'job-modal-' . ($jobId ?? 'default') . '-' . ($companyFilter ?? 'all') . '-' . md5(json_encode([$search, $companyFilter, $locationFilter, $dateFromFilter, $dateToFilter]))"
+    />
 
 </flux:card>
 

@@ -17,7 +17,9 @@ class SearchFilters extends Component
     public $locations = [];
     public $showPerPage = true;
     public $showDateFilters = true;
+    public $showCompanyFilter = true;
     public $title = 'Search & Filters';
+    public $scopedCompanyId = null; // For company-specific filtering
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -34,6 +36,8 @@ class SearchFilters extends Component
         $this->locations = $locations;
         $this->showPerPage = $options['showPerPage'] ?? true;
         $this->showDateFilters = $options['showDateFilters'] ?? true;
+        $this->showCompanyFilter = $options['showCompanyFilter'] ?? true;
+        $this->scopedCompanyId = $options['scopedCompanyId'] ?? null;
         $this->title = $options['title'] ?? 'Search & Filters';
 
         // Initialize from URL parameters
@@ -50,11 +54,12 @@ class SearchFilters extends Component
             'value' => null,
             'filters' => [
                 'search' => $this->search,
-                'companyFilter' => $this->companyFilter,
+                'companyFilter' => $this->scopedCompanyId ? null : $this->companyFilter,
                 'locationFilter' => $this->locationFilter,
                 'dateFromFilter' => $this->dateFromFilter,
                 'dateToFilter' => $this->dateToFilter,
                 'perPage' => $this->perPage,
+                'scopedCompanyId' => $this->scopedCompanyId,
             ]
         ]);
     }
@@ -78,11 +83,12 @@ class SearchFilters extends Component
             'value' => $this->$propertyName,
             'filters' => [
                 'search' => $this->search,
-                'companyFilter' => $this->companyFilter,
+                'companyFilter' => $this->scopedCompanyId ? null : $this->companyFilter, // Use scoped company if available
                 'locationFilter' => $this->locationFilter,
                 'dateFromFilter' => $this->dateFromFilter,
                 'dateToFilter' => $this->dateToFilter,
                 'perPage' => $this->perPage,
+                'scopedCompanyId' => $this->scopedCompanyId, // Add scoped company ID
             ]
         ]);
     }

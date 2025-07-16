@@ -17,23 +17,31 @@ class JobModal extends Component
     public $jobId = null; // URL parameter for the job ID
     public $showModal = false; // Controls modal visibility
 
+    // Filter parameters to scope navigation
+    public $companyId = null;
+    public $filterScope = []; // Store filter parameters from parent
+
     // Cache navigation state to avoid repeated queries
     public $canGoToPrevious = false;
     public $canGoToNext = false;
 
-    protected $queryString = []; // Remove query string handling from modal
+    protected $queryString = ['jobId']; // Enable URL parameter handling
 
     protected $listeners = [
         'openJobModal' => 'openModal',
         'refreshJobModal' => 'refreshModal',
         'closeJobModal' => 'closeModal',
-        'jobIdUpdated' => 'handleJobIdUpdate',
+        'updateJobId' => 'handleJobIdUpdate',
         'previousRating' => 'previousRating',
         'nextRating' => 'nextRating'
     ];
 
-    public function mount($jobId = null)
+    public function mount($jobId = null, $companyId = null, $filterScope = [])
     {
+        // Set filter parameters
+        $this->companyId = $companyId;
+        $this->filterScope = $filterScope;
+
         // Set jobId from parameter or URL
         $this->jobId = $jobId ?: request()->get('jobId');
 
@@ -80,7 +88,7 @@ class JobModal extends Component
     {
         // Hide the modal and clear data
         $this->showModal = false;
-        $this->jobId = null;
+        $this->jobId = null; // This will automatically remove the URL parameter
         $this->jobPosting = null;
         $this->rating = null;
 
@@ -104,6 +112,78 @@ class JobModal extends Component
         }
     }
 
+    /**
+     * Called automatically when jobId property changes (from URL or programmatically)
+     */
+    public function updatedJobId($value)
+    {
+        if ($value) {
+            // JobId was set - load the job and show modal
+            $this->loadJobFromId($value);
+            $this->showModal = true;
+        } else {
+            // JobId was cleared - hide modal
+            $this->showModal = false;
+            $this->jobPosting = null;
+            $this->rating = null;
+        }
+    }
+
+    /**
+     * Build a filtered query based on current filter scope
+     */
+    private function getFilteredQuery()
+    {
+        $query = JobPosting::query();
+
+        // Apply company filter - prioritize companyId over filterScope companyFilter
+        if ($this->companyId) {
+            $query->where('company_id', $this->companyId);
+        } elseif (!empty($this->filterScope['companyFilter'])) {
+            $companyFilter = $this->filterScope['companyFilter'];
+            if (is_numeric($companyFilter)) {
+                // If it's numeric, treat as company ID
+                $query->where('company_id', $companyFilter);
+            } else {
+                // If it's text, search by company name
+                $query->whereHas('company', function($companyQuery) use ($companyFilter) {
+                    $companyQuery->where('name', 'like', '%' . $companyFilter . '%');
+                });
+            }
+        }
+
+        // Apply filters from filterScope
+        if (!empty($this->filterScope)) {
+            // Search filter
+            if (!empty($this->filterScope['search'])) {
+                $search = $this->filterScope['search'];
+                $query->where(function($q) use ($search) {
+                    $q->where('title', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%')
+                      ->orWhereHas('company', function($companyQuery) use ($search) {
+                          $companyQuery->where('name', 'like', '%' . $search . '%');
+                      });
+                });
+            }
+
+            // Location filter
+            if (!empty($this->filterScope['locationFilter'])) {
+                $query->where('location', 'like', '%' . $this->filterScope['locationFilter'] . '%');
+            }
+
+            // Date range filters
+            if (!empty($this->filterScope['dateFromFilter'])) {
+                $query->where('posted_date', '>=', $this->filterScope['dateFromFilter']);
+            }
+
+            if (!empty($this->filterScope['dateToFilter'])) {
+                $query->where('posted_date', '<=', $this->filterScope['dateToFilter']);
+            }
+        }
+
+        return $query;
+    }
+
     private function updateNavigationState()
     {
         if (!$this->jobPosting || !$this->jobPosting->job_id) {
@@ -112,15 +192,31 @@ class JobModal extends Component
             return;
         }
 
-        // Single query to check both directions at once
-        $navigationData = JobPosting::selectRaw('
-            EXISTS(SELECT 1 FROM job_postings WHERE job_id < ?) as has_previous,
-            EXISTS(SELECT 1 FROM job_postings WHERE job_id > ?) as has_next
-        ', [$this->jobPosting->job_id, $this->jobPosting->job_id])
+        // Build the base query with filters
+        $baseQuery = $this->getFilteredQuery();
+
+        // Single query to check both directions at once with filters applied
+        $navigationData = $baseQuery->selectRaw('
+            EXISTS(SELECT 1 FROM job_postings jp WHERE jp.job_id < ?' .
+            ($this->companyId ? ' AND jp.company_id = ?' : '') . ') as has_previous,
+            EXISTS(SELECT 1 FROM job_postings jp WHERE jp.job_id > ?' .
+            ($this->companyId ? ' AND jp.company_id = ?' : '') . ') as has_next
+        ', array_filter([
+            $this->jobPosting->job_id,
+            $this->companyId,
+            $this->jobPosting->job_id,
+            $this->companyId
+        ]))
         ->first();
 
-        $this->canGoToPrevious = (bool) $navigationData->has_previous;
-        $this->canGoToNext = (bool) $navigationData->has_next;
+        // Add null check to prevent the error
+        if ($navigationData) {
+            $this->canGoToPrevious = (bool) $navigationData->has_previous;
+            $this->canGoToNext = (bool) $navigationData->has_next;
+        } else {
+            $this->canGoToPrevious = false;
+            $this->canGoToNext = false;
+        }
     }
 
     public function previousRating()
@@ -131,8 +227,9 @@ class JobModal extends Component
 
         $currentJobId = $this->jobPosting->job_id;
 
-        // Find the previous job posting
-        $previousJob = JobPosting::where('job_id', '<', $currentJobId)
+        // Find the previous job posting using filtered query
+        $previousJob = $this->getFilteredQuery()
+            ->where('job_id', '<', $currentJobId)
             ->with('company')
             ->orderBy('job_id', 'desc')
             ->first();
@@ -151,8 +248,9 @@ class JobModal extends Component
 
         $currentJobId = $this->jobPosting->job_id;
 
-        // Find the next job posting
-        $nextJob = JobPosting::where('job_id', '>', $currentJobId)
+        // Find the next job posting using filtered query
+        $nextJob = $this->getFilteredQuery()
+            ->where('job_id', '>', $currentJobId)
             ->with('company')
             ->orderBy('job_id', 'asc')
             ->first();
@@ -212,9 +310,10 @@ class JobModal extends Component
             $this->rating = JobRating::where('job_id', $jobId)->first();
             Log::info('JobModal loadJobFromId - rating found: ' . ($this->rating ? 'yes' : 'no'));
 
-            // Calculate current index and total
-            $this->total = JobPosting::count();
-            $this->currentIndex = JobPosting::where('job_id', '<=', $jobId)->count() - 1;
+            // Calculate current index and total using filtered query
+            $filteredQuery = $this->getFilteredQuery();
+            $this->total = $filteredQuery->count();
+            $this->currentIndex = $filteredQuery->where('job_id', '<=', $jobId)->count() - 1;
 
             // Cache navigation state
             $this->updateNavigationState();
@@ -240,10 +339,8 @@ class JobModal extends Component
 
     public function updated($property, $value)
     {
-        if ($property === 'jobId') {
-            if ($value) {
-                $this->loadJobFromId($value);
-            }
+        if ($property === 'jobId' && $value) {
+            $this->loadJobFromId($value);
         }
     }
 

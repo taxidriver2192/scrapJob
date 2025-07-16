@@ -33,11 +33,11 @@ class Dashboard extends Component
         'showDetailedRatings' => true,
         'columns' => [
             // Rating columns - these appear first in the order defined
-            'overall_score' => ['enabled' => true, 'label' => 'Overall Score', 'type' => 'rating'],
-            'location_score' => ['enabled' => true, 'label' => 'Location', 'type' => 'rating'],
-            'tech_score' => ['enabled' => true, 'label' => 'Tech Skills', 'type' => 'rating'],
-            'team_size_score' => ['enabled' => true, 'label' => 'Team Size', 'type' => 'rating'],
-            'leadership_score' => ['enabled' => true, 'label' => 'Leadership', 'type' => 'rating'], // Disabled example
+            'overall_score' => ['enabled' => false, 'label' => 'Overall Score', 'type' => 'rating'],
+            'location_score' => ['enabled' => false, 'label' => 'Location', 'type' => 'rating'],
+            'tech_score' => ['enabled' => false, 'label' => 'Tech Skills', 'type' => 'rating'],
+            'team_size_score' => ['enabled' => false, 'label' => 'Team Size', 'type' => 'rating'],
+            'leadership_score' => ['enabled' => false, 'label' => 'Leadership', 'type' => 'rating'], // Disabled example
 
             // Regular columns - these appear after rating columns in the order defined
             'title' => ['enabled' => true, 'label' => 'Title', 'type' => 'regular'],

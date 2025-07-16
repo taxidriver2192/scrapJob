@@ -92,7 +92,7 @@ class JobTable extends Component
             ];
         }
 
-        // Initialize filters from URL parameters
+        // Initialize filters from URL parameters or tableConfig
         $this->page = request()->get('page', 1);
         $this->search = request()->get('search', '');
         $this->companyFilter = request()->get('companyFilter', '');
@@ -100,6 +100,11 @@ class JobTable extends Component
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->perPage = request()->get('perPage', 10);
+
+        // Override companyFilter if specified in tableConfig
+        if (isset($this->tableConfig['companyFilter'])) {
+            $this->companyFilter = $this->tableConfig['companyFilter'];
+        }
     }
 
     private function processColumnConfiguration()
@@ -160,7 +165,12 @@ class JobTable extends Component
     {
         if (isset($data['filters'])) {
             $this->search = $data['filters']['search'] ?? '';
-            $this->companyFilter = $data['filters']['companyFilter'] ?? '';
+            // Use scopedCompanyId if available, otherwise use companyFilter
+            if (isset($data['filters']['scopedCompanyId']) && $data['filters']['scopedCompanyId']) {
+                $this->companyFilter = $data['filters']['scopedCompanyId'];
+            } else {
+                $this->companyFilter = $data['filters']['companyFilter'] ?? '';
+            }
             $this->locationFilter = $data['filters']['locationFilter'] ?? '';
             $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
@@ -201,9 +211,14 @@ class JobTable extends Component
 
         // Apply company filter
         if (!empty($this->companyFilter)) {
-            $query->whereHas('company', function ($q) {
-                $q->where('name', $this->companyFilter);
-            });
+            // Check if it's a numeric company ID or company name
+            if (is_numeric($this->companyFilter)) {
+                $query->where('company_id', $this->companyFilter);
+            } else {
+                $query->whereHas('company', function ($q) {
+                    $q->where('name', $this->companyFilter);
+                });
+            }
         }
 
         // Apply location filter

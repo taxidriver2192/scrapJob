@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
 use App\Livewire\Jobs\Index as JobsIndex;
 use App\Livewire\Jobs\JobDetails;
-use App\Livewire\Companies;
+use App\Livewire\Companies\Index as CompaniesIndex;
+use App\Livewire\Companies\CompanyDetails;
 use App\Livewire\Queue;
 use App\Livewire\Ratings;
 use App\Livewire\ProfileEdit;
@@ -39,8 +40,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/jobs', JobsIndex::class)->name('jobs');
     Route::get('/job/{jobId}', JobDetails::class)->name('job.details');
 
-    // Other application routes
-    Route::get('/companies', Companies::class)->name('companies');
+    // Company-related routes
+    Route::get('/companies', CompaniesIndex::class)->name('companies');
+    Route::get('/company/{companyId}', CompanyDetails::class)->name('company.details');
     Route::get('/queue', Queue::class)->name('queue');
     Route::get('/ratings', Ratings::class)->name('ratings');
 

@@ -24,6 +24,11 @@ class JobInformation extends Component
         return data_get($this->jobPosting, 'company.name', 'N/A');
     }
 
+    public function getCompanyId()
+    {
+        return data_get($this->jobPosting, 'company.company_id');
+    }
+
     public function getJobLocation()
     {
         return data_get($this->jobPosting, 'location', 'N/A');
