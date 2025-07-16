@@ -3,12 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev   # or Dockerfile.prod
+      args:
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
     ports:
       - "8082:80"
     volumes:
       - ./laravel-dashboard:/var/www/html   # hot-reload code
       - ~/.composer/cache:/tmp/composer     # speeds up rebuilds
       - ./backups:/var/www/backups         # backup SQL files
+    user: "${HOST_UID}:${HOST_GID}"
     environment:
       APP_ENV: local
       APP_KEY: ${APP_KEY}
@@ -19,6 +23,8 @@ services:
       DB_DATABASE: linkedin_jobs
       DB_USERNAME: laravel
       DB_PASSWORD: laravelpass
+      UID: ${HOST_UID}
+      GID: ${HOST_GID}
     depends_on:
       db:
         condition: service_healthy

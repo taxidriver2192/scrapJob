@@ -34,6 +34,7 @@ else
   info "Go application source found"
 fi
 
+
 # 3) Ensure .env is present for Laravel
 if [ ! -f "./laravel-dashboard/.env" ]; then
   info "Creating .env from template"
@@ -51,6 +52,7 @@ docker run --rm \
   php:8.3-cli \
   php artisan key:generate --ansi --force
 success "Host .env now has a valid 32-byte key"
+
 
 # 4) Build & start containers
 info "Building & starting Docker containers…"
@@ -86,13 +88,6 @@ if [ ! -f "linkedin-scraper" ]; then
   go build -o linkedin-scraper cmd/main.go && success "Go application built"
 fi
 
-# 8) Run Go migrations
-info "Running Go application migrations..."
-if [ -f "linkedin-scraper" ]; then
-  ./linkedin-scraper migrate && success "Go migrations complete"
-else
-  warn "linkedin-scraper binary not found, skipping migrations"
-fi
 
 # helper: wait for health
 wait_for() {
@@ -113,7 +108,15 @@ if docker ps --format "table {{.Names}}" | grep -q "scrapjob-app"; then
   wait_for "scrapjob-app" 60
 
   APP_SVC="scrapjob-app"
-  exec_in_app="docker exec -u www-data $APP_SVC bash -lc"
+  # Use the HOST_UID from .env file
+  HOST_UID=$(grep "^HOST_UID=" .env | cut -d'=' -f2)
+  HOST_GID=$(grep "^HOST_GID=" .env | cut -d'=' -f2)
+  
+  # Default to 1000 if not found
+  HOST_UID=${HOST_UID:-1000}
+  HOST_GID=${HOST_GID:-1000}
+  
+  exec_in_app="docker exec -u ${HOST_UID}:${HOST_GID} $APP_SVC bash -lc"
 
   # 5) Composer install & key
   info "Installing Composer deps…"
@@ -128,15 +131,11 @@ if docker ps --format "table {{.Names}}" | grep -q "scrapjob-app"; then
   $exec_in_app "cd /var/www/html && php artisan config:clear && php artisan cache:clear && php artisan view:clear && php artisan route:clear"
   success "Caches cleared"
 
-  # 6) Fix permissions
+  # 6) Fix permissions with proper UID/GID
   info "Fixing storage/bootstrap permissions…"
-  docker exec $APP_SVC bash -lc "chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache"
+  docker exec $APP_SVC bash -lc "chown -R ${HOST_UID}:${HOST_GID} /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true"
   success "Permissions fixed"
 
-  # 7) Run migrations
-  info "Running migrations…"
-  $exec_in_app "cd /var/www/html && php artisan migrate --force"
-  success "Migrations complete"
 else
   info "Laravel containers not found, skipping Laravel setup"
 fi

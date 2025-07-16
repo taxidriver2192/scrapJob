@@ -17,6 +17,7 @@ class JobTable extends Component
     public $showRating = true;
     public $showDetailedRatings = false;
     public $title = 'Jobs';
+    public $linkToDetailsPage = false; // New option to link to dedicated page instead of modal
 
     // New configuration structure
     public $tableConfig = [];
@@ -56,21 +57,13 @@ class JobTable extends Component
 
     public function mount($options = [], $tableConfig = [], $jobId = null)
     {
-        Log::info('JobTable mount - received parameters:');
-        Log::info('JobTable mount - options: ' . json_encode($options));
-        Log::info('JobTable mount - tableConfig keys: ' . json_encode(array_keys($tableConfig)));
-        Log::info('JobTable mount - received jobId parameter: ' . ($jobId ?? 'null'));
-
         // Set jobId if passed from parent
         if ($jobId) {
             $this->jobId = $jobId;
-            Log::info('JobTable mount - set jobId to: ' . $this->jobId);
         } else {
-            Log::info('JobTable mount - no jobId parameter, checking URL');
             $urlJobId = request()->get('jobId');
             if ($urlJobId) {
                 $this->jobId = $urlJobId;
-                Log::info('JobTable mount - set jobId from URL to: ' . $this->jobId);
             }
         }
 
@@ -81,6 +74,7 @@ class JobTable extends Component
             $this->showActions = $tableConfig['showActions'] ?? true;
             $this->showRating = $tableConfig['showRating'] ?? true;
             $this->showDetailedRatings = $tableConfig['showDetailedRatings'] ?? false;
+            $this->linkToDetailsPage = $tableConfig['linkToDetailsPage'] ?? false;
 
             // Process columns configuration
             $this->processColumnConfiguration();
@@ -106,8 +100,6 @@ class JobTable extends Component
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->perPage = request()->get('perPage', 10);
-
-        Log::info('JobTable mount - final jobId: ' . ($this->jobId ?? 'null'));
     }
 
     private function processColumnConfiguration()
@@ -148,9 +140,14 @@ class JobTable extends Component
 
     public function viewJobRating($jobId)
     {
-        // Simply dispatch to parent to update URL parameter
-        // Let the parent handle all the modal logic
-        $this->dispatch('updateJobId', $jobId);
+        if ($this->linkToDetailsPage) {
+            // Navigate to dedicated job details page
+            return redirect()->route('job.details', ['jobId' => $jobId]);
+        } else {
+            // Simply dispatch to parent to update URL parameter
+            // Let the parent handle all the modal logic
+            $this->dispatch('updateJobId', $jobId);
+        }
     }
 
     public function closeModal()

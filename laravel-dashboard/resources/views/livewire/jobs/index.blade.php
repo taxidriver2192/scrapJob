@@ -25,20 +25,19 @@
 
         <!-- Jobs Table Component -->
         <livewire:jobs.job-table
-            :options="[
+            :tableConfig="[
+                'title' => 'Job Listings',
                 'showActions' => true,
                 'showRating' => true,
-                'title' => 'Job Listings',
+                'showDetailedRatings' => false,
+                'linkToDetailsPage' => true,
                 'columns' => [
-                    'title' => 'Title',
-                    'company' => 'Company',
-                    'location' => 'Location',
-                    'posted_date' => 'Posted Date'
+                    'title' => ['enabled' => true, 'label' => 'Title', 'type' => 'regular'],
+                    'company' => ['enabled' => true, 'label' => 'Company', 'type' => 'regular'],
+                    'location' => ['enabled' => true, 'label' => 'Location', 'type' => 'regular'],
+                    'posted_date' => ['enabled' => true, 'label' => 'Posted Date', 'type' => 'regular']
                 ]
             ]"
         />
-
-        <!-- Job Modal Component -->
-        <livewire:jobs.job-modal />
     </flux:main>
 </div>

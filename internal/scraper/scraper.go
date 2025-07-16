@@ -7,6 +7,7 @@ import (
 	"linkedin-job-scraper/internal/config"
 	"linkedin-job-scraper/internal/database"
 	"linkedin-job-scraper/internal/models"
+	"os"
 	"strconv"
 	"strings"
 
@@ -62,8 +63,14 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	}))
 	defer cancel()
 
-	// Enable console logging from JavaScript
+	// Enable console logging from JavaScript only if DEBUG_SCRAPER is enabled
+	debugScraper := strings.ToLower(os.Getenv("DEBUG_SCRAPER")) == "true"
 	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		// Skip logging if debugging is disabled
+		if !debugScraper {
+			return
+		}
+		
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
 			args := make([]string, len(ev.Args))
@@ -74,7 +81,7 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 					args[i] = "null"
 				}
 			}
-			// Log ALL console messages for debugging
+			// Log console messages only when debugging is enabled
 			message := strings.Join(args, " ")
 			fmt.Printf("JS: %s\n", message)
 		}

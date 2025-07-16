@@ -32,7 +32,7 @@ class Address extends Model
     public static function searchByQuery(string $query, int $limit = 10)
     {
         $query = trim($query);
-        
+
         if (strlen($query) < 2) {
             return collect();
         }
@@ -64,13 +64,13 @@ class Address extends Model
     private static function searchDanishAddressFormat(string $query, int $limit = 10)
     {
         [$streetPart, $cityPart] = array_map('trim', explode(',', $query, 2));
-        
+
         $addressQuery = self::query();
 
         // Parse the city part for postal code
         $postalCode = null;
         $cityName = null;
-        
+
         if (preg_match('/^(\d{4})\s*(.*)/', $cityPart, $matches)) {
             $postalCode = $matches[1];
             $cityName = trim($matches[2]);
@@ -82,7 +82,7 @@ class Address extends Model
         // Parse the street part for street name and house number
         $streetName = null;
         $houseNumber = null;
-        
+
         if (preg_match('/^(.+?)\s+(\d+[a-zA-Z]*)$/', $streetPart, $matches)) {
             $streetName = trim($matches[1]);
             $houseNumber = trim($matches[2]);
@@ -115,16 +115,16 @@ class Address extends Model
 
         // Order by relevance
         $addressQuery->orderByRaw("
-            CASE 
+            CASE
                 WHEN vejnavn LIKE ? AND husnr LIKE ? THEN 1
                 WHEN vejnavn LIKE ? THEN 2
                 WHEN postnrnavn LIKE ? THEN 3
-                ELSE 4 
+                ELSE 4
             END, vejnavn, husnr
         ", [
-            $streetName . '%', 
+            $streetName . '%',
             ($houseNumber ? $houseNumber . '%' : '%'),
-            $streetName . '%', 
+            $streetName . '%',
             ($cityName ? $cityName . '%' : '%')
         ]);
 
@@ -183,7 +183,7 @@ class Address extends Model
     private static function searchGeneral(string $query, int $limit = 10)
     {
         $words = array_filter(explode(' ', $query));
-        
+
         $addressQuery = self::query();
 
         foreach ($words as $word) {
@@ -196,11 +196,11 @@ class Address extends Model
 
         // Order by relevance
         $addressQuery->orderByRaw("
-            CASE 
+            CASE
                 WHEN vejnavn LIKE ? THEN 1
-                WHEN postnrnavn LIKE ? THEN 2  
+                WHEN postnrnavn LIKE ? THEN 2
                 WHEN full_address LIKE ? THEN 3
-                ELSE 4 
+                ELSE 4
             END, vejnavn, husnr
         ", [$query . '%', $query . '%', $query . '%']);
 

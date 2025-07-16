@@ -3,6 +3,10 @@
 # 1) Base image
 FROM php:8.3-apache
 
+# Accept build arguments for UID/GID
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+
 # 2) System dependencies + PHP extensions + Apache mod_rewrite
 RUN apt-get update && \
     apt-get install -y \
@@ -23,7 +27,11 @@ RUN apt-get update && \
 # 3) Composer (copy from the official Composer image)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# 4) Set Apache to serve from /public
+# 4) Create a user with the same UID/GID as the host user
+RUN groupadd -g ${HOST_GID} dockeruser && \
+    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash dockeruser
+
+# 5) Set Apache to serve from /public
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri \
       -e 's!DocumentRoot /var/www/html!DocumentRoot ${APACHE_DOCUMENT_ROOT}!g' \
@@ -31,18 +39,38 @@ RUN sed -ri \
       /etc/apache2/sites-available/000-default.conf \
       /etc/apache2/apache2.conf
 
-# 5) Copy app code into the image (for cached vendor install)
+# 6) Set working directory and copy app code
 WORKDIR /var/www/html
-COPY --chown=www-data:www-data laravel-dashboard/ .
+COPY --chown=${HOST_UID}:${HOST_GID} laravel-dashboard/ .
 
-# 6) Install PHP dependencies
+# 7) Install PHP dependencies as the docker user
 RUN composer install \
       --prefer-dist \
       --no-dev \
       --no-scripts \
       --no-interaction && \
-    chown -R www-data:www-data /var/www/html
+    chown -R ${HOST_UID}:${HOST_GID} /var/www/html
 
-# 7) Switch to unprivileged user and bootstrap Apache
-USER www-data
-CMD ["apache2-foreground"]
+# 8) Ensure storage and bootstrap/cache are writable
+RUN chmod -R 775 storage bootstrap/cache && \
+    chown -R ${HOST_UID}:${HOST_GID} storage bootstrap/cache
+
+# 9) Configure Apache to run as the docker user
+RUN sed -i "s/User www-data/User dockeruser/" /etc/apache2/apache2.conf && \
+    sed -i "s/Group www-data/Group dockeruser/" /etc/apache2/apache2.conf
+
+# 10) Create an entrypoint script
+RUN echo '#!/bin/bash\n\
+# Ensure proper permissions on mounted volumes\n\
+chown -R ${HOST_UID}:${HOST_GID} /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true\n\
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true\n\
+# Start Apache\n\
+exec apache2-foreground\n\
+' > /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# 11) Switch to the docker user
+USER dockeruser
+
+# 12) Use the entrypoint script
+CMD ["/usr/local/bin/docker-entrypoint.sh"]

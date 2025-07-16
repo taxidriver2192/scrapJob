@@ -27,25 +27,21 @@ class JobModal extends Component
         'openJobModal' => 'openModal',
         'refreshJobModal' => 'refreshModal',
         'closeJobModal' => 'closeModal',
-        'jobIdUpdated' => 'handleJobIdUpdate'
+        'jobIdUpdated' => 'handleJobIdUpdate',
+        'previousRating' => 'previousRating',
+        'nextRating' => 'nextRating'
     ];
 
     public function mount($jobId = null)
     {
-        Log::info('JobModal mount - received jobId parameter: ' . $jobId);
-
         // Set jobId from parameter or URL
         $this->jobId = $jobId ?: request()->get('jobId');
 
-        Log::info('JobModal mount - final jobId: ' . $this->jobId);
-
         // Check if there's a jobId and load the job
         if ($this->jobId) {
-            Log::info('JobModal mount - loading job with ID: ' . $this->jobId . ' and setting showModal to true');
             $this->loadJobFromId($this->jobId);
             $this->showModal = true; // Open the modal when jobId is present
         } else {
-            Log::info('JobModal mount - no jobId, not loading job');
             $this->showModal = false; // Ensure modal is closed when no jobId
         }
     }
@@ -88,16 +84,12 @@ class JobModal extends Component
         $this->jobPosting = null;
         $this->rating = null;
 
-        Log::info('JobModal closeModal - modal closed, showModal set to false');
-
         // Dispatch event to notify parent components that modal is closed
         $this->dispatch('modalClosed');
     }
 
     public function handleJobIdUpdate($jobId)
     {
-        Log::info('JobModal handleJobIdUpdate - received jobId: ' . $jobId);
-
         if ($jobId) {
             $this->jobId = $jobId;
             $this->loadJobFromId($jobId);
@@ -210,14 +202,10 @@ class JobModal extends Component
 
     private function loadJobFromId($jobId)
     {
-        Log::info('JobModal loadJobFromId - called with jobId: ' . ($jobId ?? 'null'));
-
         // Load the job posting
         $this->jobPosting = JobPosting::where('job_id', $jobId)
             ->with('company')
             ->first();
-
-        Log::info('JobModal loadJobFromId - job found: ' . ($this->jobPosting ? 'yes (ID: ' . $this->jobPosting->job_id . ')' : 'no'));
 
         if ($this->jobPosting) {
             // Try to load existing job rating
@@ -233,7 +221,6 @@ class JobModal extends Component
 
             // Show the modal by setting showModal to true
             $this->showModal = true;
-            Log::info('JobModal loadJobFromId - showing modal, showModal set to: ' . ($this->showModal ? 'true' : 'false'));
         } else {
             Log::error('JobModal loadJobFromId - job not found for jobId: ' . $jobId);
         }
@@ -253,12 +240,8 @@ class JobModal extends Component
 
     public function updated($property, $value)
     {
-        Log::info('JobModal updated - property: ' . $property . ', value: ' . ($value ?? 'null'));
-
         if ($property === 'jobId') {
-            Log::info('JobModal updated - jobId changed to: ' . ($value ?? 'null'));
             if ($value) {
-                Log::info('JobModal updated - loading job for new jobId: ' . $value);
                 $this->loadJobFromId($value);
             }
         }
@@ -266,8 +249,6 @@ class JobModal extends Component
 
     public function render()
     {
-        Log::info('JobModal render - jobId: ' . ($this->jobId ?? 'null'));
-        Log::info('JobModal render - job loaded: ' . ($this->jobPosting ? 'yes (ID: ' . $this->jobPosting->job_id . ')' : 'no'));
         return view('livewire.jobs.job-modal');
     }
 }

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Dashboard;
 use App\Livewire\Jobs\Index as JobsIndex;
+use App\Livewire\Jobs\JobDetails;
 use App\Livewire\Companies;
 use App\Livewire\Queue;
 use App\Livewire\Ratings;
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Job-related routes
     Route::get('/jobs', JobsIndex::class)->name('jobs');
+    Route::get('/job/{jobId}', JobDetails::class)->name('job.details');
 
     // Other application routes
     Route::get('/companies', Companies::class)->name('companies');

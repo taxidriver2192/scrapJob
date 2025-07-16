@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'virkdata' => [
+        'key' => env('VIRKDATA_API_KEY'),
+    ],
+
 ];
