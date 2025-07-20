@@ -24,8 +24,6 @@ func (s *LinkedInScraper) buildSearchURL(keywords, location string, start int) s
 
 // scrapePage scrapes a single page of job results
 func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFromPage int) ([]*models.JobPosting, error) {
-	fmt.Printf("🌐 Navigating to: %s\n", url)
-	
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
 	)
@@ -69,8 +67,6 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		return nil, fmt.Errorf("failed to get page title: %w", err)
 	}
 	
-	fmt.Printf("📄 Page loaded: %s\n", pageTitle)
-
 	// Check if login is required
 	var hasLoginForm bool
 	err = chromedp.Run(ctx,
@@ -81,20 +77,15 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		return nil, fmt.Errorf("redirected to login page - authentication may have expired")
 	}
 
-	// Wait for job results to load and extract URLs
-	// Note: We no longer scroll as we use pagination via start parameter
-	fmt.Println("🔍 Extracting job URLs from current page...")
+	// Extract job URLs from current page
 	jobURLs, err := s.extractJobURLs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract job URLs: %w", err)
 	}
 
 	if len(jobURLs) == 0 {
-		fmt.Println("⚠️  No job URLs found on this page")
 		return []*models.JobPosting{}, nil
 	}
-
-	fmt.Printf("✅ Found %d job URLs on page\n", len(jobURLs))
 
 	// Filter out jobs that already exist in database to avoid unnecessary scraping
 	var filteredJobURLs []string
@@ -113,29 +104,22 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		// Check if job already exists in database
 		exists, err := s.jobRepo.ExistsLinkedInJobID(jobID)
 		if err != nil {
-			fmt.Printf("⚠️  Failed to check if job %d exists: %v\n", jobID, err)
 			// Include URL anyway to be safe
 			filteredJobURLs = append(filteredJobURLs, jobURL)
 			continue
 		}
 		
 		if exists {
-			fmt.Printf("⏭️  Job %d already exists, skipping URL scraping\n", jobID)
 			skippedCount++
 			continue
 		}
 		
 		filteredJobURLs = append(filteredJobURLs, jobURL)
 	}
-	
-	if skippedCount > 0 {
-		fmt.Printf("⏭️  Skipped %d existing jobs, will scrape %d new jobs\n", skippedCount, len(filteredJobURLs))
-	}
 
 	// Limit to specified max jobs from this page if needed
 	if len(filteredJobURLs) > maxJobsFromPage {
 		filteredJobURLs = filteredJobURLs[:maxJobsFromPage]
-		fmt.Printf("📊 Limited to %d jobs from this page\n", maxJobsFromPage)
 	}
 
 	// Scrape details from each job page
@@ -160,6 +144,5 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 		}
 	}
 
-	fmt.Printf("✅ Scraped %d job details from page\n", len(jobs))
 	return jobs, nil
 }

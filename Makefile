@@ -135,7 +135,7 @@ restore:
 scrape:
 	@echo "🔍 Starting job scraping..."
 	@echo "💡 Edit this target to change keywords/location"
-	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
+	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 2000
 
 show-jobs:
 	@echo "📋 Recent scraped jobs:"

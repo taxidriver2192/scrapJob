@@ -34,7 +34,7 @@ func NewLinkedInScraper(cfg *config.Config, db *database.DB) *LinkedInScraper {
 
 // ScrapeJobs scrapes LinkedIn jobs based on search parameters
 func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) error {
-	fmt.Println("🚀 Initializing Chrome browser...")
+	fmt.Println("🚀 Starting LinkedIn job scraper...")
 	
 	// Setup Chrome options with better error handling
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -88,11 +88,10 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	})
 
 	// Login to LinkedIn
-	fmt.Println("🔐 Attempting to login to LinkedIn...")
 	if err := s.login(ctx); err != nil {
 		return fmt.Errorf("login failed: %w", err)
 	}
-	fmt.Println("✅ Login successful!")
+	fmt.Println("✅ Ready to scrape!")
 
 	// Dynamic pagination based on job URLs FOUND on LinkedIn (not jobs saved to DB)
 	totalJobUrlsFound := 0   // Total job URLs LinkedIn has shown us (for pagination)
@@ -100,47 +99,43 @@ func (s *LinkedInScraper) ScrapeJobs(keywords, location string, totalJobs int) e
 	page := 1
 	const maxPages = 1000 // Safety limit to prevent infinite loops
 	
-	fmt.Printf("🔍 Starting scrape to collect up to %d jobs with dynamic pagination\n", totalJobs)
+	fmt.Printf("🎯 Target: %d jobs | Keywords: %s | Location: %s\n", totalJobs, keywords, location)
+	
+	// Create unified progress tracker
+	progress := NewOverallScrapingProgress(totalJobs)
 
 	for page <= maxPages && totalJobsSaved < totalJobs {
 		// Use LinkedIn's pagination: start from total job URLs we've seen
 		start := totalJobUrlsFound
 		pageURL := s.buildSearchURL(keywords, location, start)
 		
-		fmt.Printf("📄 Scraping page %d (start=%d): %s\n", page, start, pageURL)
-		
 		// Scrape page and get result info
-		pageResult, err := s.scrapePageWithDetails(ctx, pageURL, 25)
+		pageResult, err := s.scrapePageWithDetails(ctx, pageURL, 25, progress)
 		if err != nil {
-			fmt.Printf("❌ Error scraping page %d: %v\n", page, err)
+			progress.AddFailed(1)
 			break
 		}
 		
 		if pageResult.TotalJobsFound == 0 {
-			fmt.Println("⚠️  No jobs found on page, stopping...")
 			break
 		}
 		
-		// Update total job URLs found (this is what LinkedIn uses for pagination)
+		// Update totals
 		totalJobUrlsFound += pageResult.TotalJobsFound
-		
-		// Update saved jobs count
 		totalJobsSaved += pageResult.JobsSaved
 		
-		fmt.Printf("✅ Processed %d job URLs from page %d (saved: %d, skipped: %d, total saved: %d/%d, next start: %d)\n", 
-			pageResult.TotalJobsFound, page, pageResult.JobsSaved, pageResult.JobsSkipped, 
-			totalJobsSaved, totalJobs, totalJobUrlsFound)
+		// Update page number in progress tracker
+		progress.UpdatePage(page, 0, 0, 0) // Just update page number, individual jobs already tracked
 		
 		// If we've reached our target, stop
 		if totalJobsSaved >= totalJobs {
-			fmt.Printf("🎯 Reached target of %d jobs, stopping\n", totalJobs)
 			break
 		}
 		
 		page++
 	}
 
-	fmt.Printf("🎉 Scraping completed! Total jobs saved: %d, total job URLs processed: %d\n", totalJobsSaved, totalJobUrlsFound)
+	progress.Finish()
 	return nil
 }
 
@@ -152,25 +147,26 @@ type PageResult struct {
 }
 
 // scrapePageWithDetails scrapes a page and returns detailed results
-func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL string, maxJobs int) (*PageResult, error) {
+func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL string, maxJobs int, progress *OverallScrapingProgress) (*PageResult, error) {
 	// Navigate to the page
 	err := chromedp.Run(ctx, chromedp.Navigate(pageURL))
 	if err != nil {
 		return nil, fmt.Errorf("failed to navigate to page: %w", err)
 	}
 
-	fmt.Println("🔍 Extracting job URLs from current page...")
-	
 	// Extract job URLs using existing function
 	jobURLs, err := s.extractJobURLs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract job URLs: %w", err)
 	}
 	
-	fmt.Printf("✅ Found %d job URLs on page\n", len(jobURLs))
-	
 	// Filter new vs existing jobs
 	newJobURLs, skippedCount := s.filterNewJobs(jobURLs)
+	
+	// Update progress for skipped jobs
+	for i := 0; i < skippedCount; i++ {
+		progress.UpdateJob(false, true) // Skipped job
+	}
 	
 	result := &PageResult{
 		TotalJobsFound: len(jobURLs),
@@ -179,16 +175,12 @@ func (s *LinkedInScraper) scrapePageWithDetails(ctx context.Context, pageURL str
 	}
 	
 	if len(newJobURLs) == 0 {
-		fmt.Printf("⏭️  All %d jobs already exist in database\n", skippedCount)
 		return result, nil
 	}
 	
-	fmt.Printf("⏭️  Skipped %d existing jobs, will scrape %d new jobs\n", skippedCount, len(newJobURLs))
+	// Process new jobs with progress tracking
+	result.JobsSaved = s.processNewJobs(ctx, newJobURLs, progress)
 	
-	// Process new jobs
-	result.JobsSaved = s.processNewJobs(ctx, newJobURLs)
-	
-	fmt.Printf("✅ Scraped %d job details from page\n", result.JobsSaved)
 	return result, nil
 }
 
@@ -231,25 +223,28 @@ func (s *LinkedInScraper) isJobNew(jobURL string) bool {
 	return !exists
 }
 
-// processNewJobs scrapes and saves new jobs
-func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) int {
+// processNewJobs scrapes and saves new jobs with individual progress updates
+func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string, progress *OverallScrapingProgress) int {
+	if len(jobURLs) == 0 {
+		return 0
+	}
+	
 	savedCount := 0
 	
-	for i, jobURL := range jobURLs {
-		fmt.Printf("📋 Scraping job %d/%d: %s\n", i+1, len(jobURLs), jobURL)
-		
+	for _, jobURL := range jobURLs {
 		job, err := s.scrapeJobDetails(ctx, jobURL)
 		if err != nil {
-			fmt.Printf("❌ Failed to scrape job %s: %v\n", jobURL, err)
+			progress.UpdateJob(false, false) // Failed job
 			continue
 		}
 		
 		if err := s.saveJob(job); err != nil {
-			fmt.Printf("❌ Failed to save job: %v\n", err)
+			progress.UpdateJob(false, false) // Failed to save
 			continue
 		}
 		
 		savedCount++
+		progress.UpdateJob(true, false) // Successfully saved
 	}
 	
 	return savedCount
@@ -322,35 +317,33 @@ func (s *LinkedInScraper) RescrapeFromQueue(limit int) error {
 		return nil
 	}
 
-	fmt.Printf("🔍 Starting rescrape of %d jobs from queue\n", len(jobsToRescrape))
-
 	// Process jobs from queue
 	successCount := 0
 	failCount := 0
+	
+	fmt.Printf("🔍 Rescaping %d jobs from queue...\n", len(jobsToRescrape))
 
-	for i, job := range jobsToRescrape {
-		fmt.Printf("📋 Scraping job %d/%d: %s\n", i+1, len(jobsToRescrape), job.ApplyURL)
-		
+	for _, job := range jobsToRescrape {
 		// Use existing scrapeJobDetails method
 		jobPosting, err := s.scrapeJobDetails(ctx, job.ApplyURL)
 		if err != nil {
-			fmt.Printf("❌ Failed to scrape job %d: %v\n", job.JobID, err)
 			failCount++
 			continue
 		}
 		
 		// Update existing job in database
 		if err := s.updateExistingJob(job.JobID, jobPosting); err != nil {
-			fmt.Printf("❌ Failed to update job %d: %v\n", job.JobID, err)
 			failCount++
 			continue
 		}
 		
 		successCount++
-		fmt.Printf("✅ Job extraction completed successfully for: %s\n", jobPosting.Title)
+		
+		// Show simple progress
+		fmt.Printf("\rProgress: %d/%d completed", successCount+failCount, len(jobsToRescrape))
 	}
-
-	fmt.Printf("🎉 Rescraping completed! Successful: %d, Failed: %d\n", successCount, failCount)
+	
+	fmt.Printf("\n✅ Rescraping complete! Success: %d | Failed: %d\n", successCount, failCount)
 	return nil
 }
 

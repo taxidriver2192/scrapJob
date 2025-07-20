@@ -61,26 +61,20 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 	utilsScriptContent, err := loadScript(utilsScript)
 	if err != nil {
 		fmt.Printf("❌ Failed to load utils script: %v\n", err)
-		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
-	fmt.Printf("✅ Loaded utils script (%d chars)\n", len(utilsScriptContent))
 	
 	jobDetailsScript, err := loadScript("job_details.js")
 	if err != nil {
 		fmt.Printf("❌ Failed to load job_details.js script: %v\n", err)
-		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
-	fmt.Printf("✅ Loaded job_details script (%d chars)\n", len(jobDetailsScript))
 	
 	skillsScript, err := loadScript("skills.js")
 	if err != nil {
 		fmt.Printf("❌ Failed to load skills.js script: %v\n", err)
-		fmt.Println("🔄 Using fallback extraction script")
 		return s.buildFallbackJobExtractionScript()
 	}
-	fmt.Printf("✅ Loaded skills script (%d chars)\n", len(skillsScript))
 
 	
 	return fmt.Sprintf(`
@@ -251,8 +245,6 @@ func (s *LinkedInScraper) buildScrollToTopScript() string {
 func (s *LinkedInScraper) buildFallbackJobExtractionScript() string {
 	return `
 		(function() {
-			console.log('Using fallback extraction script');
-			
 			// Basic title extraction as fallback
 			const getTitleText = function() {
 				const selectors = [
