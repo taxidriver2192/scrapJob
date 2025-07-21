@@ -1,4 +1,4 @@
-<div>
+<div wire:listen="requestAiRating=rateJobWithAi">
     @if($jobPosting)
     <div class="p-6">
         <div class="flex items-center justify-between mb-6">
@@ -74,11 +74,13 @@
         <div class="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <div class="flex justify-between items-center text-sm text-zinc-500 dark:text-zinc-400">
                 <span>Rated on: {{ $rating && data_get($rating, 'rated_at') ? \Carbon\Carbon::parse(data_get($rating, 'rated_at'))->format('F j, Y \a\t g:i A') : 'N/A' }}</span>
-                @if(data_get($jobPosting, 'apply_url'))
-                <flux:button size="sm" href="{{ data_get($jobPosting, 'apply_url') }}" target="_blank" icon="arrow-top-right-on-square">
-                    View Original Job
-                </flux:button>
-                @endif
+                <div class="flex items-center space-x-2">
+                    @if(data_get($jobPosting, 'apply_url'))
+                    <flux:button size="sm" href="{{ data_get($jobPosting, 'apply_url') }}" target="_blank" icon="arrow-top-right-on-square">
+                        View Original Job
+                    </flux:button>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

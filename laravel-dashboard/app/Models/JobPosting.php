@@ -48,4 +48,9 @@ class JobPosting extends Model
     {
         return $this->hasOne(JobQueue::class, 'job_id', 'job_id');
     }
+
+    public function getCompanyNameAttribute()
+    {
+        return $this->company ? $this->company->name : null;
+    }
 }

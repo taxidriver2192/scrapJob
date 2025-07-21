@@ -42,8 +42,13 @@ new class extends Component
                     <x-nav-link :href="route('queue')" :active="request()->routeIs('queue')" wire:navigate>
                         {{ __('Queue') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('ratings')" :active="request()->routeIs('ratings')" wire:navigate>
-                        {{ __('Ratings') }}
+                    <x-nav-link :href="route('job-queue.index')" :active="request()->routeIs('job-queue.*')" wire:navigate>
+                        <flux:icon.queue-list class="inline mr-1 size-4" />
+                        {{ __('Rating Queue') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('job-ratings.index')" :active="request()->routeIs('job-ratings.*')" wire:navigate>
+                        <flux:icon.sparkles class="inline mr-1 size-4" />
+                        {{ __('AI Ratings') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -111,6 +116,10 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('ratings')" :active="request()->routeIs('ratings')" wire:navigate>
                 {{ __('Ratings') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('job-ratings.index')" :active="request()->routeIs('job-ratings.*')" wire:navigate>
+                <flux:icon.sparkles class="inline mr-1 size-4" />
+                {{ __('AI Ratings') }}
             </x-responsive-nav-link>
         </div>
 

@@ -21,6 +21,22 @@
                 label="Willing to relocate"
             />
 
+            <div>
+                <flux:field>
+                    <flux:label>Maximum Travel Distance to Work (km)</flux:label>
+                    <flux:description>How far are you willing to travel daily for work? This helps match jobs within your commute range.</flux:description>
+                    <flux:input
+                        wire:model="maxTravelDistance"
+                        type="number"
+                        placeholder="e.g., 50"
+                        min="0"
+                        max="500"
+                        :invalid="$errors->has('maxTravelDistance')"
+                    />
+                    @error('maxTravelDistance') <flux:error>{{ $message }}</flux:error> @enderror
+                </flux:field>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <flux:field>

@@ -8,9 +8,23 @@
                 </flux:badge>
             </div>
 
-            <flux:heading size="md" class="mb-6 text-green-600">
-                <flux:icon.viewfinder-circle class="mr-2" />Skills Radar Chart
-            </flux:heading>
+            <div class="flex items-center justify-between mb-6">
+                <flux:heading size="md" class="text-green-600">
+                    <flux:icon.viewfinder-circle class="mr-2" />Skills Radar Chart
+                </flux:heading>
+
+                @if($this->isAiRating() && $this->getAiRatingId())
+                <flux:button
+                    size="sm"
+                    variant="outline"
+                    href="{{ route('ai-job-ratings.show', $this->getAiRatingId()) }}"
+                    icon="eye"
+                    class="text-purple-600 border-purple-300 hover:bg-purple-50"
+                >
+                    View Details
+                </flux:button>
+                @endif
+            </div>
 
             <!-- Overall Score Progress Bar -->
             <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg">
@@ -208,10 +222,11 @@
                 <flux:button
                     variant="primary"
                     size="sm"
-                    icon="star"
-                    wire:click="rateJob"
+                    icon="sparkles"
+                    wire:click="requestRating"
+                    class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                    Rate This Job
+                    Rate This Job with AI
                 </flux:button>
             </div>
         @endif

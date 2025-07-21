@@ -32,30 +32,23 @@ class JobDetails extends Component
     public function mount($jobId)
     {
         $this->jobId = $jobId;
-        Log::info('JobDetails mount - received jobId: ' . $jobId);
 
         if ($this->jobId) {
             $this->loadJobFromId($this->jobId);
-        } else {
-            Log::warning('JobDetails mount - no jobId provided');
-            // Don't redirect here, let the view handle showing an error
         }
+        // Don't redirect here, let the view handle showing an error
     }
 
     private function loadJobFromId($jobId)
     {
-        Log::info('JobDetails loadJobFromId - called with jobId: ' . ($jobId ?? 'null'));
-
         // Load the job posting
         $this->jobPosting = JobPosting::where('job_id', $jobId)
             ->with('company')
             ->first();
 
-        Log::info('JobDetails loadJobFromId - job found: ' . ($this->jobPosting ? 'yes (ID: ' . $this->jobPosting->job_id . ')' : 'no'));
-
         if (!$this->jobPosting) {
             // Job not found, log the error but let the view handle it
-            Log::warning('JobDetails loadJobFromId - job not found for ID: ' . $jobId);
+            Log::warning('Job not found: ' . $jobId);
             return;
         }
 
@@ -64,8 +57,22 @@ class JobDetails extends Component
             UserJobView::markAsViewed(Auth::id(), $jobId);
         }
 
-        // Try to load existing job rating (optional)
-        $this->rating = JobRating::where('job_id', $jobId)->first();
+        // Load regular manual rating
+        $this->rating = JobRating::where('job_id', $jobId)
+            ->where('rating_type', 'manual')
+            ->first();
+
+        // If no manual rating found, check for AI rating
+        if (!$this->rating && Auth::check()) {
+            $aiRating = JobRating::where('job_id', $jobId)
+                ->where('user_id', Auth::id())
+                ->where('rating_type', 'ai_rating')
+                ->first();
+
+            if ($aiRating) {
+                $this->rating = $this->convertAiRatingToStandardFormat($aiRating);
+            }
+        }
 
         // Calculate current position and total for navigation
         $this->calculatePosition();
@@ -167,5 +174,32 @@ class JobDetails extends Component
         Log::info('JobDetails render - jobPosting exists: ' . ($this->jobPosting ? 'yes' : 'no'));
 
         return view('livewire.jobs.job-details');
+    }
+
+    /**
+     * Convert AI rating to standard format for display
+     */
+    private function convertAiRatingToStandardFormat(JobRating $aiRating)
+    {
+        // Parse the AI response to get scores
+        $response = json_decode($aiRating->response, true);
+
+        if (!$response) {
+            return null;
+        }
+
+        // Create a fake JobRating-like structure for display
+        return (object) [
+            'job_id' => $aiRating->job_id,
+            'overall_score' => $response['overall_score'] ?? 0,
+            'location_score' => $response['scores']['location'] ?? 0,
+            'tech_score' => $response['scores']['tech_match'] ?? 0,
+            'team_size_score' => $response['scores']['company_fit'] ?? 0,
+            'leadership_score' => $response['scores']['seniority_match'] ?? 0,
+            'criteria' => json_encode($response['reasoning'] ?? []),
+            'rated_at' => $aiRating->rated_at,
+            'rating_type' => 'ai_rating', // Mark as AI rating
+            'ai_confidence' => $response['confidence'] ?? 0,
+        ];
     }
 }

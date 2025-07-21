@@ -5,7 +5,7 @@
                 <flux:icon.funnel class="mr-2" />
                 {{ $title }}
             </flux:heading>
-            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset)
+            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $ratingStatusFilter || $datePreset)
             <flux:button
                 size="sm"
                 variant="ghost"
@@ -17,7 +17,7 @@
             @endif
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
             <!-- Global Search -->
             <div class="md:col-span-2">
                 <div class="flex items-center gap-1 mb-1">
@@ -82,6 +82,21 @@
                     <option value="">All Jobs</option>
                     <option value="viewed">Viewed Only</option>
                     <option value="not_viewed">Not Viewed</option>
+                </flux:select>
+            </div>
+
+            <!-- Rating Status Filter -->
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Rating Status</flux:label>
+                    <flux:tooltip content="Show jobs with or without AI ratings" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="ratingStatusFilter" icon="sparkles">
+                    <option value="">All Jobs</option>
+                    <option value="rated">Rated Only</option>
+                    <option value="not_rated">Not Rated</option>
                 </flux:select>
             </div>
             @endauth
@@ -160,6 +175,15 @@
                 <flux:badge variant="outline" size="sm">
                     Status: {{ $viewedStatusFilter === 'viewed' ? 'Viewed Only' : 'Not Viewed' }}
                     <flux:button size="xs" variant="ghost" wire:click="$set('viewedStatusFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
+
+                @if($ratingStatusFilter)
+                <flux:badge variant="outline" size="sm">
+                    Rating: {{ $ratingStatusFilter === 'rated' ? 'Rated Only' : 'Not Rated' }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('ratingStatusFilter', '')" class="ml-1">
                         <flux:icon.x-mark class="w-3 h-3" />
                     </flux:button>
                 </flux:badge>

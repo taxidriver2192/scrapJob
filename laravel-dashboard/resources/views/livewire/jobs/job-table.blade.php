@@ -12,6 +12,13 @@
 
     <flux:table :paginate="$jobs">
         <flux:table.columns>
+            <!-- Bulk Selection Column -->
+            <flux:table.column class="w-12">
+                <flux:checkbox
+                    wire:click="toggleSelectAll"
+                    :checked="$selectAll"
+                />
+            </flux:table.column>
 
             @if(isset($ratingColumns) && count($ratingColumns) > 0)
                 @foreach($ratingColumns as $field => $label)
@@ -47,6 +54,13 @@
         <flux:table.rows>
             @forelse($jobs as $job)
                 <flux:table.row :key="$job->job_id">
+                    <!-- Bulk Selection Column -->
+                    <flux:table.cell class="w-12">
+                        <flux:checkbox
+                            wire:click="toggleJobSelection({{ $job->job_id }})"
+                            :checked="$this->isJobSelected($job->job_id)"
+                        />
+                    </flux:table.cell>
 
                     @if(isset($ratingColumns) && count($ratingColumns) > 0)
                         @foreach($ratingColumns as $field => $label)
@@ -75,11 +89,19 @@
                                         @if($linkToDetailsPage)
                                             <a href="{{ route('job.details', ['jobId' => $job->job_id]) }}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left block">
                                                 <div class="flex items-center gap-2">
-                                                    @if(auth()->check() && $this->isJobViewed($job->job_id))
-                                                        <flux:badge color="zinc" size="sm" class="shrink-0">
-                                                            Seen
-                                                        </flux:badge>
-                                                    @endif
+                                                    <div class="flex gap-1">
+                                                        @if(auth()->check() && $this->isJobViewed($job->job_id))
+                                                            <flux:badge color="zinc" size="sm" class="shrink-0">
+                                                                Seen
+                                                            </flux:badge>
+                                                        @endif
+                                                        @if(auth()->check() && $this->isJobRated($job->job_id))
+                                                            <flux:badge color="green" size="sm" class="shrink-0">
+                                                                <flux:icon.sparkles class="w-3 h-3 mr-1" />
+                                                                Rated
+                                                            </flux:badge>
+                                                        @endif
+                                                    </div>
                                                     <div class="min-w-0">
                                                         @if(strlen($job->title) > 50)
                                                             <flux:tooltip :content="$job->title">
@@ -97,11 +119,19 @@
                                         @else
                                             <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left">
                                                 <div class="flex items-center gap-2">
-                                                    @if(auth()->check() && $this->isJobViewed($job->job_id))
-                                                        <flux:badge color="zinc" size="sm" class="shrink-0">
-                                                            Seen
-                                                        </flux:badge>
-                                                    @endif
+                                                    <div class="flex gap-1">
+                                                        @if(auth()->check() && $this->isJobViewed($job->job_id))
+                                                            <flux:badge color="zinc" size="sm" class="shrink-0">
+                                                                Seen
+                                                            </flux:badge>
+                                                        @endif
+                                                        @if(auth()->check() && $this->isJobRated($job->job_id))
+                                                            <flux:badge color="green" size="sm" class="shrink-0">
+                                                                <flux:icon.sparkles class="w-3 h-3 mr-1" />
+                                                                Rated
+                                                            </flux:badge>
+                                                        @endif
+                                                    </div>
                                                     <div class="min-w-0">
                                                         @if(strlen($job->title) > 50)
                                                             <flux:tooltip :content="$job->title">
@@ -187,7 +217,7 @@
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="{{ count($ratingColumns ?? []) + count($regularColumns ?? []) + ($showActions ? 1 : 0) }}">
+                    <flux:table.cell colspan="{{ 1 + count($ratingColumns ?? []) + count($regularColumns ?? []) + ($showActions ? 1 : 0) }}">
                         <div class="text-center text-zinc-500 dark:text-zinc-400 py-8">
                             <flux:icon.magnifying-glass class="text-4xl mb-4" />
                             <p class="text-lg">No jobs found matching your criteria.</p>
@@ -198,6 +228,46 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+
+    <!-- Bulk Actions Section -->
+    @if($showBulkActions)
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <span class="text-blue-800 dark:text-blue-200 font-medium">
+                    {{ count($selectedJobs) }} job(s) selected
+                    @if(auth()->check() && $this->getUnratedSelectedJobsCount() < count($selectedJobs))
+                        <span class="text-sm text-blue-600 dark:text-blue-300">
+                            ({{ $this->getUnratedSelectedJobsCount() }} unrated)
+                        </span>
+                    @endif
+                </span>
+                <flux:button
+                    size="sm"
+                    variant="outline"
+                    wire:click="clearSelection"
+                    icon="x-mark"
+                >
+                    Clear Selection
+                </flux:button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <flux:button
+                    size="sm"
+                    variant="primary"
+                    wire:click="queueSelectedJobsForRating"
+                    icon="sparkles"
+                    :disabled="auth()->check() && $this->getUnratedSelectedJobsCount() === 0"
+                >
+                    Queue for AI Rating
+                    @if(auth()->check() && $this->getUnratedSelectedJobsCount() > 0)
+                        ({{ $this->getUnratedSelectedJobsCount() }})
+                    @endif
+                </flux:button>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- Job Modal Component -->
     <livewire:jobs.job-modal

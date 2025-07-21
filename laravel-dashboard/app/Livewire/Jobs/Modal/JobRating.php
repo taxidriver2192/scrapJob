@@ -2,6 +2,10 @@
 
 namespace App\Livewire\Jobs\Modal;
 
+use App\Models\JobPosting;
+use App\Services\JobRatingService;
+use App\Exceptions\OpenAiException;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class JobRating extends Component
@@ -21,6 +25,19 @@ class JobRating extends Component
         return $this->rating && data_get($this->rating, 'overall_score', 0) > 0;
     }
 
+    public function isAiRating()
+    {
+        return $this->rating && data_get($this->rating, 'source_type') === 'ai_job_rating';
+    }
+
+    public function getAiRatingId()
+    {
+        if ($this->isAiRating()) {
+            return data_get($this->rating, 'source_id');
+        }
+        return null;
+    }
+
     public function getCriteria()
     {
         $criteria = data_get($this->rating, 'criteria', '');
@@ -29,6 +46,12 @@ class JobRating extends Component
 
     public function getConfidence()
     {
+        // Check if this is an AI rating with direct confidence score
+        if (data_get($this->rating, 'ai_confidence')) {
+            return data_get($this->rating, 'ai_confidence', 0);
+        }
+
+        // Fallback to criteria-based confidence
         $criteria = $this->getCriteria();
         return data_get($criteria, 'confidence', 0);
     }
@@ -36,8 +59,12 @@ class JobRating extends Component
     public function getConfidenceColor()
     {
         $confidence = $this->getConfidence();
-        if ($confidence >= 80) return 'green';
-        if ($confidence >= 60) return 'yellow';
+        if ($confidence >= 80) {
+            return 'green';
+        }
+        if ($confidence >= 60) {
+            return 'yellow';
+        }
         return 'red';
     }
 
@@ -152,21 +179,58 @@ class JobRating extends Component
             return;
         }
 
-        $jobId = data_get($this->jobPosting, 'job_id');
+        if (!Auth::check()) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'You must be logged in to rate jobs.'
+            ]);
+            return;
+        }
 
-        // Add your job rating logic here
-        // This could trigger an API call to your AI rating service
-        // or queue a job to process the rating
+        try {
+            // Show loading state
+            $this->dispatch('notify', [
+                'type' => 'info',
+                'message' => 'AI is analyzing this job... Please wait a moment.'
+            ]);
 
-        // For now, just show a notification
-        $this->dispatch('notify', [
-            'type' => 'info',
-            'message' => "Job rating request submitted for job ID: {$jobId}. This may take a few moments to process."
-        ]);
+            // Get the job posting model
+            $jobPosting = JobPosting::where('job_id', data_get($this->jobPosting, 'job_id'))->first();
 
-        // You could also close the modal and refresh the table
-        // $this->dispatch('closeJobModal');
-        // $this->dispatch('refreshJobTable');
+            if (!$jobPosting) {
+                throw new OpenAiException('Job posting not found in database');
+            }
+
+            // Rate the job using the AI service
+            $jobRatingService = app(JobRatingService::class);
+            $jobRatingService->rateJobForUser($jobPosting);
+
+            // Success notification
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Job successfully rated! The AI analysis is now available.'
+            ]);
+
+            // Refresh the component to show the new rating
+            $this->dispatch('refreshJobRating', ['jobId' => data_get($this->jobPosting, 'job_id')]);
+
+        } catch (OpenAiException $e) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'AI rating failed: ' . $e->getMessage()
+            ]);
+        } catch (\Exception $e) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'An error occurred while rating the job: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function requestRating()
+    {
+        // Dispatch event to parent component (SharedJobContent) to handle the AI rating
+        $this->dispatch('requestAiRating');
     }
 
     public function render()

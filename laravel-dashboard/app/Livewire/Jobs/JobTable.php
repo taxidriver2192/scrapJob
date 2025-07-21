@@ -36,10 +36,17 @@ class JobTable extends Component
     public $dateToFilter = '';
     public $viewedStatusFilter = '';
 
+    public $ratingStatusFilter = '';
+
     // Modal state
     public $selectedJobId = null;
     public $showModal = false;
     public $jobId = null; // URL parameter for modal
+
+    // Bulk selection state
+    public $selectedJobs = [];
+    public $selectAll = false;
+    public $showBulkActions = false;
 
     protected $listeners = [
         'filterUpdated' => 'handleFilterUpdate',
@@ -57,6 +64,7 @@ class JobTable extends Component
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
+        'ratingStatusFilter' => ['except' => ''],
         'jobId' => ['except' => null],
     ];
 
@@ -105,6 +113,7 @@ class JobTable extends Component
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
+        $this->ratingStatusFilter = request()->get('ratingStatusFilter', '');
         $this->perPage = request()->get('perPage', 10);
 
         // Override companyFilter if specified in tableConfig
@@ -249,7 +258,7 @@ class JobTable extends Component
         // Apply viewed status filter (only for authenticated users)
         if (!empty($this->viewedStatusFilter) && Auth::check()) {
             $userId = Auth::id();
-            
+
             if ($this->viewedStatusFilter === 'viewed') {
                 // Show only jobs that have been viewed
                 $query->whereExists(function ($subQuery) use ($userId) {
@@ -385,7 +394,263 @@ class JobTable extends Component
         if (!Auth::check()) {
             return false;
         }
-        
+
         return UserJobView::hasUserViewed(Auth::id(), $jobId);
+    }
+
+    /**
+     * Toggle job selection
+     */
+    public function toggleJobSelection($jobId)
+    {
+        if (in_array($jobId, $this->selectedJobs)) {
+            $this->selectedJobs = array_diff($this->selectedJobs, [$jobId]);
+        } else {
+            $this->selectedJobs[] = $jobId;
+        }
+
+        $this->updateBulkActionsVisibility();
+        $this->selectAll = false; // Reset select all when individual items are toggled
+    }
+
+    /**
+     * Toggle select all jobs on current page
+     */
+    public function toggleSelectAll()
+    {
+        if ($this->selectAll) {
+            // Select all jobs on current page - get current page jobs
+            $currentPageJobIds = $this->getCurrentPageJobIds();
+            $this->selectedJobs = array_unique(array_merge($this->selectedJobs, $currentPageJobIds));
+        } else {
+            // Deselect all jobs on current page
+            $currentPageJobIds = $this->getCurrentPageJobIds();
+            $this->selectedJobs = array_diff($this->selectedJobs, $currentPageJobIds);
+        }
+
+        $this->updateBulkActionsVisibility();
+    }
+
+    /**
+     * Get job IDs for current page
+     */
+    private function getCurrentPageJobIds()
+    {
+        // Build the same query as in render() to get current page job IDs
+        $query = JobPosting::with(['company', 'jobRatings']);
+
+        // Apply all the same filters as in render()
+        if (!empty($this->search)) {
+            $search = $this->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('company', function ($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if (!empty($this->companyFilter)) {
+            if (is_numeric($this->companyFilter)) {
+                $query->where('company_id', $this->companyFilter);
+            } else {
+                $query->whereHas('company', function ($q) {
+                    $q->where('name', $this->companyFilter);
+                });
+            }
+        }
+
+        if (!empty($this->locationFilter)) {
+            $query->where('location', 'like', "%{$this->locationFilter}%");
+        }
+
+        if (!empty($this->dateFromFilter)) {
+            $query->whereDate('posted_date', '>=', $this->dateFromFilter);
+        }
+
+        if (!empty($this->dateToFilter)) {
+            $query->whereDate('posted_date', '<=', $this->dateToFilter);
+        }
+
+        if (!empty($this->viewedStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
+
+            if ($this->viewedStatusFilter === 'viewed') {
+                $query->whereExists(function ($subQuery) use ($userId) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('user_job_views')
+                        ->whereColumn('user_job_views.job_id', 'job_postings.job_id')
+                        ->where('user_job_views.user_id', $userId);
+                });
+            } elseif ($this->viewedStatusFilter === 'not_viewed') {
+                $query->whereNotExists(function ($subQuery) use ($userId) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('user_job_views')
+                        ->whereColumn('user_job_views.job_id', 'job_postings.job_id')
+                        ->where('user_job_views.user_id', $userId);
+                });
+            }
+        }
+
+        // Apply sorting
+        if (in_array($this->sortField, ['overall_score', 'location_score', 'tech_score', 'team_size_score', 'leadership_score'])) {
+            $query->leftJoin('job_ratings', 'job_postings.job_id', '=', 'job_ratings.job_id')
+                  ->select('job_postings.*')
+                  ->orderBy("job_ratings.{$this->sortField}", $this->sortDirection)
+                  ->orderBy('job_postings.posted_date', 'desc');
+        } else {
+            $query->orderBy($this->sortField, $this->sortDirection);
+        }
+
+        // Get current page jobs
+        $jobs = $query->paginate($this->perPage, ['*'], 'page', $this->page);
+
+        return $jobs->pluck('job_id')->toArray();
+    }
+
+    /**
+     * Clear all selections
+     */
+    public function clearSelection()
+    {
+        $this->selectedJobs = [];
+        $this->selectAll = false;
+        $this->updateBulkActionsVisibility();
+    }
+
+    /**
+     * Update bulk actions visibility
+     */
+    private function updateBulkActionsVisibility()
+    {
+        $this->showBulkActions = count($this->selectedJobs) > 0;
+    }
+
+    /**
+     * Queue selected jobs for AI rating
+     */
+    public function queueSelectedJobsForRating()
+    {
+        if (empty($this->selectedJobs)) {
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'message' => 'Please select at least one job to queue for rating.'
+            ]);
+            return;
+        }
+
+        if (!Auth::check()) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'You must be logged in to queue jobs for rating.'
+            ]);
+            return;
+        }
+
+        $queuedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($this->selectedJobs as $jobId) {
+            // Check if job already has an AI rating for this user
+            $existingRating = JobRating::where('job_id', $jobId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if ($existingRating) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Check if job is already queued
+            $existingQueue = \App\Models\JobQueue::where('job_id', $jobId)
+                ->whereIn('status_code', [\App\Models\JobQueue::STATUS_PENDING, \App\Models\JobQueue::STATUS_IN_PROGRESS])
+                ->first();
+
+            if ($existingQueue) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Add to queue
+            $queueItem = \App\Models\JobQueue::create([
+                'job_id' => $jobId,
+                'user_id' => Auth::id(),
+                'status_code' => \App\Models\JobQueue::STATUS_PENDING,
+                'queued_at' => now(),
+            ]);
+
+            // Dispatch the job for background processing
+            \App\Jobs\ProcessAiJobRating::dispatch($queueItem->queue_id);
+
+            $queuedCount++;
+        }
+
+        $message = "Queued {$queuedCount} jobs for AI rating.";
+        if ($skippedCount > 0) {
+            $message .= " {$skippedCount} jobs were skipped (already rated or queued).";
+        }
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => $message
+        ]);
+
+        $this->clearSelection();
+    }
+
+    /**
+     * Check if a job is selected
+     */
+    public function isJobSelected($jobId): bool
+    {
+        return in_array($jobId, $this->selectedJobs);
+    }
+
+    /**
+     * Check if a job has been rated by the current authenticated user
+     */
+    public function isJobRated($jobId): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        return JobRating::where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->exists();
+    }
+
+    /**
+     * Get the AI job rating for the current user and job
+     */
+    public function getJobRating($jobId)
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        return JobRating::where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->first();
+    }
+
+    /**
+     * Get count of selected jobs that haven't been rated yet
+     */
+    public function getUnratedSelectedJobsCount(): int
+    {
+        if (!Auth::check()) {
+            return 0;
+        }
+
+        $count = 0;
+        foreach ($this->selectedJobs as $jobId) {
+            if (!$this->isJobRated($jobId)) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 }

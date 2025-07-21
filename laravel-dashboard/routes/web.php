@@ -10,6 +10,8 @@ use App\Livewire\Queue;
 use App\Livewire\Ratings;
 use App\Livewire\ProfileEdit;
 use Illuminate\Support\Facades\DB;
+use App\Livewire\JobRatings\Index as JobRatingsIndex;
+use App\Livewire\JobRatings\Show as JobRatingsShow;
 
 // Public routes (no authentication required)
 Route::get('/test', function () {
@@ -51,6 +53,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Profile edit route
     Route::get('/profile/edit', ProfileEdit::class)->name('profile.edit');
+
+    // AI Job Rating routes
+    Route::get('/job-ratings', JobRatingsIndex::class)->name('job-ratings.index');
+    Route::get('/job-ratings/{jobRating}', JobRatingsShow::class)->name('job-ratings.show');
+
+    // Job Queue Management route
+    Route::get('/job-queue', \App\Livewire\JobQueue\Index::class)->name('job-queue.index');
 });
 
 // Include Breeze authentication routes

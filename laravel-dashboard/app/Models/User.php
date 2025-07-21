@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -43,6 +42,7 @@ class User extends Authenticatable
         'salary_expectation_max',
         'currency',
         'willing_to_relocate',
+        'max_travel_distance',
         'open_to_management',
         // Education
         'highest_education',
@@ -96,5 +96,21 @@ class User extends Authenticatable
             'profile_completed' => 'boolean',
             'profile_updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the user job views for the user.
+     */
+    public function jobViews()
+    {
+        return $this->hasMany(UserJobView::class);
+    }
+
+    /**
+     * Get the job queue items for the user.
+     */
+    public function jobQueues()
+    {
+        return $this->hasMany(JobQueue::class);
     }
 }

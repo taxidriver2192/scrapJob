@@ -69,23 +69,35 @@ class SyncVirkdataCompany extends Command
 
         $success = 0;
         $errors = 0;
+        $skipped = 0;
 
         foreach ($companies as $company) {
-            $result = $this->syncCompany($company, false);
-            if ($result === 0) {
-                $success++;
+            // Skip companies with existing errors
+            if (!is_null($company->error)) {
+                $skipped++;
             } else {
-                $errors++;
+                $result = $this->syncCompany($company, false);
+                if ($result === 0) {
+                    $success++;
+                } else {
+                    $errors++;
+                }
+                // Add small delay to be nice to the API
+                sleep(1);
             }
-            $bar->advance();
 
-            // Add small delay to be nice to the API
-            sleep(1);
+            $bar->advance();
         }
 
         $bar->finish();
         $this->newLine(2);
-        $this->info("Sync completed. Success: {$success}, Errors: {$errors}");
+
+        // Build summary message
+        $summary = "Sync completed. Success: {$success}, Errors: {$errors}";
+        if ($skipped > 0) {
+            $summary .= ", Skipped (existing errors): {$skipped}";
+        }
+        $this->info($summary);
 
         return 0;
     }

@@ -12,6 +12,7 @@ class UpdateWorkArrangement extends Component
     public string $salary_expectation_min = '';
     public string $salary_expectation_max = '';
     public string $currency = 'USD';
+    public ?int $maxTravelDistance = null;
 
     /**
      * Mount the component.
@@ -24,6 +25,7 @@ class UpdateWorkArrangement extends Component
         $this->salary_expectation_min = $user->salary_expectation_min ?? '';
         $this->salary_expectation_max = $user->salary_expectation_max ?? '';
         $this->currency = $user->currency ?? 'USD';
+        $this->maxTravelDistance = $user->max_travel_distance;
     }
 
     public function rules()
@@ -34,6 +36,7 @@ class UpdateWorkArrangement extends Component
             'salary_expectation_min' => 'nullable|integer|min:0',
             'salary_expectation_max' => 'nullable|integer|min:0',
             'currency' => 'required|string|max:3',
+            'maxTravelDistance' => 'nullable|integer|min:0|max:500',
         ];
     }
 
@@ -43,9 +46,13 @@ class UpdateWorkArrangement extends Component
     public function updateWorkArrangement(): void
     {
         $validated = $this->validate();
-
         $user = Auth::user();
-        $user->update($validated);
+        // Map Livewire property to database column
+        $updateData = $validated;
+        $updateData['max_travel_distance'] = $this->maxTravelDistance;
+        // Save attributes
+        $user->fill($updateData);
+        $user->save();
 
         $this->dispatch('profile-updated', name: $user->name);
     }
