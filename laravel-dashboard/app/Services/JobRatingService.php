@@ -75,7 +75,6 @@ class JobRatingService
             }
 
             // Extract scores from the AI response
-            $overallScore = $aiResponse['overall_score'] ?? 0;
             $locationScore = $aiResponse['scores']['location'] ?? 0;
             $techScore = $aiResponse['scores']['tech_match'] ?? 0;
             $companySizeScore = $aiResponse['scores']['company_fit'] ?? 0;
@@ -96,7 +95,7 @@ class JobRatingService
                 'total_tokens' => $totalTokens,
                 'cost' => $cost,
                 'metadata' => $metadata,
-                'overall_score' => $overallScore,
+                'overall_score' => 0, // Overall score is no longer used
                 'location_score' => $locationScore,
                 'tech_score' => $techScore,
                 'team_size_score' => $companySizeScore,
@@ -111,7 +110,6 @@ class JobRatingService
                 'job_id' => $job->job_id,
                 'user_id' => $user->id,
                 'model' => $response['model'],
-                'overall_score' => $overallScore,
                 'location_score' => $locationScore,
                 'tech_score' => $techScore,
                 'company_size_score' => $companySizeScore,
@@ -136,244 +134,86 @@ class JobRatingService
     }
 
     /**
-     * Build the AI prompt based on job, company, and user information
+     * Build the AI prompt (no overall_score field)
      */
     private function buildJobRatingPrompt(JobPosting $job, ?Company $company, User $user): string
     {
-        // Format job information
-        $jobTitle = $job->title ?? self::NOT_SPECIFIED;
-        $companyName = $company?->name ?? $job->company_name ?? self::NOT_SPECIFIED;
-        $location = $job->location ?? self::NOT_SPECIFIED;
-        $applicants = $job->applicants ? "{$job->applicants} applicants" : self::NOT_SPECIFIED;
-        $workType = $job->work_type ?? self::NOT_SPECIFIED;
-        $skills = $job->skills ? json_encode($job->skills) : self::NOT_SPECIFIED;
-        $descriptionAvailable = (!empty($job->description) && strlen($job->description) > 50) ? 'Yes' : 'No';
+        // ---- 1. Job JSON ----
+        $jobData = [
+            'job_id'       => $job->job_id,
+            'title'        => $job->title,
+            'company_name' => $company?->name ?? $job->company_name ?? self::NOT_SPECIFIED,
+            'location'     => $job->location,
+            'work_type'    => $job->work_type,
+            'skills'       => $job->skills,
+            'summary'      => $job->brief_summary_of_job
+                              ?: str($job->description)->limit(500),
+        ];
 
-        // Format user profile information
-        $userProfile = $this->buildUserProfileText($user);
+        // ---- 2. Candidate JSON ----
+        $userData = [
+            'user_id'                => $user->id,
+            'preferred_location'     => $user->preferred_location,
+            'years_of_experience'    => $user->years_of_experience,
+            'skills'                 => $user->skills,
+            'preferred_job_type'     => $user->preferred_job_type,
+            'remote_work_preference' => $user->remote_work_preference,
+            'willing_to_relocate'    => $user->willing_to_relocate,
+            'open_to_management'     => $user->open_to_management,
+            'highest_education'      => $user->highest_education,
+            'field_of_study'         => $user->field_of_study,
+        ];
 
-        // Build the prompt (inspired by the Go script)
-        return sprintf('You are an expert job matching AI that provides REALISTIC and ACCURATE evaluations based on AVAILABLE data only.
+        // ---- 3. Company JSON (minimal) ----
+        $companyData = $company ? [
+            'industry'  => $company->industrydesc,
+            'employees' => $company->employees,
+        ] : new \stdClass();
 
-ANALYZE THIS JOB:
-Job ID: %s
-Title: %s
-Company: %s
-Location: %s
-Applicants: %s
-Work Type: %s
-Skills: %s
-Description Available: %s
+        $jobJson     = json_encode($jobData,     JSON_UNESCAPED_UNICODE);
+        $userJson    = json_encode($userData,    JSON_UNESCAPED_UNICODE);
+        $companyJson = json_encode($companyData, JSON_UNESCAPED_UNICODE);
 
-CANDIDATE PROFILE:
-%s
+        return <<<PROMPT
+You are an AI that scores how well a candidate fits a job posting.
 
-SCORING GUIDELINES (0-100, be REALISTIC and use available data):
+INPUT:
+{
+  "job": $jobJson,
+  "candidate": $userJson,
+  "company": $companyJson
+}
 
-**LOCATION MATCH:**
-• User preferred location or close by: 90-100 (perfect)
-• Same country/region: 70-85 (good)
-• Remote work available and user wants remote: 85-95 (very good)
-• Different country but remote mentioned: 60-80 (possible)
-• Empty/unclear location: 40 (unknown, assume average)
+TASK:
+• Score these five criteria on a 0-100 scale: location, tech_match, company_fit, seniority_match, work_type_match.  
+• Provide one short sentence of reasoning per criterion.  
+• Add a single-sentence summary.  
+• Output a confidence (0-100) based on information completeness.  
 
-**TECH MATCH:**
-Analyze job title + skills array + any description for matches with user skills/experience:
-• 5+ technology matches: 90-100 (excellent match)
-• 3-4 technology matches: 75-85 (good match)
-• 1-2 technology matches: 50-70 (possible match)
-• Related technologies: 40-60 (transferable)
-• No clear tech match but development role: 20-40 (unlikely)
-• Non-technical role: 0-20 (poor match)
-
-**COMPANY FIT:**
-Based on company information and user preferences:
-• Company size matches user preference: 80-100
-• Industry matches user experience/interest: 75-90
-• Company values align with user profile: 70-85
-• Limited company information: 50 (neutral)
-
-**SENIORITY MATCH:**
-Analyze job title against user experience level:
-• Perfect seniority match: 90-100
-• Slight level difference: 70-85
-• User overqualified: 60-75
-• User underqualified: 30-50
-• Management role but user doesn\'t want management: 10-30
-
-**WORK TYPE MATCH:**
-Based on job work type and user preferences:
-• Perfect match (remote/hybrid/onsite): 90-100
-• Acceptable alternative: 70-85
-• Not preferred but workable: 50-65
-• Strongly conflicts with preference: 20-40
-
-IMPORTANT: Work with available data only. If information is missing, don\'t penalize - focus on what IS available. Provide specific reasoning for each score.
-
-Return ONLY this JSON (no markdown formatting, all scores must be integers):
+OUTPUT: valid JSON only, **no overall_score**, exactly this shape:
 
 {
-  "job_id": "%s",
-  "overall_score": [INTEGER_WEIGHTED_AVERAGE],
+  "job_id": <integer>,
   "scores": {
-    "location": [INTEGER_SCORE],
-    "tech_match": [INTEGER_SCORE],
-    "company_fit": [INTEGER_SCORE],
-    "seniority_match": [INTEGER_SCORE],
-    "work_type_match": [INTEGER_SCORE]
+    "location": <integer>,
+    "tech_match": <integer>,
+    "company_fit": <integer>,
+    "seniority_match": <integer>,
+    "work_type_match": <integer>
   },
   "reasoning": {
-    "location": "Location assessment based on user preferences",
-    "tech_match": "Technology match analysis with user skills",
-    "company_fit": "Company size/culture fit assessment",
-    "seniority_match": "Seniority level analysis",
-    "work_type_match": "Work arrangement match analysis",
-    "summary": "Brief overall job fit assessment"
+    "location": "<text>",
+    "tech_match": "<text>",
+    "company_fit": "<text>",
+    "seniority_match": "<text>",
+    "work_type_match": "<text>",
+    "summary": "<text>"
   },
-  "confidence": [0-100_HOW_CONFIDENT_ARE_YOU]
-}',
-            $job->job_id,
-            $jobTitle,
-            $companyName,
-            $location,
-            $applicants,
-            $workType,
-            $skills,
-            $descriptionAvailable,
-            $userProfile,
-            $job->job_id
-        );
-    }
+  "confidence": <integer>
+}
 
-    /**
-     * Build user profile text from available user data
-     */
-    private function buildUserProfileText(User $user): string
-    {
-        $profile = [];
-
-        $this->addBasicInfo($profile, $user);
-        $this->addExperienceInfo($profile, $user);
-        $this->addPreferences($profile, $user);
-        $this->addEducationInfo($profile, $user);
-
-        return empty($profile)
-            ? "• Profile information not yet completed - please update your profile for better job matching"
-            : implode("\n", $profile);
-    }
-
-    private function addBasicInfo(array &$profile, User $user): void
-    {
-        if ($user->preferred_location) {
-            $profile[] = "• Lives in: {$user->preferred_location}";
-        }
-
-        if ($user->years_of_experience) {
-            $profile[] = "• Years of experience: {$user->years_of_experience}";
-        }
-    }
-
-    private function addExperienceInfo(array &$profile, User $user): void
-    {
-        if ($user->current_job_title) {
-            $profile[] = "• Current role: {$user->current_job_title}";
-        }
-
-        if ($user->current_company) {
-            $profile[] = "• Current company: {$user->current_company}";
-        }
-
-        if ($user->industry) {
-            $profile[] = "• Industry: {$user->industry}";
-        }
-
-        if ($user->skills && is_array($user->skills)) {
-            $skillsText = $this->processArrayToString($user->skills);
-            if ($skillsText) {
-                $profile[] = "• Skills: {$skillsText}";
-            }
-        }
-
-        if ($user->career_summary) {
-            $profile[] = "• Career summary: {$user->career_summary}";
-        }
-    }
-
-    /**
-     * Process an array of mixed types into a comma-separated string
-     */
-    private function processArrayToString(array $items): ?string
-    {
-        $processedItems = [];
-        foreach ($items as $item) {
-            if (is_array($item)) {
-                // If it's an array, json encode it or extract meaningful values
-                $processedItems[] = json_encode($item);
-            } elseif (is_string($item) && !empty(trim($item))) {
-                $processedItems[] = trim($item);
-            } elseif (!is_null($item)) {
-                // Convert other types to string
-                $processedItems[] = (string) $item;
-            }
-        }
-
-        return !empty($processedItems) ? implode(', ', $processedItems) : null;
-    }
-
-    private function addPreferences(array &$profile, User $user): void
-    {
-        if ($user->preferred_job_type) {
-            $profile[] = "• Preferred job type: {$user->preferred_job_type}";
-        }
-
-        $this->addBooleanPreferences($profile, $user);
-        $this->addSalaryExpectations($profile, $user);
-    }
-
-    private function addBooleanPreferences(array &$profile, User $user): void
-    {
-        if ($user->remote_work_preference !== null) {
-            $remote = $user->remote_work_preference ? 'Yes' : 'No';
-            $profile[] = "• Remote work preference: {$remote}";
-        }
-
-        if ($user->willing_to_relocate !== null) {
-            $relocate = $user->willing_to_relocate ? 'Yes' : 'No';
-            $profile[] = "• Willing to relocate: {$relocate}";
-        }
-
-        if ($user->open_to_management !== null) {
-            $management = $user->open_to_management ? 'Yes' : 'No';
-            $profile[] = "• Open to management roles: {$management}";
-        }
-    }
-
-    private function addSalaryExpectations(array &$profile, User $user): void
-    {
-        if ($user->salary_expectation_min || $user->salary_expectation_max) {
-            $currency = $user->currency ?? 'USD';
-            $min = $user->salary_expectation_min ? number_format($user->salary_expectation_min) : '?';
-            $max = $user->salary_expectation_max ? number_format($user->salary_expectation_max) : '?';
-            $profile[] = "• Salary expectation: {$min}-{$max} {$currency}";
-        }
-    }
-
-    private function addEducationInfo(array &$profile, User $user): void
-    {
-        if ($user->highest_education) {
-            $profile[] = "• Education: {$user->highest_education}";
-        }
-
-        if ($user->field_of_study) {
-            $profile[] = "• Field of study: {$user->field_of_study}";
-        }
-
-        if ($user->languages && is_array($user->languages)) {
-            $languagesText = $this->processArrayToString($user->languages);
-            if ($languagesText) {
-                $profile[] = "• Languages: {$languagesText}";
-            }
-        }
+Return nothing outside the JSON object.
+PROMPT;
     }
 
     /**

@@ -15,6 +15,7 @@ class JobPosting extends Model
         'company_id',
         'location',
         'description',
+        'brief_summary_of_job',
         'apply_url',
         'posted_date',
         'applicants',

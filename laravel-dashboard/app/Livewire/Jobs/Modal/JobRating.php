@@ -22,7 +22,7 @@ class JobRating extends Component
     // Helper methods for the view
     public function hasRating()
     {
-        return $this->rating && data_get($this->rating, 'overall_score', 0) > 0;
+        return $this->rating;
     }
 
     public function isAiRating()
@@ -76,65 +76,39 @@ class JobRating extends Component
 
         $criteria = $this->getCriteria();
 
-        // Prepare scores (0-100 scale)
-        $locationScore = data_get($this->rating, 'location_score', 0);
-        $techScore = data_get($this->rating, 'tech_score', 0);
-        $teamSizeScore = data_get($this->rating, 'team_size_score', 0);
-        $leadershipScore = data_get($this->rating, 'leadership_score', 0);
-
-        // Chart dimensions
-        $size = 240;
-        $center = $size / 2;
-        $maxRadius = 90;
-
-        // Calculate positions for 4 axes (top, right, bottom, left)
         $axes = [
             [
                 'name' => 'Location',
-                'score' => $locationScore,
+                'score' => $this->getLocationScore(),
                 'color' => '#3b82f6',
                 'icon' => 'map-pin',
                 'tooltip' => data_get($criteria, 'location', 'Location analysis not available')
             ],
             [
                 'name' => 'Tech Skills',
-                'score' => $techScore,
+                'score' => $this->getTechScore(),
                 'color' => '#8b5cf6',
                 'icon' => 'code-bracket',
                 'tooltip' => data_get($criteria, 'tech_match', 'Technical skills analysis not available')
             ],
             [
                 'name' => 'Team Size',
-                'score' => $teamSizeScore,
+                'score' => $this->getTeamSizeScore(),
                 'color' => '#f97316',
                 'icon' => 'user-group',
                 'tooltip' => data_get($criteria, 'company_fit', 'Company culture and team size analysis not available')
             ],
             [
                 'name' => 'Leadership',
-                'score' => $leadershipScore,
+                'score' => $this->getLeadershipScore(),
                 'color' => '#6366f1',
                 'icon' => 'academic-cap',
                 'tooltip' => data_get($criteria, 'seniority_fit', 'Leadership and seniority level analysis not available')
             ]
         ];
 
-        // Calculate polygon points
-        $points = [];
-        for ($i = 0; $i < 4; $i++) {
-            $angle = ($i * 90 - 90) * pi() / 180; // Start from top and go clockwise
-            $radius = ($axes[$i]['score'] / 100) * $maxRadius;
-            $x = $center + cos($angle) * $radius;
-            $y = $center + sin($angle) * $radius;
-            $points[] = "$x,$y";
-        }
-
         return [
-            'size' => $size,
-            'center' => $center,
-            'maxRadius' => $maxRadius,
             'axes' => $axes,
-            'polygonPoints' => implode(' ', $points)
         ];
     }
 

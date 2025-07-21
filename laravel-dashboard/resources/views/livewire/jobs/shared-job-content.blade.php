@@ -41,15 +41,21 @@
             </div>
         </div>
 
-        <!-- Job Information and Rating Cards -->
+        <!-- Job Information, Skills, and Summary Cards -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <!-- Job Information Component -->
             <livewire:jobs.modal.job-information :jobPosting="$jobPosting" :key="'job-info-'.$jobPosting->job_id" />
 
-            <!-- Job Rating Component -->
-            <div class="lg:col-span-2">
-                <livewire:jobs.modal.job-rating :rating="$rating" :jobPosting="$jobPosting" :key="'job-rating-'.$jobPosting->job_id" />
-            </div>
+            <!-- Job Skills Component -->
+            <livewire:jobs.modal.job-skills :jobPosting="$jobPosting" :key="'job-skills-'.$jobPosting->job_id" />
+
+            <!-- Job Summary Component -->
+            <livewire:jobs.modal.job-summary :jobPosting="$jobPosting" :key="'job-summary-'.$jobPosting->job_id" />
+        </div>
+
+        <!-- Job Rating Component (Full Width) -->
+        <div class="mb-6">
+            <livewire:jobs.modal.job-rating :rating="$rating" :jobPosting="$jobPosting" :key="'job-rating-'.$jobPosting->job_id" />
         </div>
 
         <!-- Job Description -->
