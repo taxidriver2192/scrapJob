@@ -24,6 +24,7 @@ class JobPosting extends Model
         'openai_adresse',
         'latitude',
         'longitude',
+        'job_post_closed_date',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class JobPosting extends Model
         'updated_at' => 'datetime',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
+        'job_post_closed_date' => 'datetime',
     ];
 
     public function company()
@@ -53,5 +55,21 @@ class JobPosting extends Model
     public function getCompanyNameAttribute()
     {
         return $this->company ? $this->company->name : null;
+    }
+
+    /**
+     * Check if the job posting is closed
+     */
+    public function isClosed(): bool
+    {
+        return !is_null($this->job_post_closed_date);
+    }
+
+    /**
+     * Check if the job posting is open
+     */
+    public function isOpen(): bool
+    {
+        return is_null($this->job_post_closed_date);
     }
 }
