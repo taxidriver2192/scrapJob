@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Flux Dark Mode Custom Variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Re-assign Flux's gray of choice... */
 @theme {
     --color-zinc-50: var(--color-slate-50);
