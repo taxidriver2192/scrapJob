@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
@@ -451,5 +452,219 @@ func (s *LinkedInScraper) updateExistingJob(jobID int, jobPosting *models.JobPos
 	}
 
 	fmt.Printf("✅ Updated job %d with new information\n", jobID)
+	return nil
+}
+
+// CheckJobClosureStatus checks if jobs are still open by visiting their apply_url
+func (s *LinkedInScraper) CheckJobClosureStatus(limit int) error {
+	fmt.Println("🚀 Initializing Chrome browser for job status checking...")
+	
+	// Setup Chrome options (same as RescrapeFromQueue)
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath(s.config.Scraper.ChromeExecutablePath),
+		chromedp.Flag("headless", s.config.Scraper.HeadlessBrowser),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-web-security", true),
+		chromedp.Flag("disable-features", "VizDisplayCompositor"),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-plugins", true),
+		chromedp.Flag("disable-images", true), // Speed up loading
+		chromedp.UserDataDir(s.config.Scraper.UserDataDir),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	// Add timeout context
+	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(func(s string, args ...interface{}) {
+		// Suppress cookie parsing errors - they're not critical
+		if !strings.Contains(s, "cookiePart") && !strings.Contains(s, "could not unmarshal event") {
+			fmt.Printf("ChromeDP: "+s+"\n", args...)
+		}
+	}))
+	defer cancel()
+
+	// Enable console logging from JavaScript
+	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		switch ev := ev.(type) {
+		case *runtime.EventConsoleAPICalled:
+			args := make([]string, len(ev.Args))
+			for i, arg := range ev.Args {
+				if arg.Value != nil {
+					args[i] = string(arg.Value)
+				} else {
+					args[i] = "null"
+				}
+			}
+			// Filter out LinkedIn internal messages and only show relevant ones
+			message := strings.Join(args, " ")
+			if !strings.Contains(message, "visitor.publishDestinations()") &&
+			   !strings.Contains(message, "destination publishing iframe") {
+				fmt.Printf("JS: %s\n", message)
+			}
+		}
+	})
+
+	// Login to LinkedIn
+	fmt.Println("🔐 Attempting to login to LinkedIn...")
+	if err := s.login(ctx); err != nil {
+		return fmt.Errorf("login failed: %w", err)
+	}
+	fmt.Println("✅ Login successful!")
+
+	// Get open jobs from database
+	openJobs, err := s.getOpenJobs(limit)
+	if err != nil {
+		return fmt.Errorf("failed to get open jobs: %w", err)
+	}
+
+	if len(openJobs) == 0 {
+		fmt.Println("✅ No open jobs found to check")
+		return nil
+	}
+
+	// Process jobs to check their status
+	successCount := 0
+	closedCount := 0
+	failCount := 0
+	var closedJobs []string
+	
+	fmt.Printf("🔍 Checking %d jobs for closure status...\n", len(openJobs))
+	
+	// Create progress tracker
+	progress := NewProgressTracker(len(openJobs), "Job Status Check")
+
+	for i, job := range openJobs {
+		// Check if job is closed
+		isClosed, err := s.checkJobIsClosed(ctx, job.ApplyURL)
+		if err != nil {
+			fmt.Printf("\n❌ Error checking job %d (%s): %v", job.JobID, job.Title, err)
+			failCount++
+			progress.SetCurrent(i + 1)
+			continue
+		}
+		
+		if isClosed {
+			// Mark job as closed in database
+			if err := s.markJobAsClosed(job.JobID); err != nil {
+				fmt.Printf("\n❌ Error marking job %d as closed: %v", job.JobID, err)
+				failCount++
+				progress.SetCurrent(i + 1)
+				continue
+			}
+			closedCount++
+			closedJobs = append(closedJobs, fmt.Sprintf("Job %d: %s", job.JobID, job.Title))
+		}
+		
+		successCount++
+		
+		// Update progress bar
+		progress.SetCurrent(i + 1)
+	}
+	
+	// Finish progress bar
+	progress.Finish()
+	
+	// Show detailed summary
+	fmt.Printf("✅ Job status checking complete! Success: %d | Closed: %d | Failed: %d\n", successCount, closedCount, failCount)
+	
+	if len(closedJobs) > 0 {
+		fmt.Println("\n🔒 Jobs marked as closed:")
+		for _, closedJob := range closedJobs {
+			fmt.Printf("  • %s\n", closedJob)
+		}
+	}
+	return nil
+}
+
+// getOpenJobs retrieves jobs from database that don't have a closed date
+func (s *LinkedInScraper) getOpenJobs(limit int) ([]QueueJob, error) {
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if limit == 0 {
+		// Get all jobs without closed date
+		query = `
+			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
+			FROM job_postings j
+			LEFT JOIN companies c ON j.company_id = c.company_id
+			WHERE j.job_post_closed_date IS NULL
+			AND j.apply_url IS NOT NULL 
+			AND j.apply_url != ''
+			ORDER BY j.created_at ASC
+		`
+		rows, err = s.db.Query(query)
+	} else {
+		// Get limited number of open jobs
+		query = `
+			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
+			FROM job_postings j
+			LEFT JOIN companies c ON j.company_id = c.company_id
+			WHERE j.job_post_closed_date IS NULL
+			AND j.apply_url IS NOT NULL 
+			AND j.apply_url != ''
+			ORDER BY j.created_at ASC
+			LIMIT ?
+		`
+		rows, err = s.db.Query(query, limit)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query open jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var jobs []QueueJob
+	for rows.Next() {
+		var job QueueJob
+		err := rows.Scan(&job.JobID, &job.ApplyURL, &job.Title, &job.Company)
+		if err != nil {
+			fmt.Printf("⚠️ Error scanning job: %v\n", err)
+			continue
+		}
+		jobs = append(jobs, job)
+	}
+
+	return jobs, nil
+}
+
+// checkJobIsClosed checks if a job is closed by looking for the Danish closure message
+func (s *LinkedInScraper) checkJobIsClosed(ctx context.Context, applyURL string) (bool, error) {
+	var isClosed bool
+	
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(applyURL),
+		chromedp.WaitVisible(`body`, chromedp.ByQuery),
+		chromedp.Sleep(2*time.Second), // Wait for page to fully load
+		chromedp.Evaluate(`
+			// Check for the Danish closure message
+			const closureSpan = document.querySelector('span.artdeco-inline-feedback__message');
+			if (closureSpan && closureSpan.textContent.includes('Modtager ikke længere ansøgninger')) {
+				console.log('Job is closed - found closure message');
+				true;
+			} else {
+				console.log('Job appears to be open - no closure message found');
+				false;
+			}
+		`, &isClosed),
+	)
+	
+	if err != nil {
+		return false, fmt.Errorf("failed to check job closure status: %w", err)
+	}
+	
+	return isClosed, nil
+}
+
+// markJobAsClosed updates the job_post_closed_date in the database
+func (s *LinkedInScraper) markJobAsClosed(jobID int) error {
+	query := `UPDATE job_postings SET job_post_closed_date = CURRENT_TIMESTAMP WHERE job_id = ?`
+	_, err := s.db.Exec(query, jobID)
+	if err != nil {
+		return fmt.Errorf("failed to mark job as closed: %w", err)
+	}
 	return nil
 }
