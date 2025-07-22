@@ -8,4 +8,7 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    build: {
+        target: ['chrome90', 'edge90', 'firefox88', 'safari14.1']
+    }
 });

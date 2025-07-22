@@ -19,7 +19,7 @@
         @fluxAppearance
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900 ">
+        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             @if (Route::has('dashboard'))
                 <livewire:layout.navigation />
             @endif
@@ -33,9 +33,10 @@
                 </header>
             @endif
 
-            <flux:main class="max-w-7xl mx-auto px-4 bg-white dark:bg-zinc-900">
+            <!-- Page Content -->
+r            <flux:main class="max-w-7xl mx-auto px-4 bg-white dark:bg-zinc-900">
                 {{ $slot }}
-            </flux:main>
+            </main>
         </div>
         
         @livewireScripts

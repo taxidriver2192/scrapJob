@@ -6,7 +6,6 @@ use App\Livewire\Jobs\Index as JobsIndex;
 use App\Livewire\Jobs\JobDetails;
 use App\Livewire\Companies\Index as CompaniesIndex;
 use App\Livewire\Companies\CompanyDetails;
-use App\Livewire\Queue;
 use App\Livewire\Ratings;
 use App\Livewire\ProfileEdit;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +44,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Company-related routes
     Route::get('/companies', CompaniesIndex::class)->name('companies');
     Route::get('/company/{companyId}', CompanyDetails::class)->name('company.details');
-    Route::get('/queue', Queue::class)->name('queue');
     Route::get('/ratings', Ratings::class)->name('ratings');
 
     // Profile route (from Breeze)
