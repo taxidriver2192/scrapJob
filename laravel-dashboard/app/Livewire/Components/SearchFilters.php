@@ -14,6 +14,7 @@ class SearchFilters extends Component
     public $datePreset = ''; // New property for date presets
     public $viewedStatusFilter = ''; // New filter for viewed status
     public $ratingStatusFilter = ''; // New filter for rating status
+    public $jobStatusFilter = 'open'; // New filter for job status (open/closed/both)
     public $perPage = 10;
 
     public $companies = [];
@@ -33,6 +34,7 @@ class SearchFilters extends Component
         'datePreset' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
         'ratingStatusFilter' => ['except' => ''],
+        'jobStatusFilter' => ['except' => 'open'],
         'perPage' => ['except' => 10],
     ];
 
@@ -55,6 +57,7 @@ class SearchFilters extends Component
         $this->datePreset = request()->get('datePreset', '');
         $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
         $this->ratingStatusFilter = request()->get('ratingStatusFilter', '');
+        $this->jobStatusFilter = request()->get('jobStatusFilter', 'open');
         $this->perPage = request()->get('perPage', 10);
 
         // Dispatch initial values to parent components
@@ -69,6 +72,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
             ]
@@ -88,6 +92,7 @@ class SearchFilters extends Component
         $this->datePreset = '';
         $this->viewedStatusFilter = '';
         $this->ratingStatusFilter = '';
+        $this->jobStatusFilter = 'open';
         $this->perPage = 10;
 
         $this->dispatch('filtersCleared');
@@ -106,6 +111,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId, // Add scoped company ID
             ]
@@ -151,6 +157,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
             ]

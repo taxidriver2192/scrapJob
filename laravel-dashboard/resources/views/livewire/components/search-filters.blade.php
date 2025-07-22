@@ -5,7 +5,7 @@
                 <flux:icon.funnel class="mr-2" />
                 {{ $title }}
             </flux:heading>
-            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $ratingStatusFilter || $datePreset)
+            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
             <flux:button
                 size="sm"
                 variant="ghost"
@@ -99,6 +99,21 @@
                     <option value="not_rated">Not Rated</option>
                 </flux:select>
             </div>
+
+            <!-- Job Status Filter -->
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Job Status</flux:label>
+                    <flux:tooltip content="Show open jobs, closed jobs, or both" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="jobStatusFilter" icon="briefcase">
+                    <option value="open">Open Jobs Only</option>
+                    <option value="closed">Closed Jobs Only</option>
+                    <option value="both">Open & Closed</option>
+                </flux:select>
+            </div>
             @endauth
 
             <!-- Items per page -->
@@ -140,7 +155,7 @@
         </div>
 
         <!-- Active Filters Display -->
-        @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset)
+        @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
         <div class="pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <div class="flex flex-wrap gap-2">
                 @if($search)
@@ -184,6 +199,15 @@
                 <flux:badge variant="outline" size="sm">
                     Rating: {{ $ratingStatusFilter === 'rated' ? 'Rated Only' : 'Not Rated' }}
                     <flux:button size="xs" variant="ghost" wire:click="$set('ratingStatusFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
+
+                @if($jobStatusFilter && $jobStatusFilter !== 'open')
+                <flux:badge variant="outline" size="sm">
+                    Status: {{ $jobStatusFilter === 'closed' ? 'Closed Jobs Only' : 'Open & Closed' }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('jobStatusFilter', 'open')" class="ml-1">
                         <flux:icon.x-mark class="w-3 h-3" />
                     </flux:button>
                 </flux:badge>

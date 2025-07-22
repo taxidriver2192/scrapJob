@@ -207,6 +207,14 @@ class JobRating extends Component
         $this->dispatch('requestAiRating');
     }
 
+    /**
+     * Check if the job is closed
+     */
+    public function isJobClosed(): bool
+    {
+        return $this->jobPosting && !is_null($this->jobPosting->job_post_closed_date);
+    }
+
     public function render()
     {
         return view('livewire.jobs.modal.job-rating');

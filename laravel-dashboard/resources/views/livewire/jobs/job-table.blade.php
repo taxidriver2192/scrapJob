@@ -90,6 +90,12 @@
                                             <a href="{{ route('job.details', ['jobId' => $job->job_id]) }}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left block">
                                                 <div class="flex items-center gap-2">
                                                     <div class="flex gap-1">
+                                                        @if($this->isJobClosed($job->job_id))
+                                                            <flux:badge color="red" size="sm" class="shrink-0">
+                                                                <flux:icon.x-circle class="w-3 h-3 mr-1" />
+                                                                Closed
+                                                            </flux:badge>
+                                                        @endif
                                                         @if(auth()->check() && $this->isJobViewed($job->job_id))
                                                             <flux:badge color="zinc" size="sm" class="shrink-0">
                                                                 Seen
@@ -120,6 +126,12 @@
                                             <button wire:click="viewJobRating({{ $job->job_id }})" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-left">
                                                 <div class="flex items-center gap-2">
                                                     <div class="flex gap-1">
+                                                        @if($this->isJobClosed($job->job_id))
+                                                            <flux:badge color="red" size="sm" class="shrink-0">
+                                                                <flux:icon.x-circle class="w-3 h-3 mr-1" />
+                                                                Closed
+                                                            </flux:badge>
+                                                        @endif
                                                         @if(auth()->check() && $this->isJobViewed($job->job_id))
                                                             <flux:badge color="zinc" size="sm" class="shrink-0">
                                                                 Seen

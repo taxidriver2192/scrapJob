@@ -35,8 +35,8 @@ class JobTable extends Component
     public $dateFromFilter = '';
     public $dateToFilter = '';
     public $viewedStatusFilter = '';
-
     public $ratingStatusFilter = '';
+    public $jobStatusFilter = 'open'; // Default to showing open jobs only
 
     // Modal state
     public $selectedJobId = null;
@@ -65,6 +65,7 @@ class JobTable extends Component
         'dateToFilter' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
         'ratingStatusFilter' => ['except' => ''],
+        'jobStatusFilter' => ['except' => 'open'],
         'jobId' => ['except' => null],
     ];
 
@@ -190,6 +191,8 @@ class JobTable extends Component
             $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
             $this->viewedStatusFilter = $data['filters']['viewedStatusFilter'] ?? '';
+            $this->ratingStatusFilter = $data['filters']['ratingStatusFilter'] ?? '';
+            $this->jobStatusFilter = $data['filters']['jobStatusFilter'] ?? 'open';
             $this->perPage = $data['filters']['perPage'] ?? 10;
 
             // Reset to first page when filters change
@@ -208,6 +211,8 @@ class JobTable extends Component
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
         $this->viewedStatusFilter = '';
+        $this->ratingStatusFilter = '';
+        $this->jobStatusFilter = 'open';
         $this->perPage = 10;
         $this->page = 1;
     }
@@ -278,6 +283,25 @@ class JobTable extends Component
             }
         }
 
+        // Apply rating status filter
+        if (!empty($this->ratingStatusFilter)) {
+            if ($this->ratingStatusFilter === 'rated') {
+                // Show only jobs that have ratings
+                $query->whereHas('jobRatings');
+            } elseif ($this->ratingStatusFilter === 'not_rated') {
+                // Show only jobs that don't have ratings
+                $query->whereDoesntHave('jobRatings');
+            }
+        }
+
+        // Apply job status filter
+        if ($this->jobStatusFilter === 'open') {
+            $query->whereNull('job_post_closed_date');
+        } elseif ($this->jobStatusFilter === 'closed') {
+            $query->whereNotNull('job_post_closed_date');
+        }
+        // If 'both' is selected, don't add any filter (show all jobs)
+
         // Apply sorting
         if (in_array($this->sortField, ['overall_score', 'location_score', 'tech_score', 'team_size_score', 'leadership_score'])) {
             // Sorting by rating fields - join with job_ratings table
@@ -301,6 +325,9 @@ class JobTable extends Component
             'locationFilter' => $this->locationFilter,
             'dateFromFilter' => $this->dateFromFilter,
             'dateToFilter' => $this->dateToFilter,
+            'viewedStatusFilter' => $this->viewedStatusFilter,
+            'ratingStatusFilter' => $this->ratingStatusFilter,
+            'jobStatusFilter' => $this->jobStatusFilter,
             'perPage' => $this->perPage,
             'sortField' => $this->sortField,
             'sortDirection' => $this->sortDirection,
@@ -622,35 +649,11 @@ class JobTable extends Component
     }
 
     /**
-     * Get the AI job rating for the current user and job
+     * Check if a job posting has been closed
      */
-    public function getJobRating($jobId)
+    public function isJobClosed($jobId): bool
     {
-        if (!Auth::check()) {
-            return null;
-        }
-
-        return JobRating::where('job_id', $jobId)
-            ->where('user_id', Auth::id())
-            ->first();
-    }
-
-    /**
-     * Get count of selected jobs that haven't been rated yet
-     */
-    public function getUnratedSelectedJobsCount(): int
-    {
-        if (!Auth::check()) {
-            return 0;
-        }
-
-        $count = 0;
-        foreach ($this->selectedJobs as $jobId) {
-            if (!$this->isJobRated($jobId)) {
-                $count++;
-            }
-        }
-
-        return $count;
+        $job = JobPosting::find($jobId);
+        return $job && !is_null($job->job_post_closed_date);
     }
 }

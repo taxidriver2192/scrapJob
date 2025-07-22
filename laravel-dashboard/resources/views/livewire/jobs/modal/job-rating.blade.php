@@ -65,27 +65,48 @@
             </div>
         @else
             <!-- Not Rated Display -->
-            <div class="p-8 text-center bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-700 rounded-lg">
-                <div class="mb-6">
-                    <flux:icon.question-mark-circle class="mx-auto text-zinc-400 dark:text-zinc-500 size-16 mb-4" />
-                    <flux:heading size="md" class="text-zinc-600 dark:text-zinc-300 mb-2">
-                        Job Not Rated Yet
-                    </flux:heading>
-                    <p class="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-                        This job hasn't been analyzed by our AI rating system. Click the button below to get an AI-powered match score based on your preferences.
-                    </p>
+            @if($this->isJobClosed())
+                <!-- Job Closed Display -->
+                <div class="p-8 text-center bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div class="mb-6">
+                        <flux:icon.x-circle class="mx-auto text-red-500 dark:text-red-400 size-16 mb-4" />
+                        <flux:heading size="md" class="text-red-600 dark:text-red-400 mb-2">
+                            Job Position Closed
+                        </flux:heading>
+                        <p class="text-red-500 dark:text-red-400 text-sm mb-6">
+                            This job posting is no longer accepting applications. The position has been closed and cannot be rated at this time.
+                        </p>
+                        @if($this->jobPosting->job_post_closed_date)
+                            <p class="text-red-400 dark:text-red-500 text-xs">
+                                Closed on {{ \Carbon\Carbon::parse($this->jobPosting->job_post_closed_date)->format('M j, Y \a\t g:i A') }}
+                            </p>
+                        @endif
+                    </div>
                 </div>
+            @else
+                <!-- Job Open - Not Rated Display -->
+                <div class="p-8 text-center bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-700 rounded-lg">
+                    <div class="mb-6">
+                        <flux:icon.question-mark-circle class="mx-auto text-zinc-400 dark:text-zinc-500 size-16 mb-4" />
+                        <flux:heading size="md" class="text-zinc-600 dark:text-zinc-300 mb-2">
+                            Job Not Rated Yet
+                        </flux:heading>
+                        <p class="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
+                            This job hasn't been analyzed by our AI rating system. Click the button below to get an AI-powered match score based on your preferences.
+                        </p>
+                    </div>
 
-                <flux:button
-                    variant="primary"
-                    size="sm"
-                    icon="sparkles"
-                    wire:click="requestRating"
-                    class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                >
-                    Rate This Job with AI
-                </flux:button>
-            </div>
+                    <flux:button
+                        variant="primary"
+                        size="sm"
+                        icon="sparkles"
+                        wire:click="requestRating"
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    >
+                        Rate This Job with AI
+                    </flux:button>
+                </div>
+            @endif
         @endif
     </div>
 </flux:card>
