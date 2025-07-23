@@ -1,6 +1,5 @@
 <div>
     <flux:heading size="xl" class="text-blue-600 dark:text-blue-400 mb-6">
-        <flux:icon name="chart-bar" class="mr-2" />
         Dashboard Overview
     </flux:heading>
 
@@ -13,7 +12,7 @@
     ]" />
 
     <!-- Advanced Search and Filters -->
-    <livewire:components.search-filters
+<livewire:components.search-filters
         :companies="$companies"
         :locations="$locations"
         :options="[

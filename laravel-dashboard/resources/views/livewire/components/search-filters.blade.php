@@ -1,8 +1,7 @@
 <flux:card class="mb-8">
     <div class="p-4">
         <div class="flex items-center justify-between mb-4">
-            <flux:heading size="md" class="text-purple-600">
-                <flux:icon.funnel class="mr-2" />
+            <flux:heading size="lg">
                 {{ $title }}
             </flux:heading>
             @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))

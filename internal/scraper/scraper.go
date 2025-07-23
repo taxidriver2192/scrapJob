@@ -547,7 +547,7 @@ func (s *LinkedInScraper) CheckJobClosureStatus(limit int) error {
 		}
 		
 		if isClosed {
-			// Mark job as closed in database
+			// Mark job as closed in database (this also updates updated_at)
 			if err := s.markJobAsClosed(job.JobID); err != nil {
 				fmt.Printf("\n❌ Error marking job %d as closed: %v", job.JobID, err)
 				failCount++
@@ -556,6 +556,14 @@ func (s *LinkedInScraper) CheckJobClosureStatus(limit int) error {
 			}
 			closedCount++
 			closedJobs = append(closedJobs, fmt.Sprintf("Job %d: %s", job.JobID, job.Title))
+		} else {
+			// Job is still open, update the updated_at timestamp so it's checked later
+			if err := s.updateJobCheckedAt(job.JobID); err != nil {
+				fmt.Printf("\n❌ Error updating job %d timestamp: %v", job.JobID, err)
+				failCount++
+				progress.SetCurrent(i + 1)
+				continue
+			}
 		}
 		
 		successCount++
@@ -586,7 +594,8 @@ func (s *LinkedInScraper) getOpenJobs(limit int) ([]QueueJob, error) {
 	var err error
 
 	if limit == 0 {
-		// Get all jobs without closed date
+		// Get all jobs without closed date, ordered by oldest updated_at first
+		// Only include jobs that haven't been checked in the last 24 hours
 		query = `
 			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
 			FROM job_postings j
@@ -594,11 +603,13 @@ func (s *LinkedInScraper) getOpenJobs(limit int) ([]QueueJob, error) {
 			WHERE j.job_post_closed_date IS NULL
 			AND j.apply_url IS NOT NULL 
 			AND j.apply_url != ''
-			ORDER BY j.created_at ASC
+			AND (j.updated_at IS NULL OR j.updated_at < DATE_SUB(NOW(), INTERVAL 1 DAY))
+			ORDER BY j.updated_at ASC, j.created_at ASC
 		`
 		rows, err = s.db.Query(query)
 	} else {
-		// Get limited number of open jobs
+		// Get limited number of open jobs, ordered by oldest updated_at first
+		// Only include jobs that haven't been checked in the last 24 hours
 		query = `
 			SELECT j.job_id, j.apply_url, j.title, COALESCE(c.name, 'Unknown') as company_name
 			FROM job_postings j
@@ -606,7 +617,8 @@ func (s *LinkedInScraper) getOpenJobs(limit int) ([]QueueJob, error) {
 			WHERE j.job_post_closed_date IS NULL
 			AND j.apply_url IS NOT NULL 
 			AND j.apply_url != ''
-			ORDER BY j.created_at ASC
+			AND (j.updated_at IS NULL OR j.updated_at < DATE_SUB(NOW(), INTERVAL 1 DAY))
+			ORDER BY j.updated_at ASC, j.created_at ASC
 			LIMIT ?
 		`
 		rows, err = s.db.Query(query, limit)
@@ -661,10 +673,20 @@ func (s *LinkedInScraper) checkJobIsClosed(ctx context.Context, applyURL string)
 
 // markJobAsClosed updates the job_post_closed_date in the database
 func (s *LinkedInScraper) markJobAsClosed(jobID int) error {
-	query := `UPDATE job_postings SET job_post_closed_date = CURRENT_TIMESTAMP WHERE job_id = ?`
+	query := `UPDATE job_postings SET job_post_closed_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE job_id = ?`
 	_, err := s.db.Exec(query, jobID)
 	if err != nil {
 		return fmt.Errorf("failed to mark job as closed: %w", err)
+	}
+	return nil
+}
+
+// updateJobCheckedAt updates the updated_at timestamp for a job that was checked but remains open
+func (s *LinkedInScraper) updateJobCheckedAt(jobID int) error {
+	query := `UPDATE job_postings SET updated_at = CURRENT_TIMESTAMP WHERE job_id = ?`
+	_, err := s.db.Exec(query, jobID)
+	if err != nil {
+		return fmt.Errorf("failed to update job checked timestamp: %w", err)
 	}
 	return nil
 }

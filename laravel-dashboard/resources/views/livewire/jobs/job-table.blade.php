@@ -2,7 +2,7 @@
     <div class="border-b border-zinc-200 dark:border-zinc-700 pb-4 mb-6">
         <div class="flex justify-between items-center">
             <flux:heading size="lg" class="text-zinc-900 dark:text-zinc-100">
-                <flux:icon.table-cells class="mr-2 text-zinc-600 dark:text-zinc-400" />{{ $title }} ({{ $totalResults }} results)
+                {{ $title }} ({{ $totalResults }} results)
             </flux:heading>
             <div class="text-sm text-zinc-500 dark:text-zinc-400">
                 {{ $jobs->count() }} results displayed

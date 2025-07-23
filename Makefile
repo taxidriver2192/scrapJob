@@ -42,7 +42,6 @@ build:
 		echo "⚠️  TypeScript compiler not found. Using existing JavaScript files."; \
 	fi
 	go build -o linkedin-scraper cmd/main.go
-	go build -o rescraper cmd/rescraper/main.go
 	go build -o job-status-checker cmd/job-status-checker/main.go
 
 # Docker services

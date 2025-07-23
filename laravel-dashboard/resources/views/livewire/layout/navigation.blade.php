@@ -32,7 +32,7 @@
 
     <flux:navbar class="me-4">
         <flux:navbar.item x-data x-on:click="$flux.dark = ! $flux.dark"
-                          icon="moon" href="#" label="Toggle dark mode" />
+                          icon="moon" label="Toggle dark mode" />
     </flux:navbar>
 
     <flux:dropdown position="top" align="start">

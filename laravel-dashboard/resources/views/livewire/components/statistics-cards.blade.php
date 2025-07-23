@@ -7,20 +7,19 @@
                    transition-shadow">
             <div class="flex items-center justify-between p-6">
                 <div>
-                    <flux:heading size="2xl"
+                    <flux:heading size="lg"
                                   class="dark:text-zinc-100">
                         {{ $card['value'] }}
                     </flux:heading>
 
-                    <flux:text
-                        class="text-blue-100 dark:text-blue-300">
+                    <flux:text class="mt-0">
                         {{ $card['title'] }}
                     </flux:text>
                 </div>
 
                 <flux:icon
                     name="{{ $card['icon'] ?? 'chart-bar' }}"
-                    class="text-4xl text-blue-200 dark:text-blue-400" />
+                    class="text-4xl text-blue-400" />
             </div>
         </flux:card>
     @endforeach
