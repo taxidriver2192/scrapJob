@@ -1,7 +1,18 @@
 <div>
-    <flux:heading size="xl" class="text-blue-600 dark:text-blue-400 mb-6">
-        <flux:icon.building-office class="mr-2" />Companies Overview
-    </flux:heading>
+    @push('breadcrumbs')
+        <livewire:components.breadcrumbs
+            :items="[
+                ['label' => 'Companies', 'icon' => 'building-office']
+            ]"
+        />
+    @endpush
+
+
+    <livewire:components.headline
+        title="Companies Overview"
+        subtitle="Comprehensive overview of all companies with statistics and detailed insights."
+        icon="building-office"
+    />
 
     <!-- Statistics Cards -->
     <livewire:components.statistics-cards :cards="[

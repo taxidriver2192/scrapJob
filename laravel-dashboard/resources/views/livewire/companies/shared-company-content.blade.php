@@ -1,6 +1,16 @@
+@push('breadcrumbs')
+    @if($company)
+        <livewire:components.breadcrumbs
+            :items="[
+                ['label' => 'Companies', 'url' => route('companies'), 'icon' => 'building-office'],
+                ['label' => $company->name]
+            ]"
+        />
+    @endif
+@endpush
+
 <div>
     @if($company)
-    <div class="p-6">
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center space-x-4">
                 @if($showBackButton)
@@ -250,9 +260,8 @@
         />
         @endif
 
-    </div>
     @else
-    <div class="p-6 text-center">
+    <div class="text-center">
         <p class="text-gray-500">Company not found.</p>
         @if($showBackButton)
         <flux:button

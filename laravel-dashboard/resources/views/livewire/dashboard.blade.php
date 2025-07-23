@@ -1,7 +1,17 @@
+@push('breadcrumbs')
+    <livewire:components.breadcrumbs
+        :items="[
+            ['label' => 'Dashboard', 'icon' => 'squares-2x2']
+        ]"
+    />
+@endpush
+
 <div>
-    <flux:heading size="xl" class="text-blue-600 dark:text-blue-400 mb-6">
-        Dashboard Overview
-    </flux:heading>
+    <livewire:components.headline
+        title="Dashboard Overview"
+        subtitle="Get an overview of all jobs, companies, and AI ratings in your system."
+        icon="squares-2x2"
+    />
 
     <!-- Statistics Cards -->
     <livewire:components.statistics-cards :cards="[

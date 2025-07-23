@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class JobPosting extends Model
 {
@@ -71,5 +72,41 @@ class JobPosting extends Model
     public function isOpen(): bool
     {
         return is_null($this->job_post_closed_date);
+    }
+
+    /** 55‑60 tegn lang sidetitel */
+    public function getSeoTitleAttribute(): string
+    {
+        $role     = $this->title ?: 'Medarbejder';          // neutral rolle
+        $mainTech = $this->skills[0] ?? null;
+        $company  = optional($this->company)->name ?: 'Vores kunde';
+        $city     = $this->location ? Str::before($this->location, ',') : null;
+        $usp      = $this->company->industrydesc
+            ?? ($this->work_type === 'remote' ? 'Remote først' : null);
+
+        $parts = [
+            trim($role . ($mainTech ? " $mainTech" : '')),
+            '–',
+            $company,
+            $city ? ", $city" : null,
+            $usp ? " | $usp" : null,
+        ];
+
+        return Str::limit(trim(collect($parts)->filter()->implode(' ')), 60, '');
+    }
+
+    /** 150‑160 tegn lang meta‑beskrivelse */
+    public function getSeoSubtitleAttribute(): string
+    {
+        $techList = collect($this->skills)->take(3)->join(', ') ?: 'relevante kompetencer';
+        $benefit  = $this->company->companydesc ?: 'en fleksibel arbejdskultur';
+
+        return Str::limit(sprintf(
+            'Bliv en del af %s som %s. Bidrag med %s og nyd %s.',
+            optional($this->company)->name ?: 'vores team',
+            Str::lower($this->title ?: 'medarbejder'),
+            $techList,
+            Str::lower($benefit)
+        ), 160, '');
     }
 }

@@ -1,15 +1,22 @@
+@push('breadcrumbs')
+    <livewire:components.breadcrumbs
+        :items="[
+            ['label' => 'AI Job Ratings', 'url' => route('job-ratings.index'), 'icon' => 'sparkles'],
+            ['label' => 'Job Rating Details']
+        ]"
+    />
+@endpush
+
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-6xl mx-auto">
         <!-- Header -->
         <div class="mb-8 flex items-center justify-between">
-            <div>
-                <flux:heading size="xl" class="mb-2">
-                    <flux:icon.sparkles class="mr-2 text-purple-500" />
-                    AI Job Rating Details
-                </flux:heading>
-                <p class="text-zinc-600 dark:text-zinc-400">
-                    Detailed view of the AI analysis for Job ID: {{ $rating->job_id }}
-                </p>
+            <div class="flex-1">
+                <livewire:components.headline
+                    title="AI Job Rating Details"
+                    subtitle="Detailed view of the AI analysis for Job ID: {{ $rating->job_id }}"
+                    icon="sparkles"
+                />
             </div>
             <flux:button
                 href="{{ route('job-ratings.index') }}"
@@ -32,25 +39,25 @@
                             <flux:icon.briefcase class="mr-2" />
                             Job Information
                         </flux:heading>
-                        
+
                         <div class="space-y-3 text-sm">
                             <div>
                                 <span class="font-medium text-zinc-700 dark:text-zinc-300">Title:</span>
                                 <span class="block text-zinc-600 dark:text-zinc-400">{{ $jobPosting->title ?? 'N/A' }}</span>
                             </div>
-                            
+
                             @if($jobPosting->company)
                             <div>
                                 <span class="font-medium text-zinc-700 dark:text-zinc-300">Company:</span>
                                 <span class="block text-zinc-600 dark:text-zinc-400">{{ $jobPosting->company->name ?? 'N/A' }}</span>
                             </div>
                             @endif
-                            
+
                             <div>
                                 <span class="font-medium text-zinc-700 dark:text-zinc-300">Location:</span>
                                 <span class="block text-zinc-600 dark:text-zinc-400">{{ $jobPosting->location ?? 'N/A' }}</span>
                             </div>
-                            
+
                             @if($jobPosting->work_type)
                             <div>
                                 <span class="font-medium text-zinc-700 dark:text-zinc-300">Work Type:</span>
@@ -89,7 +96,7 @@
                             <flux:icon.cog-6-tooth class="mr-2" />
                             Rating Metadata
                         </flux:heading>
-                        
+
                         <div class="space-y-3 text-sm">
                             <div class="flex items-center space-x-2">
                                 <flux:badge color="blue" size="sm">{{ $rating->model }}</flux:badge>
@@ -107,7 +114,7 @@
                                     <div class="font-semibold text-green-600">{{ number_format($rating->completion_tokens) }}</div>
                                 </div>
                             </div>
-                            
+
                             <div class="grid grid-cols-2 gap-4 text-center">
                                 <div class="bg-zinc-50 dark:bg-zinc-800 rounded p-2">
                                     <div class="text-xs text-zinc-500">Total Tokens</div>
@@ -142,7 +149,7 @@
                             <flux:icon.chart-bar class="mr-2" />
                             AI Scores
                         </flux:heading>
-                        
+
                         @if(isset($parsedResponse['overall_score']))
                         <div class="mb-4">
                             <div class="text-center bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-lg p-3">
@@ -187,7 +194,7 @@
                             <flux:icon.chat-bubble-left-right class="mr-2" />
                             AI Prompt
                         </flux:heading>
-                        
+
                         <div class="bg-zinc-50 dark:bg-zinc-800 rounded-lg p-4 max-h-96 overflow-y-auto">
                             <pre class="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono">{{ $rating->prompt }}</pre>
                         </div>
@@ -201,7 +208,7 @@
                             <flux:icon.chat-bubble-oval-left class="mr-2" />
                             AI Response
                         </flux:heading>
-                        
+
                         @if($parsedResponse)
                         <!-- Parsed JSON Response -->
                         <div class="space-y-4">

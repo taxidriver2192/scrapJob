@@ -1,13 +1,17 @@
+@push('breadcrumbs')
+    <livewire:components.breadcrumbs
+        :items="[
+            ['label' => 'AI Job Ratings', 'icon' => 'sparkles']
+        ]"
+    />
+@endpush
+
 <div>
-    <div class="mb-8">
-        <flux:heading size="xl" class="mb-2">
-            <flux:icon.sparkles class="mr-2" />
-            AI Job Rating History
-        </flux:heading>
-        <p class="">
-            View your AI-powered job ratings, prompts, and responses with detailed analytics.
-        </p>
-    </div>
+    <livewire:components.headline
+        title="AI Job Rating History"
+        subtitle="View your AI-powered job ratings, prompts, and responses with detailed analytics."
+        icon="sparkles"
+    />
 
     <!-- Statistics Summary -->
     <div class="mb-6">

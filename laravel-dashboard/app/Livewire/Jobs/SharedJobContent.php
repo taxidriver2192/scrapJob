@@ -162,6 +162,57 @@ class SharedJobContent extends Component
         return true;
     }
 
+    /**
+     * Get breadcrumb items for this job, only if valid data exists.
+     * @return array|null
+     */
+    public function getBreadcrumbItems()
+    {
+        // Only return breadcrumbs if we have a valid job posting with a title
+        if (!$this->jobPosting || !data_get($this->jobPosting, 'title')) {
+            return null;
+        }
+
+        // Don't show breadcrumbs if we're on homepage with jobId parameter (modal context)
+        $currentRoute = request()->route()->getName();
+        $hasJobIdParam = request()->has('jobId');
+
+        if ($currentRoute === 'dashboard' && $hasJobIdParam) {
+            return null;
+        }
+
+        return [
+            ['label' => 'Jobs', 'url' => route('jobs'), 'icon' => 'briefcase'],
+            ['label' => \Illuminate\Support\Str::limit(data_get($this->jobPosting, 'title'), 50)]
+        ];
+    }
+
+    /**
+     * Get headline data for the job content.
+     * @return array|null
+     */
+    public function getHeadlineData()
+    {
+        if (!$this->jobPosting || !data_get($this->jobPosting, 'title')) {
+            return null;
+        }
+
+        // Use the SEO-optimized title and subtitle from the JobPosting model
+        $title = $this->jobPosting->seo_title;
+        $subtitle = $this->jobPosting->seo_subtitle;
+
+        // Add rating status to the title if this is a rating view (in Danish)
+        if ($this->rating && data_get($this->rating, 'overall_score', 0) > 0) {
+            $title = 'Job Vurdering: ' . $title;
+        }
+
+        return [
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'icon' => 'star',
+        ];
+    }
+
     public function render()
     {
         return view('livewire.jobs.shared-job-content');

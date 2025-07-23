@@ -1,7 +1,17 @@
+@push('breadcrumbs')
+    <livewire:components.breadcrumbs
+        :items="[
+            ['label' => 'Companies', 'icon' => 'building-office']
+        ]"
+    />
+@endpush
+
 <div>
-    <flux:heading size="xl" class="text-blue-600 mb-6">
-        <i class="fas fa-building mr-2"></i>Companies
-    </flux:heading>
+    <livewire:components.headline
+        title="Companies"
+        subtitle="Explore companies and their job postings to find your perfect match."
+        icon="building-office"
+    />
 
     <!-- Search and Filter Row -->
     <div class="flex gap-4 mb-6">

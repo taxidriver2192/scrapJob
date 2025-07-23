@@ -1,5 +1,4 @@
 <div>
-    <flux:main container class="max-w-7xl mx-auto px-4 bg-white dark:bg-zinc-900">
         <flux:heading size="xl" class="text-blue-600 dark:text-blue-400 mb-6">
             <i class="fas fa-star mr-2"></i>Job Ratings
         </flux:heading>
@@ -275,5 +274,4 @@
             :total="0"
         />
 
-    </flux:main>
 </div>

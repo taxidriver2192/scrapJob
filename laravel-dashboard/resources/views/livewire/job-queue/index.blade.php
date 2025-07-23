@@ -1,12 +1,17 @@
+@push('breadcrumbs')
+    <livewire:components.breadcrumbs
+        :items="[
+            ['label' => 'Job Rating Queue', 'icon' => 'queue-list']
+        ]"
+    />
+@endpush
+
 <div>
-    <flux:header class="mb-8">
-        <flux:heading size="xl" class="text-zinc-900 dark:text-zinc-100">
-            <flux:icon.queue-list class="mr-3 text-zinc-600 dark:text-zinc-400" />Job Rating Queue
-        </flux:heading>
-        <flux:subheading class="text-zinc-600 dark:text-zinc-400">
-            Monitor and manage AI job rating queue across all users
-        </flux:subheading>
-    </flux:header>
+    <livewire:components.headline
+        title="Job Rating Queue"
+        subtitle="Monitor and manage AI job rating queue across all users."
+        icon="queue-list"
+    />
 
     <!-- Statistics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">

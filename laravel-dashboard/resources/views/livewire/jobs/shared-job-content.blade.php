@@ -1,6 +1,24 @@
+@push('breadcrumbs')
+    @if($this->getBreadcrumbItems())
+        <livewire:components.breadcrumbs
+            :items="$this->getBreadcrumbItems()"
+        />
+    @endif
+@endpush
+
 <div wire:listen="requestAiRating=rateJobWithAi">
     @if($jobPosting)
     <div class="p-6">
+        <!-- Headline -->
+        @if($this->getHeadlineData())
+            @php $headlineData = $this->getHeadlineData(); @endphp
+            <livewire:components.headline
+                :title="$headlineData['title']"
+                :subtitle="$headlineData['subtitle']"
+                :icon="$headlineData['icon']"
+            />
+        @endif
+
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center space-x-4">
                 @if($showBackButton)
@@ -13,10 +31,6 @@
                     Back to Dashboard
                 </flux:button>
                 @endif
-                <flux:heading size="lg">
-                    <flux:icon.star class="mr-2 text-yellow-500" />
-                    {{ $rating && data_get($rating, 'overall_score', 0) > 0 ? 'Job Rating Details' : 'Job Details (Not Rated)' }}
-                </flux:heading>
                 @if($showNavigation && $currentIndex !== null && $total !== null)
                 <div class="flex items-center space-x-2">
                     <flux:button
