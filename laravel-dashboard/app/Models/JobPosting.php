@@ -26,6 +26,8 @@ class JobPosting extends Model
         'latitude',
         'longitude',
         'job_post_closed_date',
+        'city',
+        'zipcode',
     ];
 
     protected $casts = [
@@ -80,7 +82,7 @@ class JobPosting extends Model
         $role     = $this->title ?: 'Medarbejder';          // neutral rolle
         $mainTech = $this->skills[0] ?? null;
         $company  = optional($this->company)->name ?: 'Vores kunde';
-        $city     = $this->location ? Str::before($this->location, ',') : null;
+        $city     = $this->city ?: null;
         $usp      = $this->company->industrydesc
             ?? ($this->work_type === 'remote' ? 'Remote først' : null);
 

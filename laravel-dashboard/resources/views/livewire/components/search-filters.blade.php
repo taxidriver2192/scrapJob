@@ -4,7 +4,7 @@
             <flux:heading size="lg">
                 {{ $title }}
             </flux:heading>
-            @if($search || $companyFilter || $locationFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+            @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
             <flux:button
                 size="sm"
                 variant="ghost"
@@ -51,21 +51,19 @@
             </div>
             @endif
 
-            <!-- Location Filter with Autocomplete -->
+            <!-- Region Filter -->
             <div>
                 <div class="flex items-center gap-1 mb-1">
-                    <flux:label>Location</flux:label>
-                    <flux:tooltip content="Filter by job location or city" position="top">
+                    <flux:label>Region</flux:label>
+                    <flux:tooltip content="Filter by Danish region or area" position="top">
                         <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
                     </flux:tooltip>
                 </div>
-                <flux:autocomplete wire:model.live="locationFilter" placeholder="Select or type location..." icon="map-pin">
-                    @foreach($locations as $location)
-                        <flux:autocomplete.item value="{{ $location }}">
-                            {{ $location }}
-                        </flux:autocomplete.item>
+                <flux:select wire:model.live="regionFilter" placeholder="All Regions" icon="map-pin">
+                    @foreach($regionOptions as $key => $label)
+                        <flux:select.option value="{{ $key }}">{{ $label }}</flux:select.option>
                     @endforeach
-                </flux:autocomplete>
+                </flux:select>
             </div>
 
             <!-- Skills Filter -->
@@ -173,7 +171,7 @@
         </div>
 
         <!-- Active Filters Display -->
-        @if($search || $companyFilter || $locationFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+        @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
         <div class="pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <div class="flex flex-wrap gap-2">
                 @if($search)
@@ -194,13 +192,15 @@
                 </flux:badge>
                 @endif
 
-                @if($locationFilter)
-                <flux:badge variant="outline" size="sm">
-                    Location: {{ $locationFilter }}
-                    <flux:button size="xs" variant="ghost" wire:click="$set('locationFilter', '')" class="ml-1">
-                        <flux:icon.x-mark class="w-3 h-3" />
-                    </flux:button>
-                </flux:badge>
+                @if($regionFilter)
+                <flux:tooltip content="{{ $this->getRegionTooltip($regionFilter) }}" position="top">
+                    <flux:badge variant="outline" size="sm">
+                        Region: {{ $regionOptions[$regionFilter] ?? $regionFilter }}
+                        <flux:button size="xs" variant="ghost" wire:click="$set('regionFilter', '')" class="ml-1">
+                            <flux:icon.x-mark class="w-3 h-3" />
+                        </flux:button>
+                    </flux:badge>
+                </flux:tooltip>
                 @endif
 
                 @if(count($skillsFilter) > 0)

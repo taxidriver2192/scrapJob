@@ -9,6 +9,7 @@ use App\Models\JobRating;
 use App\Models\JobQueue;
 use Livewire\Attributes\Layout;
 use Illuminate\Support\Facades\Log;
+use Flux\Flux;
 
 #[Layout('layouts.app')]
 class Dashboard extends Component
@@ -34,15 +35,17 @@ class Dashboard extends Component
         'columns' => [
             // Rating columns - these appear first in the order defined
             'overall_score' => ['enabled' => false, 'label' => 'Overall Score', 'type' => 'rating'],
-            'location_score' => ['enabled' => true, 'label' => 'Location', 'type' => 'rating'],
-            'tech_score' => ['enabled' => true, 'label' => 'Tech Skills', 'type' => 'rating'],
-            'team_size_score' => ['enabled' => true, 'label' => 'Team Size', 'type' => 'rating'],
-            'leadership_score' => ['enabled' => true, 'label' => 'Leadership', 'type' => 'rating'], // Disabled example
+            'location_score' => ['enabled' => false, 'label' => 'Location', 'type' => 'rating'],
+            'tech_score' => ['enabled' => false, 'label' => 'Tech Skills', 'type' => 'rating'],
+            'team_size_score' => ['enabled' => false, 'label' => 'Team Size', 'type' => 'rating'],
+            'leadership_score' => ['enabled' => false, 'label' => 'Leadership', 'type' => 'rating'], // Disabled example
 
             // Regular columns - these appear after rating columns in the order defined
             'title' => ['enabled' => true, 'label' => 'Title', 'type' => 'regular'],
             'company' => ['enabled' => true, 'label' => 'Company', 'type' => 'regular'],
-            'location' => ['enabled' => true, 'label' => 'Location', 'type' => 'regular'],
+            'location' => ['enabled' => false, 'label' => 'Location', 'type' => 'regular'],
+            'city' => ['enabled' => true, 'label' => 'City', 'type' => 'regular'],
+            'zipcode' => ['enabled' => true, 'label' => 'Zip Code', 'type' => 'regular'],
             'posted_date' => ['enabled' => true, 'label' => 'Posted Date', 'type' => 'regular'],
         ]
     ];
@@ -51,7 +54,8 @@ class Dashboard extends Component
     public $currentFilters = [
         'search' => '',
         'companyFilter' => '',
-        'locationFilter' => '',
+        'locationFilter' => '', // Keep for backward compatibility
+        'regionFilter' => '',
         'skillsFilter' => '',
         'dateFromFilter' => '',
         'dateToFilter' => '',
@@ -80,6 +84,7 @@ class Dashboard extends Component
             'search' => request()->get('search', ''),
             'companyFilter' => request()->get('companyFilter', ''),
             'locationFilter' => request()->get('locationFilter', ''),
+            'regionFilter' => request()->get('regionFilter', ''),
             'skillsFilter' => request()->get('skillsFilter', []),
             'dateFromFilter' => request()->get('dateFromFilter', ''),
             'dateToFilter' => request()->get('dateToFilter', ''),
@@ -101,8 +106,14 @@ class Dashboard extends Component
             ->avg('overall_score');
     }    public function loadComponentData()
     {
-        // Load data for child components
-        $this->companies = Company::orderBy('name')->pluck('name', 'company_id')->toArray();
+        // Load data for child components - only companies with open jobs
+        $this->companies = Company::whereHas('jobPostings', function($query) {
+                $query->whereNull('job_post_closed_date'); // Only open jobs
+            })
+            ->orderBy('name')
+            ->pluck('name', 'company_id')
+            ->toArray();
+
         $this->locations = JobPosting::whereNotNull('location')
             ->distinct()
             ->orderBy('location')

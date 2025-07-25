@@ -31,7 +31,8 @@ class JobTable extends Component
     // Current filters
     public $search = '';
     public $companyFilter = '';
-    public $locationFilter = '';
+    public $locationFilter = ''; // Keep for backward compatibility
+    public $regionFilter = '';
     public $skillsFilter = []; // Array for multiple skills
     public $dateFromFilter = '';
     public $dateToFilter = '';
@@ -62,6 +63,7 @@ class JobTable extends Component
         'search' => ['except' => ''],
         'companyFilter' => ['except' => ''],
         'locationFilter' => ['except' => ''],
+        'regionFilter' => ['except' => ''],
         'skillsFilter' => ['except' => []],
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
@@ -103,7 +105,8 @@ class JobTable extends Component
             $this->regularColumns = $options['columns'] ?? [
                 'title' => 'Title',
                 'company' => 'Company',
-                'location' => 'Location',
+                'city' => 'City',
+                'zipcode' => 'Zip Code',
                 'posted_date' => 'Posted Date'
             ];
         }
@@ -113,6 +116,7 @@ class JobTable extends Component
         $this->search = request()->get('search', '');
         $this->companyFilter = request()->get('companyFilter', '');
         $this->locationFilter = request()->get('locationFilter', '');
+        $this->regionFilter = request()->get('regionFilter', '');
         $this->dateFromFilter = request()->get('dateFromFilter', '');
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
@@ -190,6 +194,7 @@ class JobTable extends Component
                 $this->companyFilter = $data['filters']['companyFilter'] ?? '';
             }
             $this->locationFilter = $data['filters']['locationFilter'] ?? '';
+            $this->regionFilter = $data['filters']['regionFilter'] ?? '';
             $this->skillsFilter = $data['filters']['skillsFilter'] ?? [];
             $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
@@ -211,6 +216,7 @@ class JobTable extends Component
             $this->companyFilter = '';
         }
         $this->locationFilter = '';
+        $this->regionFilter = '';
         $this->skillsFilter = []; // Clear skills filter
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
@@ -250,9 +256,9 @@ class JobTable extends Component
             }
         }
 
-        // Apply location filter
-        if (!empty($this->locationFilter)) {
-            $query->where('location', 'like', "%{$this->locationFilter}%");
+        // Apply region filter (new implementation)
+        if (!empty($this->regionFilter)) {
+            $this->applyRegionFilter($query, $this->regionFilter);
         }
 
         // Apply skills filter
@@ -337,7 +343,7 @@ class JobTable extends Component
             'page' => $this->page,
             'search' => $this->search,
             'companyFilter' => $this->companyFilter,
-            'locationFilter' => $this->locationFilter,
+            'regionFilter' => $this->regionFilter,
             'skillsFilter' => $this->skillsFilter,
             'dateFromFilter' => $this->dateFromFilter,
             'dateToFilter' => $this->dateToFilter,
@@ -504,8 +510,9 @@ class JobTable extends Component
             }
         }
 
-        if (!empty($this->locationFilter)) {
-            $query->where('location', 'like', "%{$this->locationFilter}%");
+        // Apply region filter (new implementation)
+        if (!empty($this->regionFilter)) {
+            $this->applyRegionFilter($query, $this->regionFilter);
         }
 
         // Apply skills filter
@@ -705,5 +712,65 @@ class JobTable extends Component
         }
 
         return $unratedCount;
+    }
+
+    private function applyRegionFilter($query, $regionScope)
+    {
+        // Define regional data matching SearchFilters.php
+        $regionalData = [
+            "København & Frederiksberg" => [
+                "zip_ranges" => [[1000, 2470]],
+                "municipalities" => ["København", "Frederiksberg"]
+            ],
+            "Vestegnen" => [
+                "zip_ranges" => [[2600, 2690]],
+                "municipalities" => ["Glostrup", "Brøndby", "Rødovre", "Albertslund", "Vallensbæk", "Taastrup", "Ishøj", "Hedehusene", "Hvidovre", "Greve", "Solrød"]
+            ],
+            "Nordsjælland" => [
+                "zip_ranges" => [[2800, 2990], [3000, 3699]],
+                "municipalities" => ["Lyngby-Taarbæk", "Gentofte", "Rudersdal", "Hørsholm", "Fredensborg", "Helsingør", "Gribskov", "Hillerød", "Allerød", "Frederikssund", "Egedal", "Furesø", "Halsnæs"]
+            ],
+            "Bornholm" => [
+                "zip_ranges" => [[3700, 3790]],
+                "municipalities" => ["Bornholm"]
+            ],
+            "Sjælland" => [
+                "zip_ranges" => [[4000, 4990]]
+            ],
+            "Fyn & Øer" => [
+                "zip_ranges" => [[5000, 5999]]
+            ],
+            "Syd- & Sønderjylland" => [
+                "zip_ranges" => [[6000, 6999]]
+            ],
+            "Midtjylland" => [
+                "zip_ranges" => [[7000, 8999]]
+            ],
+            "Nordjylland" => [
+                "zip_ranges" => [[9000, 9999]]
+            ]
+        ];
+
+        if (!isset($regionalData[$regionScope])) {
+            return;
+        }
+
+        $region = $regionalData[$regionScope];
+
+        $query->where(function($q) use ($region) {
+            // Filter by zip code ranges
+            if (isset($region['zip_ranges'])) {
+                foreach ($region['zip_ranges'] as $range) {
+                    $q->orWhereBetween('zipcode', [$range[0], $range[1]]);
+                }
+            }
+
+            // Filter by municipalities if available
+            if (isset($region['municipalities'])) {
+                foreach ($region['municipalities'] as $municipality) {
+                    $q->orWhere('city', 'like', "%{$municipality}%");
+                }
+            }
+        });
     }
 }

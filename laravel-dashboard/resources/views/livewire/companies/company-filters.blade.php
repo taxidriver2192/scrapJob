@@ -6,7 +6,7 @@
                     <flux:icon.funnel class="mr-2" />
                     {{ $options['title'] ?? 'Company Search & Filters' }}
                 </flux:heading>
-                @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
+                @if($search || $cityFilter || $regionFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
                 <flux:button
                     size="sm"
                     variant="ghost"
@@ -46,6 +46,21 @@
                         <option value="">All Cities</option>
                         @foreach($locations as $location)
                         <option value="{{ $location }}">{{ $location }}</option>
+                        @endforeach
+                    </flux:select>
+                </div>
+
+                <!-- Regional Filter -->
+                <div>
+                    <div class="flex items-center gap-1 mb-1">
+                        <flux:label>Region</flux:label>
+                        <flux:tooltip content="Filter by larger geographical regions" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
+                    </div>
+                    <flux:select wire:model.live="regionFilter" icon="globe-alt">
+                        @foreach($regionOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </flux:select>
                 </div>
@@ -150,7 +165,7 @@
             </div>
 
             <!-- Active Filters Display -->
-            @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
+            @if($search || $cityFilter || $regionFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
             <div class="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
                 <div class="flex flex-wrap gap-2">
                     @if($search)
@@ -160,16 +175,23 @@
                             <flux:icon.x-mark class="w-3 h-3" />
                         </flux:button>
                     </flux:badge>
-                    @endif
+                    @endif                @if($cityFilter)
+                <flux:badge variant="outline" size="sm">
+                    City: {{ $cityFilter }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('cityFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
 
-                    @if($cityFilter)
-                    <flux:badge variant="outline" size="sm">
-                        City: {{ $cityFilter }}
-                        <flux:button size="xs" variant="ghost" wire:click="$set('cityFilter', '')" class="ml-1">
-                            <flux:icon.x-mark class="w-3 h-3" />
-                        </flux:button>
-                    </flux:badge>
-                    @endif
+                @if($regionFilter)
+                <flux:badge variant="outline" size="sm">
+                    Region: {{ $regionFilter }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('regionFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
 
                     @if($statusFilter)
                     <flux:badge variant="outline" size="sm">

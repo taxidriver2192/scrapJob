@@ -175,6 +175,20 @@
                                         </div>
                                     @endif
                                 </flux:table.cell>
+                            @elseif($field === 'city')
+                                <flux:table.cell class="whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <flux:icon.map-pin class="mr-2 text-zinc-400 dark:text-zinc-500" />
+                                        {{ $job->city ?? 'Not specified' }}
+                                    </div>
+                                </flux:table.cell>
+                            @elseif($field === 'zipcode')
+                                <flux:table.cell class="whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <flux:icon.map class="mr-2 text-zinc-400 dark:text-zinc-500" />
+                                        {{ $job->zipcode ?? 'Not specified' }}
+                                    </div>
+                                </flux:table.cell>
                             @elseif($field === 'location')
                                 <flux:table.cell class="whitespace-nowrap">
                                     <div class="flex items-center">
@@ -288,12 +302,12 @@
         :filterScope="[
             'search' => $search,
             'companyFilter' => $companyFilter,
-            'locationFilter' => $locationFilter,
+            'regionFilter' => $regionFilter,
             'dateFromFilter' => $dateFromFilter,
             'dateToFilter' => $dateToFilter,
             'viewedStatusFilter' => $viewedStatusFilter
         ]"
-        :key="'job-modal-' . ($jobId ?? 'default') . '-' . ($companyFilter ?? 'all') . '-' . md5(json_encode([$search, $companyFilter, $locationFilter, $dateFromFilter, $dateToFilter, $viewedStatusFilter]))"
+        :key="'job-modal-' . ($jobId ?? 'default') . '-' . ($companyFilter ?? 'all') . '-' . md5(json_encode([$search, $companyFilter, $regionFilter, $dateFromFilter, $dateToFilter, $viewedStatusFilter]))"
     />
 
 </flux:card>

@@ -23,6 +23,7 @@ class CompanyTable extends Component
     // Current filters
     public $search = '';
     public $cityFilter = '';
+    public $regionFilter = '';
     public $statusFilter = '';
     public $hasVatFilter = '';
     public $hasJobsFilter = '';
@@ -41,6 +42,7 @@ class CompanyTable extends Component
         'perPage' => ['except' => 10],
         'search' => ['except' => ''],
         'cityFilter' => ['except' => ''],
+        'regionFilter' => ['except' => ''],
         'statusFilter' => ['except' => ''],
         'hasVatFilter' => ['except' => ''],
         'hasJobsFilter' => ['except' => ''],
@@ -63,6 +65,7 @@ class CompanyTable extends Component
         $this->page = request()->get('page', 1);
         $this->search = request()->get('search', '');
         $this->cityFilter = request()->get('cityFilter', '');
+        $this->regionFilter = request()->get('regionFilter', '');
         $this->statusFilter = request()->get('statusFilter', '');
         $this->hasVatFilter = request()->get('hasVatFilter', '');
         $this->hasJobsFilter = request()->get('hasJobsFilter', '');
@@ -125,6 +128,7 @@ class CompanyTable extends Component
     {
         $this->search = '';
         $this->cityFilter = '';
+        $this->regionFilter = '';
         $this->statusFilter = '';
         $this->hasVatFilter = '';
         $this->hasJobsFilter = '';
@@ -132,6 +136,43 @@ class CompanyTable extends Component
         $this->maxEmployeesFilter = '';
         $this->perPage = 10;
         $this->page = 1;
+    }
+
+    private function getRegionalData()
+    {
+        return [
+            'København & Frederiksberg' => [
+                'zip_ranges' => [[1000, 2470]],
+                'municipalities' => ['København', 'Frederiksberg']
+            ],
+            'Vestegnen' => [
+                'zip_ranges' => [[2600, 2690]],
+                'municipalities' => ['Glostrup', 'Brøndby', 'Rødovre', 'Albertslund', 'Vallensbæk', 'Taastrup', 'Ishøj', 'Hedehusene', 'Hvidovre', 'Greve', 'Solrød']
+            ],
+            'Nordsjælland' => [
+                'zip_ranges' => [[2800, 2990], [3000, 3699]],
+                'municipalities' => ['Lyngby-Taarbæk', 'Gentofte', 'Rudersdal', 'Hørsholm', 'Fredensborg', 'Helsingør', 'Gribskov', 'Hillerød', 'Allerød', 'Frederikssund', 'Egedal', 'Furesø', 'Halsnæs']
+            ],
+            'Bornholm' => [
+                'zip_ranges' => [[3700, 3790]],
+                'municipalities' => ['Bornholm']
+            ],
+            'Sjælland' => [
+                'zip_ranges' => [[4000, 4990]]
+            ],
+            'Fyn & Øer' => [
+                'zip_ranges' => [[5000, 5999]]
+            ],
+            'Syd- & Sønderjylland' => [
+                'zip_ranges' => [[6000, 6999]]
+            ],
+            'Midtjylland' => [
+                'zip_ranges' => [[7000, 8999]]
+            ],
+            'Nordjylland' => [
+                'zip_ranges' => [[9000, 9999]]
+            ]
+        ];
     }
 
     public function render()
@@ -159,6 +200,30 @@ class CompanyTable extends Component
         // Apply city filter
         if (!empty($this->cityFilter)) {
             $query->where('city', 'LIKE', '%' . $this->cityFilter . '%');
+        }
+
+        // Apply region filter
+        if (!empty($this->regionFilter)) {
+            $regionalData = $this->getRegionalData();
+            if (isset($regionalData[$this->regionFilter])) {
+                $region = $regionalData[$this->regionFilter];
+
+                $query->where(function ($q) use ($region) {
+                    // Filter by zip code ranges
+                    if (isset($region['zip_ranges'])) {
+                        foreach ($region['zip_ranges'] as $range) {
+                            $q->orWhereBetween('zipcode', [$range[0], $range[1]]);
+                        }
+                    }
+
+                    // Filter by municipalities if available
+                    if (isset($region['municipalities'])) {
+                        foreach ($region['municipalities'] as $municipality) {
+                            $q->orWhere('city', 'LIKE', '%' . $municipality . '%');
+                        }
+                    }
+                });
+            }
         }
 
         // Apply status filter

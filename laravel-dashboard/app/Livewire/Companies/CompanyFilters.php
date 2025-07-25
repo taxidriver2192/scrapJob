@@ -13,6 +13,7 @@ class CompanyFilters extends Component
     // Filter values
     public $search = '';
     public $cityFilter = '';
+    public $regionFilter = ''; // New regional filter
     public $statusFilter = '';
     public $hasVatFilter = '';
     public $hasJobsFilter = '';
@@ -22,6 +23,7 @@ class CompanyFilters extends Component
 
     // Available filter options
     public $statusOptions = [];
+    public $regionOptions = []; // New regional options
     public $vatOptions = [
         '' => 'All Companies',
         'with_vat' => 'With VAT Number',
@@ -46,6 +48,7 @@ class CompanyFilters extends Component
     protected $queryString = [
         'search' => ['except' => ''],
         'cityFilter' => ['except' => ''],
+        'regionFilter' => ['except' => ''], // New regional filter in query string
         'statusFilter' => ['except' => ''],
         'hasVatFilter' => ['except' => ''],
         'hasJobsFilter' => ['except' => ''],
@@ -62,6 +65,7 @@ class CompanyFilters extends Component
         // Initialize filters from URL parameters
         $this->search = request()->get('search', '');
         $this->cityFilter = request()->get('cityFilter', '');
+        $this->regionFilter = request()->get('regionFilter', ''); // Initialize regional filter
         $this->statusFilter = request()->get('statusFilter', '');
         $this->hasVatFilter = request()->get('hasVatFilter', '');
         $this->hasJobsFilter = request()->get('hasJobsFilter', '');
@@ -78,6 +82,7 @@ class CompanyFilters extends Component
             'filters' => [
                 'search' => $this->search,
                 'cityFilter' => $this->cityFilter,
+                'regionFilter' => $this->regionFilter, // Dispatch regional filter
                 'statusFilter' => $this->statusFilter,
                 'hasVatFilter' => $this->hasVatFilter,
                 'hasJobsFilter' => $this->hasJobsFilter,
@@ -100,6 +105,84 @@ class CompanyFilters extends Component
         foreach ($statuses as $status) {
             $this->statusOptions[$status] = ucfirst($status);
         }
+
+        // Load regional options
+        $this->loadRegionalData();
+    }
+
+    public function loadRegionalData()
+    {
+        $regionalData = [
+            [
+                "macro_region" => "Region Hovedstaden",
+                "scope" => "København & Frederiksberg",
+                "zip_ranges" => [[1000, 2470]],
+                "municipalities" => ["København", "Frederiksberg"]
+            ],
+            [
+                "macro_region" => "Region Hovedstaden",
+                "scope" => "Vestegnen",
+                "zip_ranges" => [[2600, 2690]],
+                "municipalities" => ["Glostrup", "Brøndby", "Rødovre", "Albertslund", "Vallensbæk", "Taastrup", "Ishøj", "Hedehusene", "Hvidovre", "Greve", "Solrød"]
+            ],
+            [
+                "macro_region" => "Region Hovedstaden",
+                "scope" => "Nordsjælland",
+                "zip_ranges" => [[2800, 2990], [3000, 3699]],
+                "municipalities" => ["Lyngby-Taarbæk", "Gentofte", "Rudersdal", "Hørsholm", "Fredensborg", "Helsingør", "Gribskov", "Hillerød", "Allerød", "Frederikssund", "Egedal", "Furesø", "Halsnæs"]
+            ],
+            [
+                "macro_region" => "Region Hovedstaden",
+                "scope" => "Bornholm",
+                "zip_ranges" => [[3700, 3790]],
+                "municipalities" => ["Bornholm"]
+            ],
+            [
+                "macro_region" => "Region Sjælland",
+                "scope" => "Sjælland",
+                "zip_ranges" => [[4000, 4990]]
+            ],
+            [
+                "macro_region" => "Region Syddanmark",
+                "scope" => "Fyn & Øer",
+                "zip_ranges" => [[5000, 5999]]
+            ],
+            [
+                "macro_region" => "Region Syddanmark",
+                "scope" => "Syd- & Sønderjylland",
+                "zip_ranges" => [[6000, 6999]]
+            ],
+            [
+                "macro_region" => "Region Midtjylland",
+                "scope" => "Midtjylland",
+                "zip_ranges" => [[7000, 8999]]
+            ],
+            [
+                "macro_region" => "Region Nordjylland",
+                "scope" => "Nordjylland",
+                "zip_ranges" => [[9000, 9999]]
+            ]
+        ];
+
+        $this->regionOptions = ['' => 'All Regions'];
+
+        // Group by macro region for better organization
+        $groupedRegions = [];
+        foreach ($regionalData as $region) {
+            $macroRegion = $region['macro_region'];
+            if (!isset($groupedRegions[$macroRegion])) {
+                $groupedRegions[$macroRegion] = [];
+            }
+            $groupedRegions[$macroRegion][] = $region;
+        }
+
+        // Create options with macro region as optgroup
+        foreach ($groupedRegions as $macroRegion => $regions) {
+            foreach ($regions as $region) {
+                $key = $region['scope'];
+                $this->regionOptions[$key] = $region['scope'] . ' (' . $macroRegion . ')';
+            }
+        }
     }
 
     public function updated($propertyName, $value = null)
@@ -111,6 +194,7 @@ class CompanyFilters extends Component
             'filters' => [
                 'search' => $this->search,
                 'cityFilter' => $this->cityFilter,
+                'regionFilter' => $this->regionFilter, // Include regional filter
                 'statusFilter' => $this->statusFilter,
                 'hasVatFilter' => $this->hasVatFilter,
                 'hasJobsFilter' => $this->hasJobsFilter,
@@ -125,6 +209,7 @@ class CompanyFilters extends Component
     {
         $this->search = '';
         $this->cityFilter = '';
+        $this->regionFilter = ''; // Clear regional filter
         $this->statusFilter = '';
         $this->hasVatFilter = '';
         $this->hasJobsFilter = '';
@@ -133,7 +218,7 @@ class CompanyFilters extends Component
         $this->perPage = 10;
 
         $this->dispatch('filtersCleared');
-        
+
         // Dispatch the updated filters
         $this->dispatch('filterUpdated', [
             'property' => 'clearFilters',
@@ -141,6 +226,7 @@ class CompanyFilters extends Component
             'filters' => [
                 'search' => $this->search,
                 'cityFilter' => $this->cityFilter,
+                'regionFilter' => $this->regionFilter, // Dispatch cleared regional filter
                 'statusFilter' => $this->statusFilter,
                 'hasVatFilter' => $this->hasVatFilter,
                 'hasJobsFilter' => $this->hasJobsFilter,
