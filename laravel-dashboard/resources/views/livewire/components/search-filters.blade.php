@@ -4,7 +4,7 @@
             <flux:heading size="lg">
                 {{ $title }}
             </flux:heading>
-            @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+            @if($search || $companyFilter || $locationFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
             <flux:button
                 size="sm"
                 variant="ghost"
@@ -66,6 +66,25 @@
                         </flux:autocomplete.item>
                     @endforeach
                 </flux:autocomplete>
+            </div>
+
+            <!-- Skills Filter -->
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Skills</flux:label>
+                    <flux:tooltip content="Select multiple skills to filter jobs" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+
+                <flux:select variant="listbox" multiple searchable wire:model.live="skillsFilter" placeholder="Choose skills..." icon="code-bracket">
+                    <x-slot name="search">
+                        <flux:select.search class="px-4" placeholder="Search skills..." />
+                    </x-slot>
+                    @foreach($availableSkills as $skill)
+                        <flux:select.option value="{{ $skill }}">{{ $skill }}</flux:select.option>
+                    @endforeach
+                </flux:select>
             </div>
 
             <!-- Viewed Status Filter -->
@@ -154,7 +173,7 @@
         </div>
 
         <!-- Active Filters Display -->
-        @if($search || $companyFilter || $locationFilter || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+        @if($search || $companyFilter || $locationFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
         <div class="pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <div class="flex flex-wrap gap-2">
                 @if($search)
@@ -182,6 +201,17 @@
                         <flux:icon.x-mark class="w-3 h-3" />
                     </flux:button>
                 </flux:badge>
+                @endif
+
+                @if(count($skillsFilter) > 0)
+                @foreach($skillsFilter as $skill)
+                <flux:badge variant="outline" size="sm">
+                    Skill: {{ $skill }}
+                    <flux:button size="xs" variant="ghost" wire:click="removeSkill('{{ $skill }}')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endforeach
                 @endif
 
                 @auth

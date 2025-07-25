@@ -32,6 +32,7 @@ class JobTable extends Component
     public $search = '';
     public $companyFilter = '';
     public $locationFilter = '';
+    public $skillsFilter = []; // Array for multiple skills
     public $dateFromFilter = '';
     public $dateToFilter = '';
     public $viewedStatusFilter = '';
@@ -61,6 +62,7 @@ class JobTable extends Component
         'search' => ['except' => ''],
         'companyFilter' => ['except' => ''],
         'locationFilter' => ['except' => ''],
+        'skillsFilter' => ['except' => []],
         'dateFromFilter' => ['except' => ''],
         'dateToFilter' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
@@ -188,6 +190,7 @@ class JobTable extends Component
                 $this->companyFilter = $data['filters']['companyFilter'] ?? '';
             }
             $this->locationFilter = $data['filters']['locationFilter'] ?? '';
+            $this->skillsFilter = $data['filters']['skillsFilter'] ?? [];
             $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
             $this->viewedStatusFilter = $data['filters']['viewedStatusFilter'] ?? '';
@@ -208,6 +211,7 @@ class JobTable extends Component
             $this->companyFilter = '';
         }
         $this->locationFilter = '';
+        $this->skillsFilter = []; // Clear skills filter
         $this->dateFromFilter = '';
         $this->dateToFilter = '';
         $this->viewedStatusFilter = '';
@@ -249,6 +253,17 @@ class JobTable extends Component
         // Apply location filter
         if (!empty($this->locationFilter)) {
             $query->where('location', 'like', "%{$this->locationFilter}%");
+        }
+
+        // Apply skills filter
+        if (!empty($this->skillsFilter) && is_array($this->skillsFilter)) {
+            $query->where(function($q) {
+                foreach ($this->skillsFilter as $skill) {
+                    // Extract skill name from format "Skill Name (count)"
+                    $skillName = preg_replace('/\s*\(\d+\)$/', '', $skill);
+                    $q->orWhereJsonContains('skills', $skillName);
+                }
+            });
         }
 
         // Apply date filters
@@ -323,6 +338,7 @@ class JobTable extends Component
             'search' => $this->search,
             'companyFilter' => $this->companyFilter,
             'locationFilter' => $this->locationFilter,
+            'skillsFilter' => $this->skillsFilter,
             'dateFromFilter' => $this->dateFromFilter,
             'dateToFilter' => $this->dateToFilter,
             'viewedStatusFilter' => $this->viewedStatusFilter,
@@ -492,6 +508,17 @@ class JobTable extends Component
             $query->where('location', 'like', "%{$this->locationFilter}%");
         }
 
+        // Apply skills filter
+        if (!empty($this->skillsFilter) && is_array($this->skillsFilter)) {
+            $query->where(function($q) {
+                foreach ($this->skillsFilter as $skill) {
+                    // Extract skill name from format "Skill Name (count)"
+                    $skillName = preg_replace('/\s*\(\d+\)$/', '', $skill);
+                    $q->orWhereJsonContains('skills', $skillName);
+                }
+            });
+        }
+
         if (!empty($this->dateFromFilter)) {
             $query->whereDate('posted_date', '>=', $this->dateFromFilter);
         }
@@ -655,5 +682,28 @@ class JobTable extends Component
     {
         $job = JobPosting::find($jobId);
         return $job && !is_null($job->job_post_closed_date);
+    }
+
+    public function getUnratedSelectedJobsCount()
+    {
+        if (!Auth::check() || empty($this->selectedJobs)) {
+            return 0;
+        }
+
+        $userId = Auth::id();
+        $unratedCount = 0;
+
+        foreach ($this->selectedJobs as $jobId) {
+            // Check if this job has been rated by the current user
+            $hasRating = \App\Models\JobRating::where('job_id', $jobId)
+                ->where('user_id', $userId)
+                ->exists();
+
+            if (!$hasRating) {
+                $unratedCount++;
+            }
+        }
+
+        return $unratedCount;
     }
 }

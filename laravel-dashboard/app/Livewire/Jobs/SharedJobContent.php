@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use App\Models\JobRating;
+use Flux\Flux;
+
 
 class SharedJobContent extends Component
 {
@@ -54,84 +56,46 @@ class SharedJobContent extends Component
         $this->dispatch('goBackToDashboard');
     }
 
-    public function rateJobWithAi()
+    public function rateJobWithAi($userId = null)
     {
-        // Add debugging
-        // Basic validation logging (keep minimal)
-        if (!Auth::check() || !$this->jobPosting || !data_get($this->jobPosting, 'job_id')) {
-            return;
-        }
-
         if (!Auth::check()) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'You must be logged in to rate jobs.'
-            ]);
+            Flux::toast('You must be logged in to rate a job.');
             return;
         }
 
-        if (!$this->jobPosting || !data_get($this->jobPosting, 'job_id')) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Unable to rate job - job information not found.'
-            ]);
+        $user = Auth::user();
+
+        // Check if user has already rated this job
+        $existingRating = JobRating::where('job_id', $this->job->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        dd($existingRating, ' IS THERE A RATING? '); // This works
+
+        if ($existingRating) {
+            Flux::toast('You have already rated this job.');
             return;
         }
 
         try {
-            // Show loading notification
-            $this->dispatch('notify', [
-                'type' => 'info',
-                'message' => 'AI is analyzing this job based on your profile... This may take a moment.'
+            // Use AI service to get job rating
+            $aiService = new AiService();
+            $rating = $aiService->rateJob($this->job);
+
+            // Create new job rating
+            JobRating::create([
+                'job_id' => $this->job->id,
+                'user_id' => $user->id,
+                'rating' => $rating,
+                'is_ai_generated' => true,
             ]);
 
-            Log::info('Starting AI job rating', ['job_id' => data_get($this->jobPosting, 'job_id')]);
+            Flux::toast('Job rated successfully with AI!');
 
-            // Get the job posting model
-            $jobPosting = JobPosting::where('job_id', data_get($this->jobPosting, 'job_id'))->first();
-
-            if (!$jobPosting) {
-                Log::error('Job posting not found', ['job_id' => data_get($this->jobPosting, 'job_id')]);
-                throw new OpenAiException('Job posting not found in database');
-            }
-
-            Log::info('Job posting found, creating rating service');
-
-            // Rate the job using the AI service
-            $jobRatingService = app(JobRatingService::class);
-            $result = $jobRatingService->rateJobForUser($jobPosting);
-            // Update the component's rating so the view shows the new AI rating
-            $this->rating = $result;
-
-            Log::info('AI rating completed', [
-                'rating_id' => $result->id,
-                'cost' => $result->cost,
-                'tokens' => $result->total_tokens,
-            ]);
-
-            // Success notification
-            $this->dispatch('notify', [
-                'type' => 'success',
-                'message' => 'Job successfully rated with AI! Check the AI Ratings page to see the detailed analysis.'
-            ]);
-
-            // Optionally refresh the parent component or redirect
-            $this->dispatch('jobRated', ['jobId' => data_get($this->jobPosting, 'job_id')]);
-
-        } catch (OpenAiException $e) {
-            Log::error('OpenAI Exception', ['error' => $e->getMessage()]);
-
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'AI rating failed: ' . $e->getMessage()
-            ]);
+            // Refresh the component to show the new rating
+            $this->dispatch('$refresh');
         } catch (\Exception $e) {
-            Log::error('General exception', ['error' => $e->getMessage()]);
-
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'An error occurred while rating the job: ' . $e->getMessage()
-            ]);
+            Flux::toast('Error rating job: ' . $e->getMessage());
         }
     }
 

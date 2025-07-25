@@ -69,7 +69,7 @@
 
         <!-- Job Rating Component (Full Width) -->
         <div class="mb-6">
-            <livewire:jobs.modal.job-rating :rating="$rating" :jobPosting="$jobPosting" :key="'job-rating-'.$jobPosting->job_id" />
+        <livewire:jobs.modal.job-rating :rating="$rating" :jobPosting="$jobPosting" :key="'job-rating-'.$jobPosting->job_id" />
         </div>
 
         <!-- Job Description -->

@@ -40,9 +40,11 @@
             </div>
 
             {{ $slot }}
+
+            <flux:toast />
         </flux:main>
     </div>
-
     @livewireScripts
+    @fluxScripts
   </body>
 </html>

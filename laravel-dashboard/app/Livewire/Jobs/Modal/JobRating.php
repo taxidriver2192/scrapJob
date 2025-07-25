@@ -7,6 +7,7 @@ use App\Services\JobRatingService;
 use App\Exceptions\OpenAiException;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Flux\Flux;
 
 class JobRating extends Component
 {
@@ -203,8 +204,79 @@ class JobRating extends Component
 
     public function requestRating()
     {
-        // Dispatch event to parent component (SharedJobContent) to handle the AI rating
-        $this->dispatch('requestAiRating');
+        if (!Auth::check()) {
+            Flux::toast(
+                heading: 'Authentication Required',
+                text: 'You must be logged in to rate a job.',
+                variant: 'warning'
+            );
+            return;
+        }
+
+        $userId = Auth::id();
+        $jobId = data_get($this->jobPosting, 'job_id');
+
+        if (!$jobId) {
+            Flux::toast(
+                heading: 'Error',
+                text: 'Job ID not found.',
+                variant: 'danger'
+            );
+            return;
+        }
+
+        // Check if job already has an AI rating for this user
+        $existingRating = \App\Models\JobRating::where('job_id', $jobId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existingRating) {
+            Flux::toast(
+                heading: 'Already Rated',
+                text: 'You have already rated this job.',
+                variant: 'warning'
+            );
+            return;
+        }
+
+        // Check if job is already queued
+        $existingQueue = \App\Models\JobQueue::where('job_id', $jobId)
+            ->whereIn('status_code', [\App\Models\JobQueue::STATUS_PENDING, \App\Models\JobQueue::STATUS_IN_PROGRESS])
+            ->first();
+
+        if ($existingQueue) {
+            Flux::toast(
+                heading: 'Already Queued',
+                text: 'This job is already queued for rating. Check the queue status if needed.',
+                variant: 'warning'
+            );
+            return;
+        }
+
+        try {
+            // Add to queue
+            $queueItem = \App\Models\JobQueue::create([
+                'job_id' => $jobId,
+                'user_id' => $userId,
+                'status_code' => \App\Models\JobQueue::STATUS_PENDING,
+                'queued_at' => now(),
+            ]);
+
+            // Dispatch the job for background processing
+            \App\Jobs\ProcessAiJobRating::dispatch($queueItem->queue_id);
+
+            Flux::toast(
+                heading: 'Rating Queued Successfully',
+                text: 'Your job rating is being processed in the background.',
+                variant: 'success'
+            );
+        } catch (\Exception $e) {
+            Flux::toast(
+                heading: 'Queue Error',
+                text: 'Failed to queue job for rating. Please try again.',
+                variant: 'danger'
+            );
+        }
     }
 
     /**
