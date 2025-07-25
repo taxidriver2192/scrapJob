@@ -6,7 +6,7 @@
                     <flux:icon.funnel class="mr-2" />
                     {{ $options['title'] ?? 'Company Search & Filters' }}
                 </flux:heading>
-                @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter)
+                @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
                 <flux:button
                     size="sm"
                     variant="ghost"
@@ -23,10 +23,9 @@
                 <div class="md:col-span-2">
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>Search Companies</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Find companies by name or description"
-                        />
+                        <flux:tooltip content="Find companies by name or description" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:input
                         wire:model.live.debounce.300ms="search"
@@ -39,10 +38,9 @@
                 <div>
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>City</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Filter by company location"
-                        />
+                        <flux:tooltip content="Filter by company location" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="cityFilter" icon="map-pin">
                         <option value="">All Cities</option>
@@ -57,10 +55,9 @@
                 <div>
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>Status</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Filter by company status"
-                        />
+                        <flux:tooltip content="Filter by company status" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="statusFilter" icon="check-circle">
                         @foreach($statusOptions as $value => $label)
@@ -75,10 +72,9 @@
                 <div>
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>VAT</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Filter by VAT registration status"
-                        />
+                        <flux:tooltip content="Filter by VAT registration status" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="hasVatFilter" icon="receipt-tax">
                         @foreach($vatOptions as $value => $label)
@@ -93,10 +89,9 @@
                 <div>
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>Job Postings</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Filter by companies with job postings"
-                        />
+                        <flux:tooltip content="Filter by companies with job postings" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="hasJobsFilter" icon="briefcase">
                         @foreach($jobsOptions as $value => $label)
@@ -106,21 +101,31 @@
                 </div>
                 @endif
 
-                <!-- Minimum Employees Filter -->
+                <!-- Employee Range Filter -->
                 @if($options['showEmployeesFilter'] ?? false)
-                <div>
+                <div class="md:col-span-2">
                     <div class="flex items-center gap-1 mb-1">
-                        <flux:label>Team Size</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Filter by minimum number of employees"
+                        <flux:label>Employee Range</flux:label>
+                        <flux:tooltip content="Filter by employee count range (leave empty for no limit)" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <flux:input
+                            wire:model.live.debounce.300ms="minEmployeesFilter"
+                            placeholder="Min employees"
+                            type="number"
+                            min="0"
+                            icon="user-group"
+                        />
+                        <flux:input
+                            wire:model.live.debounce.300ms="maxEmployeesFilter"
+                            placeholder="Max employees"
+                            type="number"
+                            min="0"
+                            icon="user-group"
                         />
                     </div>
-                    <flux:select wire:model.live="minEmployeesFilter" icon="user-group">
-                        @foreach($employeeRangeOptions as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                        @endforeach
-                    </flux:select>
                 </div>
                 @endif
 
@@ -129,10 +134,9 @@
                 <div class="@if(!($options['showStatusFilter'] ?? false) && !($options['showVatFilter'] ?? false) && !($options['showJobsFilter'] ?? false) && !($options['showEmployeesFilter'] ?? false)) md:col-start-4 @endif">
                     <div class="flex items-center gap-1 mb-1">
                         <flux:label>Results per Page</flux:label>
-                        <flux:icon.question-mark-circle
-                            class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help"
-                            tooltip="Number of companies to display per page"
-                        />
+                        <flux:tooltip content="Number of companies to display per page" position="top">
+                            <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                        </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="perPage" icon="queue-list">
                         <option value="5">5 per page</option>
@@ -146,7 +150,7 @@
             </div>
 
             <!-- Active Filters Display -->
-            @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter)
+            @if($search || $cityFilter || $statusFilter || $hasVatFilter || $hasJobsFilter || $minEmployeesFilter || $maxEmployeesFilter)
             <div class="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
                 <div class="flex flex-wrap gap-2">
                     @if($search)
@@ -194,10 +198,17 @@
                     </flux:badge>
                     @endif
 
-                    @if($minEmployeesFilter)
+                    @if($minEmployeesFilter || $maxEmployeesFilter)
                     <flux:badge variant="outline" size="sm">
-                        Employees: {{ $employeeRangeOptions[$minEmployeesFilter] }}
-                        <flux:button size="xs" variant="ghost" wire:click="$set('minEmployeesFilter', '')" class="ml-1">
+                        Employees:
+                        @if($minEmployeesFilter && $maxEmployeesFilter)
+                            {{ number_format($minEmployeesFilter) }} - {{ number_format($maxEmployeesFilter) }}
+                        @elseif($minEmployeesFilter)
+                            {{ number_format($minEmployeesFilter) }}+
+                        @elseif($maxEmployeesFilter)
+                            ≤ {{ number_format($maxEmployeesFilter) }}
+                        @endif
+                        <flux:button size="xs" variant="ghost" wire:click="$set('minEmployeesFilter', ''); $set('maxEmployeesFilter', '')" class="ml-1">
                             <flux:icon.x-mark class="w-3 h-3" />
                         </flux:button>
                     </flux:badge>

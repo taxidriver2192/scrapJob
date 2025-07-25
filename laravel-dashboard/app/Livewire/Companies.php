@@ -3,62 +3,75 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use App\Models\Company;
 use Livewire\Attributes\Layout;
 
 #[Layout('layouts.app')]
 class Companies extends Component
 {
-    use WithPagination;
-
-    public $search = '';
-    public $perPage = 20;
-    public $sortField = 'job_postings_count';
-    public $sortDirection = 'desc';
-
-    protected $queryString = ['search'];
-
-    public function updatingSearch()
-    {
-        $this->resetPage();
-    }
-
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            // Toggle direction if same field
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            // Set new field with default direction
-            $this->sortField = $field;
-            $this->sortDirection = $field === 'job_postings_count' ? 'desc' : 'asc';
-        }
-        $this->resetPage();
-    }
-
     public function render()
     {
-        $companies = Company::withCount('jobPostings')
-            ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%');
-            });
+        // Get unique locations for the filters
+        $locations = Company::whereNotNull('city')
+            ->distinct()
+            ->pluck('city')
+            ->sort()
+            ->values()
+            ->toArray();
 
-        // Apply sorting
-        switch ($this->sortField) {
-            case 'name':
-                $companies->orderBy('name', $this->sortDirection);
-                break;
-            case 'job_postings_count':
-                $companies->orderBy('job_postings_count', $this->sortDirection);
-                break;
-            default:
-                $companies->orderBy('job_postings_count', 'desc');
-                break;
-        }
+        // Define table configuration similar to JobTable
+        $tableConfig = [
+            'title' => 'Company Directory',
+            'linkToDetailsPage' => true,
+            'showActions' => false,
+            'columns' => [
+                'name' => [
+                    'label' => 'Company Name',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ],
+                'vat' => [
+                    'label' => 'VAT Number',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ],
+                'city' => [
+                    'label' => 'Location',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ],
+                'employees' => [
+                    'label' => 'Employees',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ],
+                'status' => [
+                    'label' => 'Status',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ],
+                'job_count' => [
+                    'label' => 'Job Postings',
+                    'enabled' => true,
+                    'type' => 'regular'
+                ]
+            ]
+        ];
 
-        $companies = $companies->paginate($this->perPage);
+        // Filter options for the company filters
+        $filterOptions = [
+            'title' => 'Company Search & Filters',
+            'showStatusFilter' => true,
+            'showVatFilter' => true,
+            'showJobsFilter' => true,
+            'showEmployeesFilter' => true,
+            'showPerPage' => true,
+        ];
 
-        return view('livewire.companies', compact('companies'));
+        return view('livewire.companies', [
+            'locations' => $locations,
+            'tableConfig' => $tableConfig,
+            'filterOptions' => $filterOptions,
+        ]);
     }
 }

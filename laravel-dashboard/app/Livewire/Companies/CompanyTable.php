@@ -27,9 +27,10 @@ class CompanyTable extends Component
     public $hasVatFilter = '';
     public $hasJobsFilter = '';
     public $minEmployeesFilter = '';
+    public $maxEmployeesFilter = '';
 
     protected $listeners = [
-        'companyFilterUpdated' => 'handleFilterUpdate',
+        'filterUpdated' => 'handleFilterUpdate',
         'filtersCleared' => 'handleFiltersCleared',
     ];
 
@@ -44,6 +45,7 @@ class CompanyTable extends Component
         'hasVatFilter' => ['except' => ''],
         'hasJobsFilter' => ['except' => ''],
         'minEmployeesFilter' => ['except' => ''],
+        'maxEmployeesFilter' => ['except' => ''],
     ];
 
     public function mount($tableConfig = [])
@@ -65,6 +67,7 @@ class CompanyTable extends Component
         $this->hasVatFilter = request()->get('hasVatFilter', '');
         $this->hasJobsFilter = request()->get('hasJobsFilter', '');
         $this->minEmployeesFilter = request()->get('minEmployeesFilter', '');
+        $this->maxEmployeesFilter = request()->get('maxEmployeesFilter', '');
         $this->perPage = request()->get('perPage', 10);
     }
 
@@ -126,6 +129,7 @@ class CompanyTable extends Component
         $this->hasVatFilter = '';
         $this->hasJobsFilter = '';
         $this->minEmployeesFilter = '';
+        $this->maxEmployeesFilter = '';
         $this->perPage = 10;
         $this->page = 1;
     }
@@ -133,7 +137,15 @@ class CompanyTable extends Component
     public function render()
     {
         // Build query based on current filters
-        $query = Company::withCount('jobPostings');
+        $query = Company::withCount([
+            'jobPostings',
+            'jobPostings as open_jobs_count' => function ($query) {
+                $query->whereNull('job_post_closed_date');
+            },
+            'jobPostings as closed_jobs_count' => function ($query) {
+                $query->whereNotNull('job_post_closed_date');
+            }
+        ]);
 
         // Apply search filter
         if (!empty($this->search)) {
@@ -164,6 +176,10 @@ class CompanyTable extends Component
         // Apply job postings filter
         if ($this->hasJobsFilter === 'with_jobs') {
             $query->has('jobPostings');
+        } elseif ($this->hasJobsFilter === 'with_open_jobs') {
+            $query->whereHas('jobPostings', function ($q) {
+                $q->whereNull('job_post_closed_date');
+            });
         } elseif ($this->hasJobsFilter === 'without_jobs') {
             $query->doesntHave('jobPostings');
         }
@@ -172,6 +188,12 @@ class CompanyTable extends Component
         if (!empty($this->minEmployeesFilter)) {
             $minEmployees = (int) $this->minEmployeesFilter;
             $query->where('employees', '>=', $minEmployees);
+        }
+
+        // Apply maximum employees filter
+        if (!empty($this->maxEmployeesFilter)) {
+            $maxEmployees = (int) $this->maxEmployeesFilter;
+            $query->where('employees', '<=', $maxEmployees);
         }
 
         // Apply sorting
