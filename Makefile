@@ -67,7 +67,12 @@ check-job-status:
 scrape:
 	@echo "🔍 Starting job scraping..."
 	@echo "💡 Edit this target to change keywords/location"
-	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 2000
+	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
+
+scrape-all:
+	@echo "🔍 Starting job scraping..."
+	@echo "💡 Edit this target to change keywords/location"
+	./linkedin-scraper scrape --keywords "" --location "denmark" --total-jobs 2000
 
 
 analyze-data:

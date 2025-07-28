@@ -184,7 +184,7 @@ class SearchFilters extends Component
 
         $viewedQuery = $this->buildFilteredJobQuery(excludeViewed: true);
         $userId = Auth::id();
-        
+
         // Use Eloquent whereHas instead of raw SQL
         $viewedCount = $viewedQuery->whereHas('userJobViews', function($query) use ($userId) {
             $query->where('user_id', $userId);

@@ -16,7 +16,7 @@ class UpdateBasicInformation extends Component
     public string $yearsOfExperience = '';
     public string $dateOfBirth = '';
     public string $bio = '';
-    public array $addressSuggestions = [];
+    public array $citySuggestions = [];
 
     protected LocationService $locationService;
 
@@ -54,24 +54,24 @@ class UpdateBasicInformation extends Component
     }
 
     /**
-     * Update address suggestions when preferred location changes
+     * Update city suggestions when preferred location changes
      */
     public function updatedPreferredLocation(): void
     {
-        if (strlen($this->preferredLocation) >= 3) {
-            $this->addressSuggestions = $this->locationService->searchAddresses($this->preferredLocation);
+        if (strlen($this->preferredLocation) >= 2) {
+            $this->citySuggestions = $this->locationService->getSuggestions($this->preferredLocation);
         } else {
-            $this->addressSuggestions = [];
+            $this->citySuggestions = [];
         }
     }
 
     /**
-     * Select an address from suggestions
+     * Select a city from suggestions
      */
-    public function selectAddress(string $address): void
+    public function selectCity(string $city): void
     {
-        $this->preferredLocation = $address;
-        $this->addressSuggestions = [];
+        $this->preferredLocation = $city;
+        $this->citySuggestions = [];
     }
 
     /**

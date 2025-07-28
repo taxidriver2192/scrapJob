@@ -14,12 +14,30 @@ import (
 // buildSearchURL constructs the LinkedIn job search URL with additional filters
 func (s *LinkedInScraper) buildSearchURL(keywords, location string, start int) string {
 	baseURL := "https://www.linkedin.com/jobs/search/"
-	params := fmt.Sprintf("?keywords=%s&location=%s&start=%d&distance=25&f_WT=1%%2C3&sortBy=DD",
-		strings.ReplaceAll(keywords, " ", "%20"),
-		strings.ReplaceAll(location, " ", "%20"),
-		start,
-	)
-	return baseURL + params
+	
+	// Build parameters dynamically to handle empty keywords
+	var paramParts []string
+	
+	// Only add keywords parameter if keywords is not empty
+	if strings.TrimSpace(keywords) != "" {
+		paramParts = append(paramParts, fmt.Sprintf("keywords=%s", strings.ReplaceAll(keywords, " ", "%20")))
+	}
+	
+	// Add location parameter
+	paramParts = append(paramParts, fmt.Sprintf("location=%s", strings.ReplaceAll(location, " ", "%20")))
+	
+	// Add other parameters
+	paramParts = append(paramParts, fmt.Sprintf("start=%d", start))
+	// paramParts = append(paramParts, "distance=25")
+	paramParts = append(paramParts, "f_WT=1%2C3") // Work type filters
+	paramParts = append(paramParts, "sortBy=DD")  // Sort by date descending
+	
+	// Join all parameters
+	params := "?" + strings.Join(paramParts, "&")
+	
+	fullURL := baseURL + params
+	// fmt.Printf("🔗 Search URL: %s\n", fullURL)
+	return fullURL
 }
 
 // scrapePage scrapes a single page of job results

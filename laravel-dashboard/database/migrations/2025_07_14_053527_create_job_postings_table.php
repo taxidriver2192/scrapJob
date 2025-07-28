@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('work_type', 50)->nullable()->comment('Remote, Hybrid, or On-site work type');
             $table->json('skills')->nullable()->comment('List of required skills');
             $table->string('openai_adresse', 500)->nullable()->comment('AI-extracted standardized address');
+            $table->datetime('job_post_closed_date')->nullable()->comment('Date and time when the job posting was closed');
             $table->timestamp('created_at')->nullable()->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrent()->useCurrentOnUpdate();
 
@@ -34,6 +35,7 @@ return new class extends Migration
             $table->index('posted_date', 'idx_posted_date');
             $table->index('location', 'idx_location');
             $table->index('title', 'idx_title');
+            $table->index('job_post_closed_date', 'idx_job_post_closed_date');
 
             // Foreign key constraint
             $table->foreign('company_id')->references('company_id')->on('companies')->onDelete('cascade');

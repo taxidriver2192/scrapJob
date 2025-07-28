@@ -46,20 +46,20 @@
             </div>
 
             <!-- Single Address Field with Autocomplete -->
-            <div class="md:col-span-2">
+            <div>
                 <flux:autocomplete
                     wire:model.live="preferredLocation"
-                    label="Address"
-                    placeholder="Start typing your address (e.g., Hovedgade 123, 4000 Roskilde)"
+                    label="Preferred Location"
+                    placeholder="Start typing a city name (e.g., København, Aarhus, Odense)"
                     clearable
                     :invalid="$errors->has('preferredLocation')"
                 >
-                    @if(count($addressSuggestions) > 0)
-                        @foreach ($addressSuggestions as $suggestion)
+                    @if(!empty($citySuggestions) && count($citySuggestions) > 0)
+                        @foreach ($citySuggestions as $suggestion)
                             <flux:autocomplete.item
                                 value="{{ $suggestion }}"
-                                wire:key="address-{{ $loop->index }}"
-                                wire:click="selectAddress('{{ $suggestion }}')"
+                                wire:key="city-{{ $loop->index }}"
+                                wire:click="selectCity('{{ $suggestion }}')"
                             >
                                 {{ $suggestion }}
                             </flux:autocomplete.item>
