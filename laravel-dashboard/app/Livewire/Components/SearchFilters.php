@@ -25,6 +25,10 @@ class SearchFilters extends Component
     public $regionOptions = []; // Available regions for filtering
     public $regionDetails = []; // Region details for tooltips (zip ranges, municipalities)
     public $availableSkills = []; // Available skills for listbox
+    public $companyOptions = []; // Available companies with counts
+    public $viewedStatusOptions = []; // Viewed status options with counts
+    public $ratingStatusOptions = []; // Rating status options with counts
+    public $jobStatusOptions = []; // Job status options with counts
     public $showPerPage = true;
     public $showDateFilters = true;
     public $showCompanyFilter = true;
@@ -61,6 +65,12 @@ class SearchFilters extends Component
 
         // Load regional data
         $this->loadRegionalData();
+
+        // Load company options with counts
+        $this->loadCompanyOptions();
+
+        // Load other filter options with counts
+        $this->loadFilterOptions();
 
         // Initialize from URL parameters
         $this->search = request()->get('search', '');
@@ -116,26 +126,127 @@ class SearchFilters extends Component
             }
         }
 
-        // Create array with skill names including counts, filtered to exclude skills with count <= 1
-        $this->availableSkills = collect($skillCounts)
-            ->filter(fn($count) => $count > 0) // Only include skills that have results
-            ->map(fn($count, $skill) => $skill . ' (' . $count . ')')
-            ->sort()
-            ->values()
-            ->toArray();
+        // Create array with skill names as keys and display labels as values
+        $this->availableSkills = [];
+        foreach (collect($skillCounts)->filter(fn($count) => $count > 0)->sortKeys() as $skill => $count) {
+            $this->availableSkills[$skill] = $skill . ' (' . $count . ')';
+        }
     }
 
-    private function buildFilteredJobQuery($excludeSkills = false, $excludeRegion = false)
+    public function loadCompanyOptions()
+    {
+        // Build base query with current filters (excluding company to avoid circular filtering)
+        $query = $this->buildFilteredJobQuery(excludeCompany: true);
+
+        // Get companies with job counts using Eloquent relationships
+        $companyCounts = $query->with('company')
+            ->get()
+            ->groupBy('company.name')
+            ->map(function($jobs) {
+                return $jobs->count();
+            })
+            ->filter(fn($count) => $count > 0)
+            ->sortKeys()
+            ->toArray();
+
+        // Create options array with counts
+        $this->companyOptions = ['' => 'All Companies'];
+        foreach ($companyCounts as $companyName => $count) {
+            // Store the company name as value and display name with count as label
+            $this->companyOptions[$companyName] = $companyName . ' (' . $count . ' jobs)';
+        }
+    }
+
+    public function loadFilterOptions()
+    {
+        // Load viewed status options with counts (only for authenticated users)
+        if (Auth::check()) {
+            $this->loadViewedStatusOptions();
+        } else {
+            $this->viewedStatusOptions = [
+                '' => 'All Jobs',
+                'viewed' => 'Viewed (0)',
+                'not_viewed' => 'Not Viewed (0)'
+            ];
+        }
+
+        // Load rating status options with counts
+        $this->loadRatingStatusOptions();
+
+        // Load job status options with counts
+        $this->loadJobStatusOptions();
+    }
+
+    private function loadViewedStatusOptions()
+    {
+        $totalQuery = $this->buildFilteredJobQuery(excludeViewed: true);
+        $totalJobs = $totalQuery->count();
+
+        $viewedQuery = $this->buildFilteredJobQuery(excludeViewed: true);
+        $userId = Auth::id();
+        
+        // Use Eloquent whereHas instead of raw SQL
+        $viewedCount = $viewedQuery->whereHas('userJobViews', function($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->count();
+
+        $notViewedCount = $totalJobs - $viewedCount;
+
+        $this->viewedStatusOptions = [
+            '' => 'All Jobs (' . $totalJobs . ')',
+            'viewed' => 'Viewed (' . $viewedCount . ')',
+            'not_viewed' => 'Not Viewed (' . $notViewedCount . ')'
+        ];
+    }
+
+    private function loadRatingStatusOptions()
+    {
+        $totalQuery = $this->buildFilteredJobQuery(excludeRating: true);
+        $totalJobs = $totalQuery->count();
+
+        $ratedQuery = $this->buildFilteredJobQuery(excludeRating: true);
+        $ratedCount = $ratedQuery->whereHas('jobRatings')->count();
+
+        $notRatedCount = $totalJobs - $ratedCount;
+
+        $this->ratingStatusOptions = [
+            '' => 'All Jobs (' . $totalJobs . ')',
+            'rated' => 'Rated (' . $ratedCount . ')',
+            'not_rated' => 'Not Rated (' . $notRatedCount . ')'
+        ];
+    }
+
+    private function loadJobStatusOptions()
+    {
+        $totalQuery = $this->buildFilteredJobQuery(excludeJobStatus: true);
+        $totalJobs = $totalQuery->count();
+
+        $openQuery = $this->buildFilteredJobQuery(excludeJobStatus: true);
+        $openCount = $openQuery->whereNull('job_post_closed_date')->count();
+
+        $closedQuery = $this->buildFilteredJobQuery(excludeJobStatus: true);
+        $closedCount = $closedQuery->whereNotNull('job_post_closed_date')->count();
+
+        $this->jobStatusOptions = [
+            'open' => 'Open Jobs (' . $openCount . ')',
+            'closed' => 'Closed Jobs (' . $closedCount . ')',
+            'both' => 'All Jobs (' . $totalJobs . ')'
+        ];
+    }
+
+    private function buildFilteredJobQuery($excludeSkills = false, $excludeRegion = false, $excludeCompany = false, $excludeViewed = false, $excludeRating = false, $excludeJobStatus = false)
     {
         $query = \App\Models\JobPosting::query();
 
-        // Apply job status filter first
-        if ($this->jobStatusFilter === 'closed') {
-            $query->whereNotNull('job_post_closed_date');
-        } elseif ($this->jobStatusFilter === 'both') {
-            // No additional filter needed for both
-        } else { // 'open' or default
-            $query->whereNull('job_post_closed_date');
+        // Apply job status filter first (unless excluded)
+        if (!$excludeJobStatus) {
+            if ($this->jobStatusFilter === 'closed') {
+                $query->whereNotNull('job_post_closed_date');
+            } elseif ($this->jobStatusFilter === 'both') {
+                // No additional filter needed for both
+            } else { // 'open' or default
+                $query->whereNull('job_post_closed_date');
+            }
         }
 
         // Apply search filter
@@ -149,15 +260,15 @@ class SearchFilters extends Component
             });
         }
 
-        // Apply company filter
-        if (!empty($this->companyFilter) && !$this->scopedCompanyId) {
+        // Apply company filter (unless excluded)
+        if (!$excludeCompany && !empty($this->companyFilter) && !$this->scopedCompanyId) {
             $query->whereHas('company', function($companyQuery) {
                 $companyQuery->where('name', $this->companyFilter);
             });
         }
 
-        // Apply scoped company filter
-        if ($this->scopedCompanyId) {
+        // Apply scoped company filter (unless excluded)
+        if (!$excludeCompany && $this->scopedCompanyId) {
             $query->where('company_id', $this->scopedCompanyId);
         }
 
@@ -169,9 +280,8 @@ class SearchFilters extends Component
         // Apply skills filter (unless excluded)
         if (!$excludeSkills && !empty($this->skillsFilter)) {
             foreach ($this->skillsFilter as $skill) {
-                // Extract skill name without count for filtering
-                $skillName = preg_replace('/\s*\(\d+\)$/', '', $skill);
-                $query->whereJsonContains('skills', $skillName);
+                // Skill names are already clean (no counts), use directly
+                $query->whereJsonContains('skills', $skill);
             }
         }
 
@@ -183,25 +293,28 @@ class SearchFilters extends Component
             $query->whereDate('created_at', '<=', $this->dateToFilter);
         }
 
-        // Apply viewed status filter
-        if (!empty($this->viewedStatusFilter) && Auth::check()) {
+        // Apply viewed status filter (unless excluded)
+        if (!$excludeViewed && !empty($this->viewedStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
             if ($this->viewedStatusFilter === 'viewed') {
-                $query->whereHas('userViews', function($q) {
-                    $q->where('user_id', Auth::id());
+                // Use Eloquent whereHas instead of raw SQL
+                $query->whereHas('userJobViews', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
                 });
             } elseif ($this->viewedStatusFilter === 'not_viewed') {
-                $query->whereDoesntHave('userViews', function($q) {
-                    $q->where('user_id', Auth::id());
+                // Use Eloquent whereDoesntHave instead of raw SQL
+                $query->whereDoesntHave('userJobViews', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
                 });
             }
         }
 
-        // Apply rating status filter
-        if (!empty($this->ratingStatusFilter)) {
+        // Apply rating status filter (unless excluded)
+        if (!$excludeRating && !empty($this->ratingStatusFilter)) {
             if ($this->ratingStatusFilter === 'rated') {
-                $query->whereHas('jobRating');
+                $query->whereHas('jobRatings');
             } elseif ($this->ratingStatusFilter === 'not_rated') {
-                $query->whereDoesntHave('jobRating');
+                $query->whereDoesntHave('jobRatings');
             }
         }
 
@@ -219,18 +332,18 @@ class SearchFilters extends Component
         $municipalities = $region['municipalities'] ?? [];
 
         $query->where(function($q) use ($zipRanges, $municipalities) {
-            // Filter by zip ranges
+            // Filter by zip ranges - qualify column name to avoid ambiguity
             if (!empty($zipRanges)) {
                 $q->where(function($zipQuery) use ($zipRanges) {
                     foreach ($zipRanges as $range) {
-                        $zipQuery->orWhereBetween('zipcode', [$range[0], $range[1]]);
+                        $zipQuery->orWhereBetween('job_postings.zipcode', [$range[0], $range[1]]);
                     }
                 });
             }
 
-            // Also filter by municipalities if available
+            // Also filter by municipalities if available - qualify column name
             if (!empty($municipalities)) {
-                $q->orWhereIn('city', $municipalities);
+                $q->orWhereIn('job_postings.city', $municipalities);
             }
         });
 
@@ -325,18 +438,18 @@ class SearchFilters extends Component
         $municipalities = $region['municipalities'] ?? [];
 
         $query->where(function($q) use ($zipRanges, $municipalities) {
-            // Filter by zip ranges
+            // Filter by zip ranges - qualify column name to avoid ambiguity
             if (!empty($zipRanges)) {
                 $q->where(function($zipQuery) use ($zipRanges) {
                     foreach ($zipRanges as $range) {
-                        $zipQuery->orWhereBetween('zipcode', [$range[0], $range[1]]);
+                        $zipQuery->orWhereBetween('job_postings.zipcode', [$range[0], $range[1]]);
                     }
                 });
             }
 
-            // Also filter by municipalities if available
+            // Also filter by municipalities if available - qualify column name
             if (!empty($municipalities)) {
-                $q->orWhereIn('city', $municipalities);
+                $q->orWhereIn('job_postings.city', $municipalities);
             }
         });
 
@@ -364,6 +477,8 @@ class SearchFilters extends Component
         // Refresh filter options after clearing
         $this->loadAvailableSkills();
         $this->loadRegionalData();
+        $this->loadCompanyOptions();
+        $this->loadFilterOptions();
 
         $this->dispatch('filtersCleared');
     }
@@ -373,11 +488,21 @@ class SearchFilters extends Component
         // Handle array properties like skillsFilter.0, skillsFilter.1, etc.
         $baseProperty = explode('.', $propertyName)[0];
 
+        // For skills filter, clean the values to store only skill names without counts
+        if ($baseProperty === 'skillsFilter' && is_array($this->skillsFilter)) {
+            $this->skillsFilter = array_map(function($skill) {
+                // Extract skill name without count for URL storage
+                return preg_replace('/\s*\(\d+\)$/', '', $skill);
+            }, $this->skillsFilter);
+        }
+
         // Refresh filter options when relevant filters change
         $refreshTriggers = ['search', 'companyFilter', 'regionFilter', 'skillsFilter', 'dateFromFilter', 'dateToFilter', 'viewedStatusFilter', 'ratingStatusFilter', 'jobStatusFilter'];
         if (in_array($baseProperty, $refreshTriggers)) {
             $this->loadAvailableSkills();
             $this->loadRegionalData();
+            $this->loadCompanyOptions();
+            $this->loadFilterOptions();
         }
 
         $this->dispatch('filterUpdated', [
@@ -454,13 +579,15 @@ class SearchFilters extends Component
         $skillToRemove = preg_replace('/\s*\(\d+\)$/', '', $skill);
 
         $this->skillsFilter = array_values(array_filter($this->skillsFilter, function($s) use ($skillToRemove) {
-            $currentSkill = preg_replace('/\s*\(\d+\)$/', '', $s);
-            return $currentSkill !== $skillToRemove;
+            // Since skillsFilter now stores clean names, compare directly
+            return $s !== $skillToRemove;
         }));
 
         // Refresh filter options after removing skill
         $this->loadAvailableSkills();
         $this->loadRegionalData();
+        $this->loadCompanyOptions();
+        $this->loadFilterOptions();
 
         $this->dispatch('filterUpdated', [
             'property' => 'skillsFilter',
@@ -514,6 +641,16 @@ class SearchFilters extends Component
         // Load available skills if not already loaded
         if (empty($this->availableSkills)) {
             $this->loadAvailableSkills();
+        }
+
+        // Load company options if not already loaded
+        if (empty($this->companyOptions)) {
+            $this->loadCompanyOptions();
+        }
+
+        // Load filter options if not already loaded
+        if (empty($this->viewedStatusOptions) || empty($this->ratingStatusOptions) || empty($this->jobStatusOptions)) {
+            $this->loadFilterOptions();
         }
 
         return view('livewire.components.search-filters');

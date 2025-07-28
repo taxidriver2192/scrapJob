@@ -42,9 +42,9 @@
                     </flux:tooltip>
                 </div>
                 <flux:autocomplete wire:model.live="companyFilter" placeholder="Select or type company..." icon="building-office">
-                    @foreach($companies as $companyId => $companyName)
-                        <flux:autocomplete.item value="{{ $companyName }}">
-                            {{ $companyName }}
+                    @foreach($companyOptions as $companyValue => $companyLabel)
+                        <flux:autocomplete.item value="{{ $companyValue }}">
+                            {{ $companyLabel }}
                         </flux:autocomplete.item>
                     @endforeach
                 </flux:autocomplete>
@@ -79,8 +79,8 @@
                     <x-slot name="search">
                         <flux:select.search class="px-4" placeholder="Search skills..." />
                     </x-slot>
-                    @foreach($availableSkills as $skill)
-                        <flux:select.option value="{{ $skill }}">{{ $skill }}</flux:select.option>
+                    @foreach($availableSkills as $skillValue => $skillLabel)
+                        <flux:select.option value="{{ $skillValue }}">{{ $skillLabel }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -95,9 +95,9 @@
                     </flux:tooltip>
                 </div>
                 <flux:select wire:model.live="viewedStatusFilter" icon="eye">
-                    <option value="">All Jobs</option>
-                    <option value="viewed">Viewed Only</option>
-                    <option value="not_viewed">Not Viewed</option>
+                    @foreach($viewedStatusOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
                 </flux:select>
             </div>
 
@@ -110,9 +110,9 @@
                     </flux:tooltip>
                 </div>
                 <flux:select wire:model.live="ratingStatusFilter" icon="sparkles">
-                    <option value="">All Jobs</option>
-                    <option value="rated">Rated Only</option>
-                    <option value="not_rated">Not Rated</option>
+                    @foreach($ratingStatusOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
                 </flux:select>
             </div>
 
@@ -125,9 +125,9 @@
                     </flux:tooltip>
                 </div>
                 <flux:select wire:model.live="jobStatusFilter" icon="briefcase">
-                    <option value="open">Open Jobs Only</option>
-                    <option value="closed">Closed Jobs Only</option>
-                    <option value="both">Open & Closed</option>
+                    @foreach($jobStatusOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
                 </flux:select>
             </div>
             @endauth
@@ -195,7 +195,7 @@
                 @if($regionFilter)
                 <flux:tooltip content="{{ $this->getRegionTooltip($regionFilter) }}" position="top">
                     <flux:badge variant="outline" size="sm">
-                        Region: {{ $regionOptions[$regionFilter] ?? $regionFilter }}
+                        Region: {{ $regionFilter }}
                         <flux:button size="xs" variant="ghost" wire:click="$set('regionFilter', '')" class="ml-1">
                             <flux:icon.x-mark class="w-3 h-3" />
                         </flux:button>
