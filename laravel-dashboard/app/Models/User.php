@@ -113,4 +113,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(JobQueue::class);
     }
+
+    /**
+     * Get the job favorites for the user.
+     */
+    public function jobFavorites()
+    {
+        return $this->hasMany(UserJobFavorite::class);
+    }
 }

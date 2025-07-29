@@ -60,6 +60,11 @@ class JobPosting extends Model
         return $this->hasMany(\App\Models\UserJobView::class, 'job_id', 'job_id');
     }
 
+    public function userJobFavorites()
+    {
+        return $this->hasMany(\App\Models\UserJobFavorite::class, 'job_id', 'job_id');
+    }
+
     public function getCompanyNameAttribute()
     {
         return $this->company ? $this->company->name : null;

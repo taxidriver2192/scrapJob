@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use App\Models\JobRating;
+use App\Models\UserJobFavorite;
 use Flux\Flux;
 
 
@@ -112,6 +113,48 @@ class SharedJobContent extends Component
                 ->where('rating_type', 'ai_rating')
                 ->first();
         }
+    }
+
+    /**
+     * Toggle job favorite status
+     */
+    public function toggleFavorite()
+    {
+        if (!Auth::check()) {
+            Flux::toast('You must be logged in to save jobs.', 'error');
+            return;
+        }
+
+        if (!$this->jobPosting || !$this->jobPosting->job_id) {
+            Flux::toast('Unable to save this job.', 'error');
+            return;
+        }
+
+        $userId = Auth::id();
+        $jobId = $this->jobPosting->job_id;
+
+        if (UserJobFavorite::isFavorited($userId, $jobId)) {
+            UserJobFavorite::removeFavorite($userId, $jobId);
+            Flux::toast('Job removed from favorites.', 'info');
+        } else {
+            UserJobFavorite::addFavorite($userId, $jobId);
+            Flux::toast('Job saved to favorites!', 'success');
+        }
+
+        // Refresh the component to update the button state
+        $this->dispatch('$refresh');
+    }
+
+    /**
+     * Check if the current job is favorited by the authenticated user
+     */
+    public function isFavorited(): bool
+    {
+        if (!Auth::check() || !$this->jobPosting || !$this->jobPosting->job_id) {
+            return false;
+        }
+
+        return UserJobFavorite::isFavorited(Auth::id(), $this->jobPosting->job_id);
     }
 
     public function canNavigatePrevious()

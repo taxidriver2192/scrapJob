@@ -4,7 +4,7 @@
             <flux:heading size="lg">
                 {{ $title }}
             </flux:heading>
-            @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+            @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $favoritesStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
             <flux:button
                 size="sm"
                 variant="ghost"
@@ -100,6 +100,7 @@
                     @endforeach
                 </flux:select>
             </div>
+            @endauth
 
             <!-- Rating Status Filter -->
             <div>
@@ -116,6 +117,23 @@
                 </flux:select>
             </div>
 
+            <!-- Favorites Status Filter -->
+            @auth
+            <div>
+                <div class="flex items-center gap-1 mb-1">
+                    <flux:label>Favorites</flux:label>
+                    <flux:tooltip content="Show your saved/favorited jobs" position="top">
+                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
+                    </flux:tooltip>
+                </div>
+                <flux:select wire:model.live="favoritesStatusFilter" icon="bookmark">
+                    @foreach($favoritesStatusOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </flux:select>
+            </div>
+            @endauth
+
             <!-- Job Status Filter -->
             <div>
                 <div class="flex items-center gap-1 mb-1">
@@ -130,7 +148,6 @@
                     @endforeach
                 </flux:select>
             </div>
-            @endauth
 
             <!-- Items per page -->
             @if($showPerPage)
@@ -171,7 +188,7 @@
         </div>
 
         <!-- Active Filters Display -->
-        @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
+        @if($search || $companyFilter || $regionFilter || count($skillsFilter) > 0 || $viewedStatusFilter || $ratingStatusFilter || $favoritesStatusFilter || $datePreset || ($jobStatusFilter && $jobStatusFilter !== 'open'))
         <div class="pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <div class="flex flex-wrap gap-2">
                 @if($search)
@@ -228,6 +245,15 @@
                 <flux:badge variant="outline" size="sm">
                     Rating: {{ $ratingStatusFilter === 'rated' ? 'Rated Only' : 'Not Rated' }}
                     <flux:button size="xs" variant="ghost" wire:click="$set('ratingStatusFilter', '')" class="ml-1">
+                        <flux:icon.x-mark class="w-3 h-3" />
+                    </flux:button>
+                </flux:badge>
+                @endif
+
+                @if($favoritesStatusFilter)
+                <flux:badge variant="outline" size="sm">
+                    Favorites: {{ $favoritesStatusFilter === 'favorited' ? 'Saved Only' : 'Not Saved' }}
+                    <flux:button size="xs" variant="ghost" wire:click="$set('favoritesStatusFilter', '')" class="ml-1">
                         <flux:icon.x-mark class="w-3 h-3" />
                     </flux:button>
                 </flux:badge>

@@ -17,6 +17,7 @@ class SearchFilters extends Component
     public $datePreset = ''; // New property for date presets
     public $viewedStatusFilter = ''; // New filter for viewed status
     public $ratingStatusFilter = ''; // New filter for rating status
+    public $favoritesStatusFilter = ''; // New filter for favorites status
     public $jobStatusFilter = 'open'; // New filter for job status (open/closed/both)
     public $perPage = 10;
 
@@ -28,6 +29,7 @@ class SearchFilters extends Component
     public $companyOptions = []; // Available companies with counts
     public $viewedStatusOptions = []; // Viewed status options with counts
     public $ratingStatusOptions = []; // Rating status options with counts
+    public $favoritesStatusOptions = []; // Favorites status options with counts
     public $jobStatusOptions = []; // Job status options with counts
     public $showPerPage = true;
     public $showDateFilters = true;
@@ -46,6 +48,7 @@ class SearchFilters extends Component
         'datePreset' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
         'ratingStatusFilter' => ['except' => ''],
+        'favoritesStatusFilter' => ['except' => ''],
         'jobStatusFilter' => ['except' => 'open'],
         'perPage' => ['except' => 10],
     ];
@@ -83,6 +86,7 @@ class SearchFilters extends Component
         $this->datePreset = request()->get('datePreset', '');
         $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
         $this->ratingStatusFilter = request()->get('ratingStatusFilter', '');
+        $this->favoritesStatusFilter = request()->get('favoritesStatusFilter', '');
         $this->jobStatusFilter = request()->get('jobStatusFilter', 'open');
         $this->perPage = request()->get('perPage', 10);
 
@@ -100,6 +104,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'favoritesStatusFilter' => $this->favoritesStatusFilter,
                 'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
@@ -173,6 +178,17 @@ class SearchFilters extends Component
         // Load rating status options with counts
         $this->loadRatingStatusOptions();
 
+        // Load favorites status options with counts (only for authenticated users)
+        if (Auth::check()) {
+            $this->loadFavoritesStatusOptions();
+        } else {
+            $this->favoritesStatusOptions = [
+                '' => 'All Jobs',
+                'favorited' => 'Favorited (0)',
+                'not_favorited' => 'Not Favorited (0)'
+            ];
+        }
+
         // Load job status options with counts
         $this->loadJobStatusOptions();
     }
@@ -216,6 +232,28 @@ class SearchFilters extends Component
         ];
     }
 
+    private function loadFavoritesStatusOptions()
+    {
+        $totalQuery = $this->buildFilteredJobQuery(excludeFavorites: true);
+        $totalJobs = $totalQuery->count();
+
+        $favoritedQuery = $this->buildFilteredJobQuery(excludeFavorites: true);
+        $userId = Auth::id();
+
+        // Use Eloquent whereHas instead of raw SQL
+        $favoritedCount = $favoritedQuery->whereHas('userJobFavorites', function($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->count();
+
+        $notFavoritedCount = $totalJobs - $favoritedCount;
+
+        $this->favoritesStatusOptions = [
+            '' => 'All Jobs (' . $totalJobs . ')',
+            'favorited' => 'Favorited (' . $favoritedCount . ')',
+            'not_favorited' => 'Not Favorited (' . $notFavoritedCount . ')'
+        ];
+    }
+
     private function loadJobStatusOptions()
     {
         $totalQuery = $this->buildFilteredJobQuery(excludeJobStatus: true);
@@ -234,7 +272,7 @@ class SearchFilters extends Component
         ];
     }
 
-    private function buildFilteredJobQuery($excludeSkills = false, $excludeRegion = false, $excludeCompany = false, $excludeViewed = false, $excludeRating = false, $excludeJobStatus = false)
+    private function buildFilteredJobQuery($excludeSkills = false, $excludeRegion = false, $excludeCompany = false, $excludeViewed = false, $excludeRating = false, $excludeFavorites = false, $excludeJobStatus = false)
     {
         $query = \App\Models\JobPosting::query();
 
@@ -315,6 +353,22 @@ class SearchFilters extends Component
                 $query->whereHas('jobRatings');
             } elseif ($this->ratingStatusFilter === 'not_rated') {
                 $query->whereDoesntHave('jobRatings');
+            }
+        }
+
+        // Apply favorites status filter (unless excluded)
+        if (!$excludeFavorites && !empty($this->favoritesStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
+            if ($this->favoritesStatusFilter === 'favorited') {
+                // Use Eloquent whereHas instead of raw SQL
+                $query->whereHas('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
+            } elseif ($this->favoritesStatusFilter === 'not_favorited') {
+                // Use Eloquent whereDoesntHave instead of raw SQL
+                $query->whereDoesntHave('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
             }
         }
 
@@ -471,6 +525,7 @@ class SearchFilters extends Component
         $this->datePreset = '';
         $this->viewedStatusFilter = '';
         $this->ratingStatusFilter = '';
+        $this->favoritesStatusFilter = '';
         $this->jobStatusFilter = 'open';
         $this->perPage = 10;
 
@@ -497,7 +552,7 @@ class SearchFilters extends Component
         }
 
         // Refresh filter options when relevant filters change
-        $refreshTriggers = ['search', 'companyFilter', 'regionFilter', 'skillsFilter', 'dateFromFilter', 'dateToFilter', 'viewedStatusFilter', 'ratingStatusFilter', 'jobStatusFilter'];
+        $refreshTriggers = ['search', 'companyFilter', 'regionFilter', 'skillsFilter', 'dateFromFilter', 'dateToFilter', 'viewedStatusFilter', 'ratingStatusFilter', 'favoritesStatusFilter', 'jobStatusFilter'];
         if (in_array($baseProperty, $refreshTriggers)) {
             $this->loadAvailableSkills();
             $this->loadRegionalData();
@@ -518,6 +573,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'favoritesStatusFilter' => $this->favoritesStatusFilter,
                 'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
@@ -566,6 +622,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'favoritesStatusFilter' => $this->favoritesStatusFilter,
                 'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,
@@ -602,6 +659,7 @@ class SearchFilters extends Component
                 'dateToFilter' => $this->dateToFilter,
                 'viewedStatusFilter' => $this->viewedStatusFilter,
                 'ratingStatusFilter' => $this->ratingStatusFilter,
+                'favoritesStatusFilter' => $this->favoritesStatusFilter,
                 'jobStatusFilter' => $this->jobStatusFilter,
                 'perPage' => $this->perPage,
                 'scopedCompanyId' => $this->scopedCompanyId,

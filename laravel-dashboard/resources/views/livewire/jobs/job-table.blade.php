@@ -107,6 +107,12 @@
                                                                 Rated
                                                             </flux:badge>
                                                         @endif
+                                                        @if(auth()->check() && $this->isJobFavorited($job->job_id))
+                                                            <flux:badge color="yellow" size="sm" class="shrink-0">
+                                                                <flux:icon.bookmark class="w-3 h-3 mr-1" />
+                                                                Saved
+                                                            </flux:badge>
+                                                        @endif
                                                     </div>
                                                     <div class="min-w-0">
                                                         @if(strlen($job->title) > 50)
@@ -141,6 +147,12 @@
                                                             <flux:badge color="green" size="sm" class="shrink-0">
                                                                 <flux:icon.sparkles class="w-3 h-3 mr-1" />
                                                                 Rated
+                                                            </flux:badge>
+                                                        @endif
+                                                        @if(auth()->check() && $this->isJobFavorited($job->job_id))
+                                                            <flux:badge color="yellow" size="sm" class="shrink-0">
+                                                                <flux:icon.bookmark class="w-3 h-3 mr-1" />
+                                                                Saved
                                                             </flux:badge>
                                                         @endif
                                                     </div>

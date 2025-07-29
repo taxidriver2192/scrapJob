@@ -53,6 +53,33 @@
                 </div>
                 @endif
             </div>
+
+            <!-- Favorite Button -->
+            @auth
+                <div class="flex items-center space-x-2">
+                    @if($this->isFavorited())
+                        <flux:button
+                            size="sm"
+                            wire:click="toggleFavorite"
+                            variant="filled"
+                            class="text-yellow-700 bg-yellow-100 border-yellow-300 hover:bg-yellow-200"
+                        >
+                            <flux:icon.bookmark variant="solid" class="w-4 h-4 mr-1" />
+                            Saved
+                        </flux:button>
+                    @else
+                        <flux:button
+                            size="sm"
+                            wire:click="toggleFavorite"
+                            variant="outline"
+                            class="hover:text-yellow-600 hover:border-yellow-300"
+                        >
+                            <flux:icon.bookmark class="w-4 h-4 mr-1" />
+                            Save Job
+                        </flux:button>
+                    @endif
+                </div>
+            @endauth
         </div>
 
         <!-- Job Information, Skills, and Summary Cards -->

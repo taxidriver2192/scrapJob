@@ -38,6 +38,7 @@ class JobTable extends Component
     public $dateToFilter = '';
     public $viewedStatusFilter = '';
     public $ratingStatusFilter = '';
+    public $favoritesStatusFilter = '';
     public $jobStatusFilter = 'open'; // Default to showing open jobs only
 
     // Modal state
@@ -69,6 +70,7 @@ class JobTable extends Component
         'dateToFilter' => ['except' => ''],
         'viewedStatusFilter' => ['except' => ''],
         'ratingStatusFilter' => ['except' => ''],
+        'favoritesStatusFilter' => ['except' => ''],
         'jobStatusFilter' => ['except' => 'open'],
         'jobId' => ['except' => null],
     ];
@@ -121,6 +123,7 @@ class JobTable extends Component
         $this->dateToFilter = request()->get('dateToFilter', '');
         $this->viewedStatusFilter = request()->get('viewedStatusFilter', '');
         $this->ratingStatusFilter = request()->get('ratingStatusFilter', '');
+        $this->favoritesStatusFilter = request()->get('favoritesStatusFilter', '');
         $this->perPage = request()->get('perPage', 10);
 
         // Override companyFilter if specified in tableConfig
@@ -200,6 +203,7 @@ class JobTable extends Component
             $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
             $this->viewedStatusFilter = $data['filters']['viewedStatusFilter'] ?? '';
             $this->ratingStatusFilter = $data['filters']['ratingStatusFilter'] ?? '';
+            $this->favoritesStatusFilter = $data['filters']['favoritesStatusFilter'] ?? '';
             $this->jobStatusFilter = $data['filters']['jobStatusFilter'] ?? 'open';
             $this->perPage = $data['filters']['perPage'] ?? 10;
 
@@ -222,6 +226,7 @@ class JobTable extends Component
         $this->dateToFilter = '';
         $this->viewedStatusFilter = '';
         $this->ratingStatusFilter = '';
+        $this->favoritesStatusFilter = '';
         $this->jobStatusFilter = 'open';
         $this->perPage = 10;
         $this->page = 1;
@@ -312,6 +317,23 @@ class JobTable extends Component
             } elseif ($this->ratingStatusFilter === 'not_rated') {
                 // Show only jobs that don't have ratings
                 $query->whereDoesntHave('jobRatings');
+            }
+        }
+
+        // Apply favorites status filter (only for authenticated users)
+        if (!empty($this->favoritesStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
+
+            if ($this->favoritesStatusFilter === 'favorited') {
+                // Show only jobs that have been favorited by the current user
+                $query->whereHas('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
+            } elseif ($this->favoritesStatusFilter === 'not_favorited') {
+                // Show only jobs that have NOT been favorited by the current user
+                $query->whereDoesntHave('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
             }
         }
 
@@ -448,6 +470,20 @@ class JobTable extends Component
     }
 
     /**
+     * Check if a job has been favorited by the current authenticated user
+     */
+    public function isJobFavorited($jobId): bool
+    {
+        if (!Auth::check()) {
+            return false;
+        }
+
+        return \App\Models\UserJobFavorite::where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->exists();
+    }
+
+    /**
      * Toggle job selection
      */
     public function toggleJobSelection($jobId)
@@ -550,6 +586,30 @@ class JobTable extends Component
                         ->from('user_job_views')
                         ->whereColumn('user_job_views.job_id', 'job_postings.job_id')
                         ->where('user_job_views.user_id', $userId);
+                });
+            }
+        }
+
+        // Apply rating status filter
+        if (!empty($this->ratingStatusFilter)) {
+            if ($this->ratingStatusFilter === 'rated') {
+                $query->whereHas('jobRatings');
+            } elseif ($this->ratingStatusFilter === 'not_rated') {
+                $query->whereDoesntHave('jobRatings');
+            }
+        }
+
+        // Apply favorites status filter (only for authenticated users)
+        if (!empty($this->favoritesStatusFilter) && Auth::check()) {
+            $userId = Auth::id();
+
+            if ($this->favoritesStatusFilter === 'favorited') {
+                $query->whereHas('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
+                });
+            } elseif ($this->favoritesStatusFilter === 'not_favorited') {
+                $query->whereDoesntHave('userJobFavorites', function($subQuery) use ($userId) {
+                    $subQuery->where('user_id', $userId);
                 });
             }
         }
