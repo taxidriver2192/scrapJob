@@ -10,7 +10,7 @@ class CityAlias extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $primaryKey = 'alias';
-    
+
     protected $fillable = [
         'alias',
         'city_norm'

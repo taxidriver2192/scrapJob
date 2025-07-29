@@ -10,7 +10,7 @@ class ZipCode extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $primaryKey = 'postnr';
-    
+
     protected $fillable = [
         'postnr',
         'city',

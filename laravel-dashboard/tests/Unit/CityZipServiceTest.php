@@ -18,7 +18,7 @@ class CityZipServiceTest extends TestCase
     {
         parent::setUp();
         $this->service = new CityZipService();
-        
+
         // Set up test data
         $this->seedTestData();
     }
@@ -37,7 +37,7 @@ class CityZipServiceTest extends TestCase
     public function it_finds_zip_codes_for_normalized_cities()
     {
         $zips = $this->service->zipsFor('København');
-        
+
         $this->assertCount(2, $zips);
         $this->assertTrue($zips->pluck('postnr')->contains('1000'));
         $this->assertTrue($zips->pluck('postnr')->contains('1150'));
@@ -47,7 +47,7 @@ class CityZipServiceTest extends TestCase
     public function it_finds_zip_codes_through_aliases()
     {
         $zips = $this->service->zipsFor('CPH');
-        
+
         $this->assertCount(2, $zips);
         $this->assertTrue($zips->pluck('postnr')->contains('1000'));
         $this->assertTrue($zips->pluck('postnr')->contains('1150'));
@@ -82,7 +82,7 @@ class CityZipServiceTest extends TestCase
     {
         $zips = $this->service->zipsFor('UnknownCity');
         $this->assertTrue($zips->isEmpty());
-        
+
         $bestZip = $this->service->bestZip('UnknownCity');
         $this->assertNull($bestZip);
     }
@@ -99,7 +99,7 @@ class CityZipServiceTest extends TestCase
     public function it_provides_comprehensive_city_info()
     {
         $info = $this->service->getCityInfo('CPH');
-        
+
         $this->assertEquals('CPH', $info['input']);
         $this->assertEquals('cph', $info['normalized']);
         $this->assertEquals('kobenhavn', $info['target_city']);
@@ -120,7 +120,7 @@ class CityZipServiceTest extends TestCase
             'lon' => 12.5683,
             'weight' => 5
         ]);
-        
+
         ZipCode::create([
             'postnr' => '1150',
             'city' => 'København K',
@@ -129,7 +129,7 @@ class CityZipServiceTest extends TestCase
             'lon' => 12.5683,
             'weight' => 10
         ]);
-        
+
         ZipCode::create([
             'postnr' => '8000',
             'city' => 'Aarhus C',

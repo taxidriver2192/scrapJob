@@ -3,13 +3,15 @@
 namespace App\Livewire\Companies;
 
 use Livewire\Component;
+use Livewire\WithPagination;
 use App\Models\Company;
 use Illuminate\Support\Facades\Log;
 
 class CompanyTable extends Component
 {
+    use WithPagination;
+
     public $perPage = 10;
-    public $page = 1;
     public $sortField = 'name';
     public $sortDirection = 'asc';
     public $title = 'Companies';
@@ -36,7 +38,6 @@ class CompanyTable extends Component
     ];
 
     protected $queryString = [
-        'page' => ['except' => 1],
         'sortField' => ['except' => 'name'],
         'sortDirection' => ['except' => 'asc'],
         'perPage' => ['except' => 10],
@@ -62,7 +63,6 @@ class CompanyTable extends Component
         }
 
         // Initialize filters from URL parameters
-        $this->page = request()->get('page', 1);
         $this->search = request()->get('search', '');
         $this->cityFilter = request()->get('cityFilter', '');
         $this->regionFilter = request()->get('regionFilter', '');
@@ -100,7 +100,7 @@ class CompanyTable extends Component
             $this->sortDirection = $field === 'name' ? 'asc' : 'desc';
         }
 
-        $this->page = 1;
+        $this->resetPage();
     }
 
     public function viewCompany($companyId)
@@ -121,7 +121,7 @@ class CompanyTable extends Component
                 }
             }
         }
-        $this->page = 1;
+        $this->resetPage();
     }
 
     public function handleFiltersCleared()
@@ -135,7 +135,7 @@ class CompanyTable extends Component
         $this->minEmployeesFilter = '';
         $this->maxEmployeesFilter = '';
         $this->perPage = 10;
-        $this->page = 1;
+        $this->resetPage();
     }
 
     private function getRegionalData()
@@ -269,11 +269,56 @@ class CompanyTable extends Component
         }
 
         // Load companies with pagination
-        $companies = $query->paginate($this->perPage, ['*'], 'page', $this->page);
+        $companies = $query->paginate($this->perPage);
 
         return view('livewire.companies.company-table', [
             'companies' => $companies,
             'totalResults' => $companies->total(),
         ]);
+    }
+
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingCityFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingRegionFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingHasVatFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingHasJobsFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingMinEmployeesFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingMaxEmployeesFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage()
+    {
+        $this->resetPage();
     }
 }

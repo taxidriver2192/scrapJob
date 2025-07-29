@@ -13,7 +13,7 @@ class SyncVirkdataCompany extends Command
      *
      * @var string
      */
-    protected $signature = 'virkdata:sync {company_id} {--all : Sync all companies without vat}';
+    protected $signature = 'virkdata:sync {company_id? : Company ID to sync} {--all : Sync all companies without vat}';
 
     /**
      * The console command description.
@@ -40,6 +40,12 @@ class SyncVirkdataCompany extends Command
         }
 
         $companyId = $this->argument('company_id');
+
+        if (!$companyId) {
+            $this->error('Please provide a company ID or use the --all flag to sync all companies.');
+            return 1;
+        }
+
         $company = Company::find($companyId);
 
         if (! $company) {
@@ -125,7 +131,6 @@ class SyncVirkdataCompany extends Command
         }
 
         // Remove name so we don't overwrite it
-        $originalName = $company->name;
         unset($result['name']);
 
         // Prepare data for storage

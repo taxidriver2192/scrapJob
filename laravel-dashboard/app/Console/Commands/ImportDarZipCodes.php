@@ -29,7 +29,7 @@ class ImportDarZipCodes extends Command
     public function handle()
     {
         $this->info('Importing ZIP codes from DAWA API...');
-        
+
         $dryRun = $this->option('dry-run');
         if ($dryRun) {
             $this->warn('Running in dry-run mode - no changes will be made');
@@ -38,7 +38,7 @@ class ImportDarZipCodes extends Command
         try {
             // Fetch data from DAWA API
             $response = Http::timeout(60)->get('https://api.dataforsyningen.dk/postnumre');
-            
+
             if (!$response->successful()) {
                 $this->error('Failed to fetch data from DAWA API');
                 return 1;
@@ -54,7 +54,7 @@ class ImportDarZipCodes extends Command
                 $postnr = $zipData['nr'];
                 $city = $zipData['navn'];
                 $cityNorm = $this->normalizeCity($city);
-                
+
                 // Extract coordinates if available
                 $lat = null;
                 $lon = null;
@@ -105,7 +105,7 @@ class ImportDarZipCodes extends Command
     private function normalizeCity(string $city): string
     {
         return Str::lower(
-            str_replace(['ø', 'æ', 'å'], ['o', 'ae', 'aa'], 
+            str_replace(['ø', 'æ', 'å'], ['o', 'ae', 'aa'],
                 trim(preg_replace('/[^a-zA-ZøæåØÆÅ\s]/', '', $city))
             )
         );
@@ -121,12 +121,12 @@ class ImportDarZipCodes extends Command
         if (str_contains(strtolower($city), 'københavn') && in_array($postnr, ['1150', '1151', '1152'])) {
             return 100;
         }
-        
+
         // Other Copenhagen districts
         if (str_contains(strtolower($city), 'københavn')) {
             return 50;
         }
-        
+
         // Major cities get higher weight for their main ZIP
         $majorCities = [
             'århus' => ['8000'],
@@ -140,14 +140,14 @@ class ImportDarZipCodes extends Command
             'roskilde' => ['4000'],
             'herning' => ['7400']
         ];
-        
+
         $cityNorm = $this->normalizeCity($city);
         foreach ($majorCities as $majorCity => $mainZips) {
             if (str_contains($cityNorm, $majorCity) && in_array($postnr, $mainZips)) {
                 return 75;
             }
         }
-        
+
         return 1; // Default weight
     }
 }

@@ -18,13 +18,13 @@ class CityZipService
     public function zipsFor(string $cityName): Collection
     {
         $normalizedCity = $this->normalize($cityName);
-        
+
         // First, check if this is a known alias
         $alias = CityAlias::where('alias', $normalizedCity)->first();
         if ($alias) {
             $normalizedCity = $alias->city_norm;
         }
-        
+
         // Get all ZIP codes for this normalized city
         return ZipCode::where('city_norm', $normalizedCity)->get();
     }
@@ -39,16 +39,16 @@ class CityZipService
     public function bestZip(string $cityName, ?string $contextZip = null): ?string
     {
         $zips = $this->zipsFor($cityName);
-        
+
         if ($zips->isEmpty()) {
             return null;
         }
-        
+
         // If we have context ZIP and it matches one of the possible zips, use it
         if ($contextZip && $zips->where('postnr', $contextZip)->isNotEmpty()) {
             return $contextZip;
         }
-        
+
         // Otherwise, prefer ZIP codes with higher weight, then lowest postnr
         return $zips
             ->sortByDesc('weight')
@@ -95,17 +95,17 @@ class CityZipService
     public function getCityInfo(string $cityName): array
     {
         $normalizedCity = $this->normalize($cityName);
-        
+
         // Check if this is an alias
         $alias = CityAlias::where('alias', $normalizedCity)->first();
         $targetCity = $alias ? $alias->city_norm : $normalizedCity;
-        
+
         // Get all ZIP codes
         $zips = ZipCode::where('city_norm', $targetCity)->get();
-        
+
         // Get all aliases for this city
         $aliases = CityAlias::where('city_norm', $targetCity)->pluck('alias');
-        
+
         return [
             'input' => $cityName,
             'normalized' => $normalizedCity,

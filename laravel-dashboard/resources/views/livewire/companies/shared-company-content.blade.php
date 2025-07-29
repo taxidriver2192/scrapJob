@@ -52,7 +52,7 @@
         </div>
 
         <!-- Company Information Cards -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Basic Company Information -->
             <flux:card>
                 <div class="p-4">
@@ -178,34 +178,11 @@
                     </div>
                 </div>
             </flux:card>
+        </div>
 
-            <!-- Financial Summary -->
-            <flux:card>
-                <div class="p-4">
-                    <flux:heading size="md" class="mb-4 text-purple-600">
-                        <flux:icon.chart-bar class="mr-2" />
-                        Financial Summary
-                    </flux:heading>
-                    @if($company->financial_summary && is_array($company->financial_summary))
-                    <div class="space-y-3">
-                        @foreach($company->financial_summary as $key => $value)
-                        <div class="flex justify-between">
-                            <span class="text-sm text-zinc-600 dark:text-zinc-400">{{ ucwords(str_replace('_', ' ', $key)) }}:</span>
-                            <span class="text-sm font-medium">
-                                @if(is_numeric($value))
-                                    {{ number_format($value) }}
-                                @else
-                                    {{ $value }}
-                                @endif
-                            </span>
-                        </div>
-                        @endforeach
-                    </div>
-                    @else
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400 italic">No financial information available.</p>
-                    @endif
-                </div>
-            </flux:card>
+        <!-- Financial Chart Component -->
+        <div class="mb-6">
+            <livewire:companies.financial-chart :company="$company" :key="'financial-chart-'.$companyId" />
         </div>
 
         <!-- Ownership Information -->

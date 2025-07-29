@@ -24,10 +24,10 @@ class LocationService
         }
 
         $normalizedQuery = $this->cityZipService->normalize($query);
-        
+
         // Search in both city names and aliases
         $cities = collect();
-        
+
         // Search in ZIP codes (city names)
         $zipCities = ZipCode::where('city_norm', 'like', $normalizedQuery . '%')
             ->orWhere('city', 'like', $query . '%')
@@ -35,9 +35,9 @@ class LocationService
             ->limit($limit)
             ->get(['city', 'city_norm'])
             ->pluck('city');
-            
+
         $cities = $cities->merge($zipCities);
-        
+
         // Search in aliases
         $aliasCities = CityAlias::where('alias', 'like', $normalizedQuery . '%')
             ->limit($limit)
@@ -46,9 +46,9 @@ class LocationService
                 return ZipCode::where('city_norm', $alias->city_norm)->first()?->city;
             })
             ->filter();
-            
+
         $cities = $cities->merge($aliasCities);
-        
+
         return $cities->unique()->take($limit)->values()->toArray();
     }
 
@@ -92,24 +92,24 @@ class LocationService
     {
         // Remove common patterns that are not city names
         $location = trim($location);
-        
+
         if (empty($location)) {
             return null;
         }
-        
+
         // Remove ", Region X, Danmark" pattern
         $location = preg_replace('/,\s*Region\s+[^,]+,\s*Danmark\s*$/i', '', $location);
-        
+
         // Remove "Kommune" suffix for municipality names
         $location = preg_replace('/\s+Kommune\s*$/i', '', $location);
-        
+
         // Remove " og omegn" (and surroundings)
         $location = preg_replace('/\s+og\s+omegn\s*$/i', '', $location);
-        
+
         // Split by comma and take the first part (usually the city)
         $parts = explode(',', $location);
         $cityPart = trim($parts[0]);
-        
+
         return !empty($cityPart) ? $cityPart : null;
     }
 

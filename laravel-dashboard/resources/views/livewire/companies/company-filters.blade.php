@@ -43,9 +43,8 @@
                         </flux:tooltip>
                     </div>
                     <flux:select wire:model.live="cityFilter" icon="map-pin">
-                        <option value="">All Cities</option>
-                        @foreach($locations as $location)
-                        <option value="{{ $location }}">{{ $location }}</option>
+                        @foreach($cityOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </flux:select>
                 </div>

@@ -76,10 +76,10 @@ class SharedCompanyContent extends Component
         // Setup data for the search-filters component
         $this->companies = collect([$this->company]); // Single company for context
         $this->locations = JobPosting::where('company_id', $this->company->company_id)
-            ->whereNotNull('location')
+            ->whereNotNull('city')
             ->distinct()
-            ->orderBy('location')
-            ->pluck('location')
+            ->orderBy('city')
+            ->pluck('city')
             ->toArray();
 
         // Setup table configuration for job-table component
@@ -90,10 +90,9 @@ class SharedCompanyContent extends Component
             'companyFilter' => $this->company->company_id, // Filter jobs by this company
             'columns' => [
                 'title' => ['enabled' => true, 'label' => 'Job Title', 'type' => 'regular'],
-                'location' => ['enabled' => true, 'label' => 'Location', 'type' => 'regular'],
-                'created_at' => ['enabled' => true, 'label' => 'Posted Date', 'type' => 'date'],
-                'employment_type' => ['enabled' => true, 'label' => 'Type', 'type' => 'regular'],
-                'apply_url' => ['enabled' => true, 'label' => 'Apply', 'type' => 'link'],
+                'city' => ['enabled' => true, 'label' => 'City', 'type' => 'regular'],
+                'zipcode' => ['enabled' => true, 'label' => 'ZIP Code', 'type' => 'regular'],
+                'posted_date' => ['enabled' => true, 'label' => 'Posted Date', 'type' => 'date'],
             ]
         ];
 
