@@ -1,10 +1,3 @@
-@push('breadcrumbs')
-    @if($this->getBreadcrumbItems())
-        <livewire:components.breadcrumbs
-            :items="$this->getBreadcrumbItems()"
-        />
-    @endif
-@endpush
 
 <div wire:listen="requestAiRating=rateJobWithAi">
     @if($jobPosting)

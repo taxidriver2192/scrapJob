@@ -1,4 +1,4 @@
-.PHONY: help setup build start stop restart check-job-status scrape analyze-data test
+.PHONY: help setup build start stop restart check-job-status scrape scrape-all scrape-loop analyze-data test
 
 # Default target
 help:
@@ -15,8 +15,10 @@ help:
 	@echo "  make stop           - Stop Docker services"
 	@echo "  make restart        - Restart Docker services"
 	@echo ""
-	@echo "� Job Operations:"
+	@echo "🔧 Job Operations:"
 	@echo "  make scrape         - Start job scraping"
+	@echo "  make scrape-all     - Scrape all jobs in Denmark"
+	@echo "  make scrape-loop    - Run scraping 30 times with 15min timeout each"
 	@echo "  make check-job-status - Check if jobs are still open"
 	@echo "  make analyze-data   - Analyze job data quality"
 	@echo ""
@@ -72,8 +74,22 @@ scrape:
 scrape-all:
 	@echo "🔍 Starting job scraping..."
 	@echo "💡 Edit this target to change keywords/location"
-	./linkedin-scraper scrape --keywords "" --location "denmark" --total-jobs 2000
+	./linkedin-scraper scrape --keywords "" --location "denmark" --total-jobs 50
 
+scrape-loop:
+	@echo "🔄 Starting 15 cycles of job scraping with 15-minute timeout per cycle..."
+	@for i in $$(seq 1 15); do \
+		echo ""; \
+		echo "🔍 Starting scraping cycle $$i of 15..."; \
+		timeout 900 ./linkedin-scraper scrape --keywords "" --location "denmark" --total-jobs 50 || { \
+			echo "⏰ Cycle $$i stopped after 15 minutes or completed"; \
+		}; \
+		if [ $$i -lt 15 ]; then \
+			echo "⏳ Waiting 15 seconds before next cycle..."; \
+			sleep 15; \
+		fi; \
+	done
+	@echo "✅ All 15 scraping cycles completed!"
 
 analyze-data:
 	@echo "🔍 Analyzing job data quality..."

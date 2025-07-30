@@ -67,23 +67,11 @@
             </div>
 
             <!-- Skills Filter -->
-            <div>
-                <div class="flex items-center gap-1 mb-1">
-                    <flux:label>Skills</flux:label>
-                    <flux:tooltip content="Select multiple skills to filter jobs" position="top">
-                        <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
-                    </flux:tooltip>
-                </div>
 
-                <flux:select variant="listbox" multiple searchable wire:model.live="skillsFilter" placeholder="Choose skills..." icon="code-bracket">
-                    <x-slot name="search">
-                        <flux:select.search class="px-4" placeholder="Search skills..." />
-                    </x-slot>
-                    @foreach($availableSkills as $skillValue => $skillLabel)
-                        <flux:select.option value="{{ $skillValue }}">{{ $skillLabel }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            </div>
+
+            <livewire:search-filters.skills-filter-simple
+                :skillsFilter="$skillsFilter"
+            />
 
             <!-- Viewed Status Filter -->
             @auth

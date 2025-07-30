@@ -53,6 +53,15 @@ class SearchFilters extends Component
         'perPage' => ['except' => 10],
     ];
 
+    protected $listeners = [
+        'skillsFilterUpdated' => 'handleSkillsFilterUpdate'
+    ];
+
+    public function handleSkillsFilterUpdate($skills)
+    {
+        $this->skillsFilter = $skills;
+    }
+
     public function mount($companies = [], $locations = [], $options = [])
     {
         $this->companies = $companies;
