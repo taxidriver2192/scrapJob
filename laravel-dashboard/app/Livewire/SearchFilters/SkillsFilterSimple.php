@@ -57,8 +57,8 @@ class SkillsFilterSimple extends Component
 
         if ($value && !in_array($value, $this->skillsFilter)) {
             $this->skillsFilter[] = $value;
-            // Emit event to parent component when skills are updated
-            $this->dispatch('skillsFilterUpdated', $this->skillsFilter);
+            // Use the simpler dispatch method
+            $this->dispatch('skillsFilterUpdated', skills: $this->skillsFilter);
         }
         $this->selectedSkill = ''; // Clear the selection
         $this->search = ''; // Clear the search
@@ -70,8 +70,8 @@ class SkillsFilterSimple extends Component
 
         $this->skillsFilter = array_values(array_filter($this->skillsFilter, fn($s) => $s !== $skill));
 
-        // Emit event to parent component
-        $this->dispatch('skillsFilterUpdated', $this->skillsFilter);
+        // Use the simpler dispatch method
+        $this->dispatch('skillsFilterUpdated', skills: $this->skillsFilter);
     }
 
     public function clearSkills()
@@ -79,14 +79,14 @@ class SkillsFilterSimple extends Component
         Log::info('SkillsFilter: Clearing all skills');
 
         $this->skillsFilter = [];
-        $this->dispatch('skillsFilterUpdated', $this->skillsFilter);
+        $this->dispatch('skillsFilterUpdated', skills: $this->skillsFilter);
     }
 
     public function mount($skillsFilter = [])
     {
         Log::info('SkillsFilter: Mounting component', ['skillsFilter' => $skillsFilter]);
 
-        $this->skillsFilter = $skillsFilter;
+        $this->skillsFilter = is_array($skillsFilter) ? $skillsFilter : [];
     }
 
     public function render()

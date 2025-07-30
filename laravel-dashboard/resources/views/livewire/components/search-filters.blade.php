@@ -67,10 +67,9 @@
             </div>
 
             <!-- Skills Filter -->
-
-
             <livewire:search-filters.skills-filter-simple
                 :skillsFilter="$skillsFilter"
+                wire:key="skills-filter-{{ md5(json_encode($skillsFilter)) }}"
             />
 
             <!-- Viewed Status Filter -->

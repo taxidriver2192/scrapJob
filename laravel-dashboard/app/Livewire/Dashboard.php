@@ -126,10 +126,11 @@ class Dashboard extends Component
         $this->currentFilters = array_merge($this->currentFilters, $filters);
     }
 
-    public function handleFilterUpdate($data)
+    public function handleFilterUpdate($filters)
     {
-        if (isset($data['filters'])) {
-            $this->currentFilters = array_merge($this->currentFilters, $data['filters']);
+        // Handle the new event format from SearchFilters\Index
+        if (is_array($filters)) {
+            $this->currentFilters = array_merge($this->currentFilters, $filters);
         }
     }
 

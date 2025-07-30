@@ -3,6 +3,7 @@
 namespace App\Livewire\Jobs;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use App\Models\JobPosting;
 use App\Models\JobRating;
 use App\Models\UserJobView;
@@ -50,11 +51,6 @@ class JobTable extends Component
     public $selectedJobs = [];
     public $selectAll = false;
     public $showBulkActions = false;
-
-    protected $listeners = [
-        'filterUpdated' => 'handleFilterUpdate',
-        'filtersCleared' => 'handleFiltersCleared',
-    ];
 
     protected $queryString = [
         'page' => ['except' => 1],
@@ -186,31 +182,34 @@ class JobTable extends Component
         $this->selectedJobId = null;
     }
 
-    public function handleFilterUpdate($data)
+    #[On('filterUpdated')]
+    public function handleFilterUpdate($filters)
     {
-        if (isset($data['filters'])) {
-            $this->search = $data['filters']['search'] ?? '';
+        if (is_array($filters)) {
+            $this->search = $filters['search'] ?? '';
             // Use scopedCompanyId if available, otherwise use companyFilter
-            if (isset($data['filters']['scopedCompanyId']) && $data['filters']['scopedCompanyId']) {
-                $this->companyFilter = $data['filters']['scopedCompanyId'];
+            if (isset($filters['scopedCompanyId']) && $filters['scopedCompanyId']) {
+                $this->companyFilter = $filters['scopedCompanyId'];
             } else {
-                $this->companyFilter = $data['filters']['companyFilter'] ?? '';
+                $this->companyFilter = $filters['companyFilter'] ?? '';
             }
-            $this->locationFilter = $data['filters']['locationFilter'] ?? '';
-            $this->regionFilter = $data['filters']['regionFilter'] ?? '';
-            $this->skillsFilter = $data['filters']['skillsFilter'] ?? [];
-            $this->dateFromFilter = $data['filters']['dateFromFilter'] ?? '';
-            $this->dateToFilter = $data['filters']['dateToFilter'] ?? '';
-            $this->viewedStatusFilter = $data['filters']['viewedStatusFilter'] ?? '';
-            $this->ratingStatusFilter = $data['filters']['ratingStatusFilter'] ?? '';
-            $this->favoritesStatusFilter = $data['filters']['favoritesStatusFilter'] ?? '';
-            $this->jobStatusFilter = $data['filters']['jobStatusFilter'] ?? 'open';
-            $this->perPage = $data['filters']['perPage'] ?? 10;
+            $this->locationFilter = $filters['locationFilter'] ?? '';
+            $this->regionFilter = $filters['regionFilter'] ?? '';
+            $this->skillsFilter = $filters['skillsFilter'] ?? [];
+            $this->dateFromFilter = $filters['dateFromFilter'] ?? '';
+            $this->dateToFilter = $filters['dateToFilter'] ?? '';
+            $this->viewedStatusFilter = $filters['viewedStatusFilter'] ?? '';
+            $this->ratingStatusFilter = $filters['ratingStatusFilter'] ?? '';
+            $this->favoritesStatusFilter = $filters['favoritesStatusFilter'] ?? '';
+            $this->jobStatusFilter = $filters['jobStatusFilter'] ?? 'open';
+            $this->perPage = $filters['perPage'] ?? 10;
 
             // Reset to first page when filters change
             $this->page = 1;
         }
     }
+
+    #[On('filtersCleared')]
 
     public function handleFiltersCleared()
     {

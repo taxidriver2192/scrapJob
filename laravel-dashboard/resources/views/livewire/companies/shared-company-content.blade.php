@@ -216,7 +216,7 @@
         @endif
         @if($company && count($locations) >= 0)
         <!-- Job Search and Filters Component -->
-        <livewire:components.search-filters
+        <livewire:search-filters.index
             :companies="$companies"
             :locations="$locations"
             :options="[

@@ -22,7 +22,7 @@
     ]" />
 
     <!-- Advanced Search and Filters -->
-<livewire:components.search-filters
+    <livewire:search-filters.index
         :companies="$companies"
         :locations="$locations"
         :options="[
