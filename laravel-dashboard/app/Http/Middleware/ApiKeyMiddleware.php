@@ -18,11 +18,11 @@ class ApiKeyMiddleware
     public function handle(Request $request, Closure $next)
     {
         $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
-        
+
         // You can store your API keys in config or database
         // For now, using environment variable
         $validApiKey = env('API_KEY', 'your-default-api-key-here');
-        
+
         if (!$apiKey || $apiKey !== $validApiKey) {
             return response()->json([
                 'error' => 'Unauthorized',
