@@ -35,3 +35,6 @@ Thumbs.db
 
 # Node.js
 node_modules/
+
+# Laravel Dashboard (now in separate repo)
+laravel-dashboard/
