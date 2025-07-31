@@ -11,7 +11,7 @@ use App\Livewire\ProfileEdit;
 use Illuminate\Support\Facades\DB;
 use App\Livewire\JobRatings\Index as JobRatingsIndex;
 use App\Livewire\JobRatings\Show as JobRatingsShow;
-use App\Livewire\SearchFilters\SkillsFilterSimple;
+use App\Livewire\SearchFilters\SkillsFilter;
 
 // Public routes (no authentication required)
 Route::get('/test', function () {

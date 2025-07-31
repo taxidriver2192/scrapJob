@@ -36,7 +36,7 @@ class DateFilter extends Component
             'start' => $this->dateRange?->start(),
             'end' => $this->dateRange?->end(),
         ]);
-        
+
         $this->emitDateUpdate();
     }
 
@@ -55,7 +55,7 @@ class DateFilter extends Component
     {
         $from = $this->dateRange?->start()?->format('Y-m-d') ?? '';
         $to = $this->dateRange?->end()?->format('Y-m-d') ?? '';
-        
+
         // Try to detect preset based on date range
         $preset = '';
         if ($this->dateRange) {
@@ -73,11 +73,11 @@ class DateFilter extends Component
     {
         $start = $dateRange->start();
         $end = $dateRange->end();
-        
+
         if (!$start || !$end) {
             return '';
         }
-        
+
         // Check for common presets by comparing with known ranges
         $presets = [
             'today' => DateRange::today(),
@@ -87,13 +87,13 @@ class DateFilter extends Component
             'lastMonth' => DateRange::lastMonth(),
             'last3Months' => DateRange::last3Months(),
         ];
-        
+
         foreach ($presets as $presetName => $presetRange) {
             if ($start->isSameDay($presetRange->start()) && $end->isSameDay($presetRange->end())) {
                 return $presetName;
             }
         }
-        
+
         return '';
     }
 

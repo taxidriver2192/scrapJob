@@ -4,8 +4,19 @@
             <flux:heading size="lg" class="text-zinc-900 dark:text-zinc-100">
                 {{ $title }} ({{ $totalResults }} results)
             </flux:heading>
-            <div class="text-sm text-zinc-500 dark:text-zinc-400">
-                {{ $jobs->count() }} results displayed
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-zinc-500 dark:text-zinc-400">
+                    {{ $jobs->count() }} results displayed
+                </div>
+                <!-- Per Page Selector -->
+                <div class="min-w-[140px]">
+                    <flux:select wire:model.live="perPage" label="Per Page" placeholder="Select...">
+                        <flux:select.option value="10">10 per page</flux:select.option>
+                        <flux:select.option value="25">25 per page</flux:select.option>
+                        <flux:select.option value="50">50 per page</flux:select.option>
+                        <flux:select.option value="100">100 per page</flux:select.option>
+                    </flux:select>
+                </div>
             </div>
         </div>
     </div>

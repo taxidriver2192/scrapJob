@@ -149,6 +149,11 @@ class JobTable extends Component
         }
     }
 
+    public function updatedPerPage()
+    {
+        $this->page = 1; // Reset to first page when changing per page
+    }
+
     public function sortBy($field)
     {
         if ($this->sortField === $field) {

@@ -4,17 +4,29 @@ namespace App\Livewire\SearchFilters;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RegionFilter extends Component
 {
     public string $selectedRegion = '';
     public array $regionOptions = [];
     public array $regionDetails = [];
+    private string $lastDispatchedValue = '';
 
     public function mount($selectedRegion = '')
     {
+        Log::info('RegionFilter: Component mounting', [
+            'selectedRegion' => $selectedRegion
+        ]);
+        
         $this->selectedRegion = $selectedRegion;
+        $this->lastDispatchedValue = $selectedRegion; // Initialize tracking
         $this->loadRegionalData();
+        
+        Log::info('RegionFilter: Mount completed', [
+            'selectedRegion' => $this->selectedRegion,
+            'regionOptions_count' => count($this->regionOptions)
+        ]);
     }
 
     private function loadRegionalData()
@@ -125,7 +137,35 @@ class RegionFilter extends Component
 
     public function updatedSelectedRegion($value)
     {
-        $this->dispatch('regionFilterUpdated', region: $value);
+        Log::info('RegionFilter: updatedSelectedRegion called', [
+            'old_value' => $this->selectedRegion,
+            'new_value' => $value,
+            'lastDispatchedValue' => $this->lastDispatchedValue,
+            'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
+        ]);
+        
+        // Only dispatch if the value actually changed from what we last dispatched
+        if ($value !== $this->lastDispatchedValue) {
+            $this->lastDispatchedValue = $value;
+            $this->dispatch('regionFilterUpdated', region: $value);
+            
+            Log::info('RegionFilter: regionFilterUpdated event dispatched', [
+                'region' => $value
+            ]);
+        } else {
+            Log::info('RegionFilter: Skipping dispatch - value unchanged', [
+                'value' => $value
+            ]);
+        }
+    }
+
+    public function updatingSelectedRegion($value)
+    {
+        Log::info('RegionFilter: updatingSelectedRegion called (before update)', [
+            'current_value' => $this->selectedRegion,
+            'incoming_value' => $value,
+            'lastDispatchedValue' => $this->lastDispatchedValue
+        ]);
     }
 
     public function getRegionTooltip($regionScope)
@@ -157,6 +197,7 @@ class RegionFilter extends Component
 
     public function render()
     {
+        Log::info('RegionFilter: render called');
         return view('livewire.search-filters.region-filter');
     }
 }

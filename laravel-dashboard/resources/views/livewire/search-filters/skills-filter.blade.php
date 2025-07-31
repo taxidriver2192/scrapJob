@@ -1,6 +1,6 @@
 <div>
     <div class="flex items-center gap-1 mb-1">
-        <flux:label>Skills</flux:label>
+        <flux:label>Skills {{ $this->skillsCount > 0 ? '(' . $this->skillsCount . ')' : '' }}</flux:label>
         <flux:tooltip content="Select multiple skills to filter jobs" position="top">
             <flux:icon.question-mark-circle class="w-4 h-4 text-zinc-400 hover:text-zinc-600 cursor-help" />
         </flux:tooltip>

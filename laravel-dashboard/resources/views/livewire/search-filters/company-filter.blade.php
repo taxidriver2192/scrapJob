@@ -7,6 +7,7 @@
     </div>
 
     <flux:select wire:model.live="selectedCompany" placeholder="Select company...">
+        <flux:select.option value="">All Companies</flux:select.option>
         @foreach($companyOptions as $value => $label)
             <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
         @endforeach
