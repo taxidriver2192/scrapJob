@@ -130,10 +130,10 @@ class Index extends Component
             'new_value' => $company,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->companyFilter = $company;
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateCompanyFilter completed', [
             'current_value' => $this->companyFilter
         ]);
@@ -146,12 +146,12 @@ class Index extends Component
             'new_value' => $region,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->regionFilter = $region;
-        
+
         Log::info('SearchFilters Index: About to emit filters updated from updateRegionFilter');
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateRegionFilter completed', [
             'current_value' => $this->regionFilter
         ]);
@@ -165,10 +165,10 @@ class Index extends Component
             'is_array' => is_array($skills),
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->skillsFilter = is_array($skills) ? $skills : [];
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateSkillsFilter completed', [
             'current_value' => $this->skillsFilter
         ]);
@@ -184,7 +184,7 @@ class Index extends Component
             'new_to' => $to,
             'new_preset' => $preset
         ]);
-        
+
         $this->dateFrom = $from;
         $this->dateTo = $to;
         $this->datePreset = $preset;
@@ -200,7 +200,7 @@ class Index extends Component
         }
 
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateDateFilter completed', [
             'current_from' => $this->dateFrom,
             'current_to' => $this->dateTo,
@@ -214,10 +214,10 @@ class Index extends Component
             'old_value' => $this->viewedStatus,
             'new_value' => $status
         ]);
-        
+
         $this->viewedStatus = $status;
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateViewedStatus completed', [
             'current_value' => $this->viewedStatus
         ]);
@@ -229,10 +229,10 @@ class Index extends Component
             'old_value' => $this->ratingStatus,
             'new_value' => $status
         ]);
-        
+
         $this->ratingStatus = $status;
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateRatingStatus completed', [
             'current_value' => $this->ratingStatus
         ]);
@@ -244,10 +244,10 @@ class Index extends Component
             'old_value' => $this->favoritesStatus,
             'new_value' => $status
         ]);
-        
+
         $this->favoritesStatus = $status;
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateFavoritesStatus completed', [
             'current_value' => $this->favoritesStatus
         ]);
@@ -259,10 +259,10 @@ class Index extends Component
             'old_value' => $this->jobStatus,
             'new_value' => $status
         ]);
-        
+
         $this->jobStatus = $status;
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updateJobStatus completed', [
             'current_value' => $this->jobStatus
         ]);
@@ -275,9 +275,9 @@ class Index extends Component
             'new_value' => $this->search,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updatedSearch completed');
     }
 
@@ -287,9 +287,9 @@ class Index extends Component
             'new_value' => $this->regionFilter,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updatedRegionFilter completed');
     }
 
@@ -299,16 +299,16 @@ class Index extends Component
             'new_value' => $this->companyFilter,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)
         ]);
-        
+
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: updatedCompanyFilter completed');
     }
 
     public function clearFilters()
     {
         Log::info('SearchFilters Index: clearFilters called');
-        
+
         $this->search = '';
         // Don't clear companyFilter if we have a scopedCompanyId
         if (!$this->scopedCompanyId) {
@@ -327,7 +327,7 @@ class Index extends Component
         Log::info('SearchFilters Index: Filters cleared, dispatching events');
         $this->dispatch('filtersCleared');
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: clearFilters completed');
     }
 
@@ -338,10 +338,10 @@ class Index extends Component
             'skill_to_remove' => $skill,
             'current_skills' => $this->skillsFilter
         ]);
-        
+
         $this->skillsFilter = array_values(array_filter($this->skillsFilter, fn($s) => $s !== $skill));
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: removeSkill completed', [
             'remaining_skills' => $this->skillsFilter
         ]);
@@ -354,7 +354,7 @@ class Index extends Component
             'old_preset' => $this->datePreset,
             'new_preset' => $preset
         ]);
-        
+
         $this->datePreset = $preset;
 
         switch ($preset) {
@@ -386,7 +386,7 @@ class Index extends Component
         ]);
 
         $this->emitFiltersUpdated();
-        
+
         Log::info('SearchFilters Index: setDatePreset completed');
     }
 
@@ -407,14 +407,14 @@ class Index extends Component
             'jobStatusFilter' => $this->jobStatus,
             'scopedCompanyId' => $this->scopedCompanyId,
         ];
-        
+
         Log::info('SearchFilters Index: emitFiltersUpdated called', [
             'filters' => $filters,
             'caller' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)
         ]);
-        
+
         $this->dispatch('filterUpdated', filters: $filters);
-        
+
         Log::info('SearchFilters Index: filterUpdated event dispatched');
     }
 

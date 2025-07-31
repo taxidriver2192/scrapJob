@@ -1,0 +1,1408 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Job Scraper API",
+        "description": "API for managing companies and job postings scraped from LinkedIn",
+        "contact": {
+            "email": "admin@jobscraper.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api",
+            "description": "API Server"
+        }
+    ],
+    "paths": {
+        "/api/companies/exists": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Check if a company exists by name",
+                "operationId": "c6b044c5acbed700374f5ea7a1d2f59b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Example Company Ltd"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Company existence check result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "exists": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "company": {
+                                            "properties": {
+                                                "company_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Example Company Ltd"
+                                                },
+                                                "vat": {
+                                                    "type": "string",
+                                                    "example": "NL123456789B01",
+                                                    "nullable": true
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "Active",
+                                                    "nullable": true
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "123 Business Street",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "example": "1234AB",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "example": "Amsterdam",
+                                                    "nullable": true
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "example": "https://example.com",
+                                                    "nullable": true
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "info@example.com",
+                                                    "nullable": true
+                                                },
+                                                "employees": {
+                                                    "type": "integer",
+                                                    "example": 50,
+                                                    "nullable": true
+                                                },
+                                                "industrycode": {
+                                                    "type": "string",
+                                                    "example": "6201",
+                                                    "nullable": true
+                                                },
+                                                "industrydesc": {
+                                                    "type": "string",
+                                                    "example": "Computer programming activities",
+                                                    "nullable": true
+                                                },
+                                                "companytype": {
+                                                    "type": "string",
+                                                    "example": "BV",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/companies": {
+            "post": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Create a new company",
+                "operationId": "4ba2fab8115d4cb8d481328838cb4bba",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Example Company Ltd"
+                                    },
+                                    "vat": {
+                                        "type": "string",
+                                        "example": "NL123456789B01",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "Active",
+                                        "nullable": true
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Business Street",
+                                        "nullable": true
+                                    },
+                                    "zipcode": {
+                                        "type": "string",
+                                        "example": "1234AB",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "Amsterdam",
+                                        "nullable": true
+                                    },
+                                    "protected": {
+                                        "type": "boolean",
+                                        "example": false,
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+31 20 1234567",
+                                        "nullable": true
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "example": "https://example.com",
+                                        "nullable": true
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "info@example.com",
+                                        "nullable": true
+                                    },
+                                    "fax": {
+                                        "type": "string",
+                                        "example": "+31 20 7654321",
+                                        "nullable": true
+                                    },
+                                    "startdate": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2020-01-01",
+                                        "nullable": true
+                                    },
+                                    "enddate": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-12-31",
+                                        "nullable": true
+                                    },
+                                    "employees": {
+                                        "type": "integer",
+                                        "example": 50,
+                                        "nullable": true
+                                    },
+                                    "industrycode": {
+                                        "type": "string",
+                                        "example": "6201",
+                                        "nullable": true
+                                    },
+                                    "industrydesc": {
+                                        "type": "string",
+                                        "example": "Computer programming activities",
+                                        "nullable": true
+                                    },
+                                    "companytype": {
+                                        "type": "string",
+                                        "example": "BV",
+                                        "nullable": true
+                                    },
+                                    "companydesc": {
+                                        "type": "string",
+                                        "example": "A software development company",
+                                        "nullable": true
+                                    },
+                                    "owners": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "nullable": true
+                                    },
+                                    "financial_summary": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "nullable": true
+                                    },
+                                    "error": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        },
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Company created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Company created successfully"
+                                        },
+                                        "company": {
+                                            "properties": {
+                                                "company_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Example Company Ltd"
+                                                },
+                                                "vat": {
+                                                    "type": "string",
+                                                    "example": "NL123456789B01",
+                                                    "nullable": true
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "Active",
+                                                    "nullable": true
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "123 Business Street",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "example": "1234AB",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "example": "Amsterdam",
+                                                    "nullable": true
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "example": "https://example.com",
+                                                    "nullable": true
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "info@example.com",
+                                                    "nullable": true
+                                                },
+                                                "employees": {
+                                                    "type": "integer",
+                                                    "example": 50,
+                                                    "nullable": true
+                                                },
+                                                "industrycode": {
+                                                    "type": "string",
+                                                    "example": "6201",
+                                                    "nullable": true
+                                                },
+                                                "industrydesc": {
+                                                    "type": "string",
+                                                    "example": "Computer programming activities",
+                                                    "nullable": true
+                                                },
+                                                "companytype": {
+                                                    "type": "string",
+                                                    "example": "BV",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Company already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Company with this name already exists"
+                                        },
+                                        "company": {
+                                            "properties": {
+                                                "company_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Example Company Ltd"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation failed"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An error occurred while creating the company"
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Database connection failed"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/companies/{id}": {
+            "get": {
+                "tags": [
+                    "Companies"
+                ],
+                "summary": "Get company by ID",
+                "operationId": "50805cb17562834cb99c0477437c5221",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Company ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Company details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "company": {
+                                            "properties": {
+                                                "company_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Example Company Ltd"
+                                                },
+                                                "vat": {
+                                                    "type": "string",
+                                                    "example": "NL123456789B01",
+                                                    "nullable": true
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "Active",
+                                                    "nullable": true
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "example": "123 Business Street",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "example": "1234AB",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "example": "Amsterdam",
+                                                    "nullable": true
+                                                },
+                                                "protected": {
+                                                    "type": "boolean",
+                                                    "example": false,
+                                                    "nullable": true
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "+31 20 1234567",
+                                                    "nullable": true
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "example": "https://example.com",
+                                                    "nullable": true
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "info@example.com",
+                                                    "nullable": true
+                                                },
+                                                "fax": {
+                                                    "type": "string",
+                                                    "example": "+31 20 7654321",
+                                                    "nullable": true
+                                                },
+                                                "startdate": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2020-01-01",
+                                                    "nullable": true
+                                                },
+                                                "enddate": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2025-12-31",
+                                                    "nullable": true
+                                                },
+                                                "employees": {
+                                                    "type": "integer",
+                                                    "example": 50,
+                                                    "nullable": true
+                                                },
+                                                "industrycode": {
+                                                    "type": "string",
+                                                    "example": "6201",
+                                                    "nullable": true
+                                                },
+                                                "industrydesc": {
+                                                    "type": "string",
+                                                    "example": "Computer programming activities",
+                                                    "nullable": true
+                                                },
+                                                "companytype": {
+                                                    "type": "string",
+                                                    "example": "BV",
+                                                    "nullable": true
+                                                },
+                                                "companydesc": {
+                                                    "type": "string",
+                                                    "example": "A software development company",
+                                                    "nullable": true
+                                                },
+                                                "owners": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "financial_summary": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "error": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "datetime",
+                                                    "example": "2024-01-01T00:00:00.000000Z"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "datetime",
+                                                    "example": "2024-01-01T00:00:00.000000Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Company not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Company not found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/jobs/exists": {
+            "get": {
+                "tags": [
+                    "Job Postings"
+                ],
+                "summary": "Check if a job posting exists by LinkedIn job ID",
+                "description": "Returns whether a job posting with the given LinkedIn job ID exists in the database",
+                "operationId": "0f2104a6163cddfd45deab527b7f5d05",
+                "parameters": [
+                    {
+                        "name": "linkedin_job_id",
+                        "in": "query",
+                        "description": "LinkedIn job ID to search for",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job posting existence check result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "exists": {
+                                            "description": "Whether the job posting exists",
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/jobs": {
+            "post": {
+                "tags": [
+                    "Job Postings"
+                ],
+                "summary": "Create a new job posting",
+                "description": "Creates a new job posting in the database",
+                "operationId": "9697c9051e7a4e9c99c0bf9b0c063f48",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "linkedin_job_id",
+                                    "title",
+                                    "company_id"
+                                ],
+                                "properties": {
+                                    "linkedin_job_id": {
+                                        "description": "LinkedIn job ID (unique)",
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "title": {
+                                        "description": "Job title",
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "company_id": {
+                                        "description": "Company ID (must exist in companies table)",
+                                        "type": "integer"
+                                    },
+                                    "location": {
+                                        "description": "Job location",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "description": "Job description",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "brief_summary_of_job": {
+                                        "description": "Brief job summary",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "apply_url": {
+                                        "description": "Application URL",
+                                        "type": "string",
+                                        "format": "url",
+                                        "maxLength": 1000,
+                                        "nullable": true
+                                    },
+                                    "posted_date": {
+                                        "description": "Date when job was posted",
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "applicants": {
+                                        "description": "Number of applicants",
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "nullable": true
+                                    },
+                                    "work_type": {
+                                        "description": "Work type (remote, hybrid, onsite)",
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true
+                                    },
+                                    "skills": {
+                                        "description": "Required skills",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "maxLength": 100
+                                        },
+                                        "nullable": true
+                                    },
+                                    "openai_adresse": {
+                                        "description": "AI-processed address",
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "nullable": true
+                                    },
+                                    "latitude": {
+                                        "description": "Latitude coordinate",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 90,
+                                        "minimum": -90,
+                                        "nullable": true
+                                    },
+                                    "longitude": {
+                                        "description": "Longitude coordinate",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 180,
+                                        "minimum": -180,
+                                        "nullable": true
+                                    },
+                                    "job_post_closed_date": {
+                                        "description": "Date when job posting closes",
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "description": "City",
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true
+                                    },
+                                    "zipcode": {
+                                        "description": "Postal code",
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Job posting created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Job posting created successfully"
+                                        },
+                                        "job_posting": {
+                                            "properties": {
+                                                "job_id": {
+                                                    "type": "integer"
+                                                },
+                                                "linkedin_job_id": {
+                                                    "type": "string"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "company_id": {
+                                                    "type": "integer"
+                                                },
+                                                "company_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "brief_summary_of_job": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "apply_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "posted_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "applicants": {
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "work_type": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "skills": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "job_post_closed_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "is_closed": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Job posting already exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Job posting with this LinkedIn ID already exists"
+                                        },
+                                        "job_posting": {
+                                            "properties": {
+                                                "job_id": {
+                                                    "type": "integer"
+                                                },
+                                                "linkedin_job_id": {
+                                                    "type": "string"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation failed"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An error occurred while creating the job posting"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/jobs/{id}": {
+            "get": {
+                "tags": [
+                    "Job Postings"
+                ],
+                "summary": "Get job posting by ID",
+                "description": "Returns detailed information about a specific job posting",
+                "operationId": "772aa583f3331dba845e7be462cd91a0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Job posting ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job posting details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "job_posting": {
+                                            "properties": {
+                                                "job_id": {
+                                                    "type": "integer"
+                                                },
+                                                "linkedin_job_id": {
+                                                    "type": "string"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "company_id": {
+                                                    "type": "integer"
+                                                },
+                                                "company_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "brief_summary_of_job": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "apply_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "posted_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "applicants": {
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "work_type": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "skills": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "openai_adresse": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "job_post_closed_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "is_closed": {
+                                                    "type": "boolean"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Job posting not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Job posting not found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/jobs/linkedin/{linkedinJobId}": {
+            "get": {
+                "tags": [
+                    "Job Postings"
+                ],
+                "summary": "Get job posting by LinkedIn job ID",
+                "description": "Returns detailed information about a specific job posting using LinkedIn job ID",
+                "operationId": "ab68e8f52f5dd302596d8894ea73b089",
+                "parameters": [
+                    {
+                        "name": "linkedinJobId",
+                        "in": "path",
+                        "description": "LinkedIn job ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job posting details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "job_posting": {
+                                            "properties": {
+                                                "job_id": {
+                                                    "type": "integer"
+                                                },
+                                                "linkedin_job_id": {
+                                                    "type": "string"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "company_id": {
+                                                    "type": "integer"
+                                                },
+                                                "company_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "brief_summary_of_job": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "apply_url": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "posted_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "applicants": {
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "work_type": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "skills": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "openai_adresse": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "job_post_closed_date": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "zipcode": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "is_closed": {
+                                                    "type": "boolean"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Job posting not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Job posting not found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "responses": {
+            "UnauthorizedResponse": {
+                "description": "Unauthorized - Invalid or missing API key",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "properties": {
+                                "error": {
+                                    "type": "string",
+                                    "example": "Unauthorized"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "Valid API key is required. Include X-API-Key header or api_key parameter."
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "description": "API Key for authentication",
+                "name": "X-API-Key",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Companies",
+            "description": "Companies"
+        },
+        {
+            "name": "Job Postings",
+            "description": "Job Postings"
+        }
+    ]
+}
