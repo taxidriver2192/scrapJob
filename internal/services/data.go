@@ -49,6 +49,30 @@ func (s *DataService) JobExists(linkedinJobID int) (bool, error) {
 	return exists, nil
 }
 
+// JobExistsForDiscovery checks if a job exists during discovery phase
+// Only caches positive results to avoid polluting cache with unprocessed jobs
+func (s *DataService) JobExistsForDiscovery(linkedinJobID int) (bool, error) {
+	// Check cache first - only look for positive cached results
+	if exists, found := s.cache.JobExistsInCache(linkedinJobID); found && exists {
+		logrus.Debugf("🎯 Cache hit for job existence (discovery): %d = %v", linkedinJobID, exists)
+		return true, nil
+	}
+
+	// Cache miss or negative result, check via API
+	logrus.Debugf("💻 Checking job via API (discovery): %d", linkedinJobID)
+	exists, err := s.apiClient.CheckJobExists(linkedinJobID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check job existence via API: %w", err)
+	}
+
+	// Only cache positive results during discovery to avoid polluting cache
+	if exists {
+		s.cache.SetJobExists(linkedinJobID, exists)
+	}
+
+	return exists, nil
+}
+
 // CreateOrGetCompany gets an existing company or creates a new one
 func (s *DataService) CreateOrGetCompany(name string) (*models.Company, error) {
 	// Check cache first
@@ -197,6 +221,70 @@ func (s *DataService) Close() error {
 	return s.cache.Close()
 }
 
+// QueueJobForProcessing adds a job ID to the Redis processing queue only if it doesn't already exist
+func (s *DataService) QueueJobForProcessing(jobID, jobURL string) error {
+	queueKey := "job_processing_queue"
+
+	// Add job ID to queue only if it doesn't already exist
+	added, err := s.cache.AddJobToQueueIfNotExists(queueKey, jobID)
+	if err != nil {
+		return fmt.Errorf("failed to queue job for processing: %w", err)
+	}
+
+	if added {
+		logrus.Debugf("📤 Queued job ID %s for processing", jobID)
+	} else {
+		logrus.Debugf("⏭️  Job ID %s already in queue, skipping", jobID)
+	}
+	
+	return nil
+}
+
+// GetNextJobFromQueue gets the next job from the Redis processing queue
+func (s *DataService) GetNextJobFromQueue() (jobID, jobURL string, err error) {
+	queueKey := "job_processing_queue"
+
+	// Get job ID from the right side of the list (FIFO)
+	jobID, err = s.cache.RPop(queueKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get job from queue: %w", err)
+	}
+
+	if jobID == "" {
+		// Queue is empty
+		return "", "", nil
+	}
+
+	// Construct the job URL from the job ID
+	jobURL = fmt.Sprintf("https://www.linkedin.com/jobs/view/%s/", jobID)
+
+	logrus.Debugf("📥 Dequeued job ID %s from processing queue", jobID)
+	return jobID, jobURL, nil
+}
+
+// RemoveJobFromQueue removes a specific job from the processing queue (for error handling)
+func (s *DataService) RemoveJobFromQueue(jobID string) error {
+	// For simplicity, we don't need to implement this since we already popped the job
+	// This method is here for interface compatibility and future enhancements
+	logrus.Debugf("🗑️  Removed job ID %s from queue", jobID)
+	return nil
+}
+
+// GetQueueLength returns the number of jobs waiting in the processing queue
+func (s *DataService) GetQueueLength() (int, error) {
+	queueKey := "job_processing_queue"
+	length, err := s.cache.LLen(queueKey)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get queue length: %w", err)
+	}
+	return length, nil
+}
+
+// IsJobInQueue checks if a job ID is already in the processing queue
+func (s *DataService) IsJobInQueue(jobID string) (bool, error) {
+	return s.cache.IsJobInQueue(jobID)
+}
+
 // Helper functions
 func splitURL(url string) []string {
 	result := []string{}
@@ -233,4 +321,19 @@ func findIndex(s, substr string) int {
 		}
 	}
 	return -1
+}
+
+// ClearJobExistsCache clears polluted job existence cache and processing queue
+func (s *DataService) ClearJobExistsCache() error {
+	// Clear job exists cache
+	if err := s.cache.ClearJobExistsCache(); err != nil {
+		return fmt.Errorf("failed to clear job exists cache: %w", err)
+	}
+
+	// Clear job processing queue
+	if err := s.cache.ClearJobProcessingQueue(); err != nil {
+		return fmt.Errorf("failed to clear job processing queue: %w", err)
+	}
+
+	return nil
 }

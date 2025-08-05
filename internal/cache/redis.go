@@ -45,7 +45,7 @@ func NewRedisCache(cfg *config.RedisConfig) *RedisCache {
 func (r *RedisCache) JobExistsInCache(linkedinJobID int) (exists bool, found bool) {
 	ctx := context.Background()
 	key := fmt.Sprintf("job_exists:%d", linkedinJobID)
-	
+
 	result, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		// Key doesn't exist in cache
@@ -55,7 +55,7 @@ func (r *RedisCache) JobExistsInCache(linkedinJobID int) (exists bool, found boo
 		logrus.Warnf("Redis error checking job existence: %v", err)
 		return false, false
 	}
-	
+
 	// Key exists, check value
 	exists = result == "true"
 	return exists, true
@@ -69,7 +69,7 @@ func (r *RedisCache) SetJobExists(linkedinJobID int, exists bool) {
 	if exists {
 		value = "true"
 	}
-	
+
 	err := r.client.Set(ctx, key, value, r.jobExistsTTL).Err()
 	if err != nil {
 		logrus.Warnf("Redis error setting job existence: %v", err)
@@ -82,7 +82,7 @@ func (r *RedisCache) SetJobExists(linkedinJobID int, exists bool) {
 func (r *RedisCache) GetCompanyByName(name string) (*models.Company, bool) {
 	ctx := context.Background()
 	key := fmt.Sprintf("company:name:%s", name)
-	
+
 	result, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return nil, false
@@ -91,13 +91,13 @@ func (r *RedisCache) GetCompanyByName(name string) (*models.Company, bool) {
 		logrus.Warnf("Redis error getting company: %v", err)
 		return nil, false
 	}
-	
+
 	var company models.Company
 	if err := json.Unmarshal([]byte(result), &company); err != nil {
 		logrus.Warnf("Redis error unmarshaling company: %v", err)
 		return nil, false
 	}
-	
+
 	logrus.Debugf("🎯 Company cache hit: %s", name)
 	return &company, true
 }
@@ -106,13 +106,13 @@ func (r *RedisCache) GetCompanyByName(name string) (*models.Company, bool) {
 func (r *RedisCache) SetCompany(company *models.Company) {
 	ctx := context.Background()
 	key := fmt.Sprintf("company:name:%s", company.Name)
-	
+
 	data, err := json.Marshal(company)
 	if err != nil {
 		logrus.Warnf("Redis error marshaling company: %v", err)
 		return
 	}
-	
+
 	err = r.client.Set(ctx, key, data, r.cacheTTL).Err()
 	if err != nil {
 		logrus.Warnf("Redis error setting company: %v", err)
@@ -125,7 +125,7 @@ func (r *RedisCache) SetCompany(company *models.Company) {
 func (r *RedisCache) InvalidateJobExists(linkedinJobID int) {
 	ctx := context.Background()
 	key := fmt.Sprintf("job_exists:%d", linkedinJobID)
-	
+
 	err := r.client.Del(ctx, key).Err()
 	if err != nil {
 		logrus.Warnf("Redis error deleting job existence cache: %v", err)
@@ -136,7 +136,7 @@ func (r *RedisCache) InvalidateJobExists(linkedinJobID int) {
 func (r *RedisCache) CompanyExistsInCache(companyName string) (exists bool, found bool) {
 	ctx := context.Background()
 	key := fmt.Sprintf("company_exists:%s", companyName)
-	
+
 	result, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return false, false
@@ -145,7 +145,7 @@ func (r *RedisCache) CompanyExistsInCache(companyName string) (exists bool, foun
 		logrus.Warnf("Redis error checking company existence: %v", err)
 		return false, false
 	}
-	
+
 	exists = result == "true"
 	return exists, true
 }
@@ -158,13 +158,47 @@ func (r *RedisCache) SetCompanyExists(companyName string, exists bool) {
 	if exists {
 		value = "true"
 	}
-	
+
 	err := r.client.Set(ctx, key, value, r.jobExistsTTL).Err()
 	if err != nil {
 		logrus.Warnf("Redis error setting company existence: %v", err)
 	} else {
 		logrus.Debugf("🔄 Cached company existence: %s = %v (TTL: %v)", companyName, exists, r.jobExistsTTL)
 	}
+}
+
+// LPush pushes a value to the left side of a Redis list
+func (r *RedisCache) LPush(key, value string) error {
+	ctx := context.Background()
+	err := r.client.LPush(ctx, key, value).Err()
+	if err != nil {
+		return fmt.Errorf("Redis LPush error: %w", err)
+	}
+	return nil
+}
+
+// RPop pops a value from the right side of a Redis list
+func (r *RedisCache) RPop(key string) (string, error) {
+	ctx := context.Background()
+	result, err := r.client.RPop(ctx, key).Result()
+	if err == redis.Nil {
+		// List is empty
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("Redis RPop error: %w", err)
+	}
+	return result, nil
+}
+
+// LLen gets the length of a Redis list
+func (r *RedisCache) LLen(key string) (int, error) {
+	ctx := context.Background()
+	length, err := r.client.LLen(ctx, key).Result()
+	if err != nil {
+		return 0, fmt.Errorf("Redis LLen error: %w", err)
+	}
+	return int(length), nil
 }
 
 // GetCacheStats returns some basic cache statistics
@@ -175,9 +209,9 @@ func (r *RedisCache) GetCacheStats() map[string]interface{} {
 		logrus.Warnf("Redis error getting stats: %v", err)
 		return map[string]interface{}{"error": err.Error()}
 	}
-	
+
 	return map[string]interface{}{
-		"info": info,
+		"info":      info,
 		"connected": true,
 	}
 }
@@ -185,4 +219,85 @@ func (r *RedisCache) GetCacheStats() map[string]interface{} {
 // Close closes the Redis connection
 func (r *RedisCache) Close() error {
 	return r.client.Close()
+}
+
+// ClearJobExistsCache clears all job existence cache entries
+// Use this to clean up polluted cache during discovery
+func (r *RedisCache) ClearJobExistsCache() error {
+	ctx := context.Background()
+
+	// Find all job_exists:* keys
+	keys, err := r.client.Keys(ctx, "job_exists:*").Result()
+	if err != nil {
+		return fmt.Errorf("Redis error finding job_exists keys: %w", err)
+	}
+
+	if len(keys) == 0 {
+		return nil
+	}
+
+	// Delete all found keys
+	err = r.client.Del(ctx, keys...).Err()
+	if err != nil {
+		return fmt.Errorf("Redis error deleting job_exists keys: %w", err)
+	}
+
+	logrus.Infof("🧹 Cleared %d job existence cache entries", len(keys))
+	return nil
+}
+
+// ClearJobProcessingQueue clears the entire job processing queue
+func (r *RedisCache) ClearJobProcessingQueue() error {
+	ctx := context.Background()
+
+	// Delete the entire list
+	err := r.client.Del(ctx, "job_processing_queue").Err()
+	if err != nil {
+		return fmt.Errorf("Redis error clearing job processing queue: %w", err)
+	}
+
+	logrus.Info("🧹 Cleared job processing queue")
+	return nil
+}
+
+// IsJobInQueue checks if a job ID is already in the processing queue
+func (r *RedisCache) IsJobInQueue(jobID string) (bool, error) {
+	ctx := context.Background()
+	queueKey := "job_processing_queue"
+
+	// Use LPOS to check if the job ID exists in the list
+	result, err := r.client.LPos(ctx, queueKey, jobID, redis.LPosArgs{}).Result()
+	if err == redis.Nil {
+		// Job ID not found in queue
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("Redis error checking job in queue: %w", err)
+	}
+
+	// If we get here, the job ID was found (result is the position)
+	return result >= 0, nil
+}
+
+// AddJobToQueueIfNotExists adds a job ID to the queue only if it doesn't already exist
+func (r *RedisCache) AddJobToQueueIfNotExists(key, jobID string) (bool, error) {
+	ctx := context.Background()
+
+	// Check if job already exists in queue
+	exists, err := r.IsJobInQueue(jobID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if job exists in queue: %w", err)
+	}
+
+	if exists {
+		return false, nil // Job already in queue, not added
+	}
+
+	// Add to queue since it doesn't exist
+	err = r.client.LPush(ctx, key, jobID).Err()
+	if err != nil {
+		return false, fmt.Errorf("Redis LPush error: %w", err)
+	}
+
+	return true, nil // Job was added
 }

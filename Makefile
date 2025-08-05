@@ -16,9 +16,11 @@ help:
 	@echo "  make restart        - Restart Redis services"
 	@echo ""
 	@echo "🔧 Job Operations:"
-	@echo "  make scrape         - Start job scraping"
-	@echo "  make scrape-all     - Scrape all jobs in Denmark"
-	@echo "  make scrape-loop    - Run scraping 30 times with 15min timeout each"
+	@echo "  make discover       - Discover new job IDs and queue them in Redis"
+	@echo "  make process        - Process queued job IDs and scrape details"
+	@echo "  make discover-loop  - Run job discovery 15 times with timeout"
+	@echo "  make process-loop   - Continuously process jobs from queue"
+	@echo "  make scrape         - Legacy: discover + scrape in one command"
 	@echo ""
 	@echo "🔧 Development:"
 	@echo "  make test           - Run tests"
@@ -60,9 +62,42 @@ restart:
 	docker-compose down && docker-compose up -d
 
 scrape:
-	@echo "🔍 Starting job scraping..."
-	@echo "💡 Edit this target to change keywords/location"
+	@echo "🔍 Starting job scraping (legacy)..."
+	@echo "💡 Consider using 'make discover' then 'make process' instead"
 	./bin/scraper scrape --keywords "software engineer" --location "denmark" --total-jobs 50 
+
+discover:
+	@echo "🔍 Discovering new job IDs and adding to Redis queue..."
+	./linkedin-scraper discover --keywords "software engineer" --location "denmark" --total-jobs 100
+
+process:
+	@echo "⚙️  Processing jobs from Redis queue..."
+	./linkedin-scraper process --limit 20
+
+discover-loop:
+	@echo "🔄 Starting 15 cycles of job ID discovery..."
+	@for i in $$(seq 1 15); do \
+		echo ""; \
+		echo "🔍 Starting discovery cycle $$i of 15..."; \
+		timeout 900 ./linkedin-scraper discover --keywords "software engineer" --location "denmark" --total-jobs 100 || { \
+			echo "⏰ Cycle $$i stopped after 15 minutes or completed"; \
+		}; \
+		if [ $$i -lt 15 ]; then \
+			echo "⏳ Waiting 15 seconds before next cycle..."; \
+			sleep 15; \
+		fi; \
+	done
+	@echo "✅ All 15 discovery cycles completed!"
+
+process-loop:
+	@echo "🔄 Starting continuous job processing..."
+	@while true; do \
+		echo ""; \
+		echo "⚙️  Processing batch of jobs from queue..."; \
+		./linkedin-scraper process --limit 50; \
+		echo "⏳ Waiting 60 seconds before next batch..."; \
+		sleep 60; \
+	done 
 
 scrape-loop:
 	@echo "🔄 Starting 15 cycles of job scraping with 15-minute timeout per cycle..."
