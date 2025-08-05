@@ -98,6 +98,7 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 			const jobDetails = {
 				title: getTitleText(),
 				company: getCompanyText(),
+				companyImageUrl: getCompanyImageUrl(),
 				location: getLocationData(),
 				description: getDescriptionText(),
 				applyUrl: getApplyUrl(),
@@ -111,6 +112,7 @@ func (s *LinkedInScraper) buildJobExtractionScript() string {
 			const result = {
 				title: jobDetails.title,
 				company: jobDetails.company,
+				companyImageUrl: jobDetails.companyImageUrl,
 				location: jobDetails.location,
 				description: jobDetails.description,
 				applyUrl: jobDetails.applyUrl,
@@ -269,15 +271,36 @@ func (s *LinkedInScraper) buildFallbackJobExtractionScript() string {
 				for (const sel of selectors) {
 					const elem = document.querySelector(sel);
 					if (elem && elem.innerText) {
+						console.log('🏢 Found company with selector:', sel, 'text:', elem.innerText.trim());
 						return elem.innerText.trim();
 					}
 				}
+				console.log('❌ No company found');
+				return '';
+			};
+			
+			// Basic company image extraction as fallback
+			const getCompanyImageUrl = function() {
+				const selectors = [
+					'.job-details-jobs-unified-top-card__company-logo img',
+					'.jobs-unified-top-card__company-logo img',
+					'img[alt*="company"]'
+				];
+				for (const sel of selectors) {
+					const elem = document.querySelector(sel);
+					if (elem && elem.src) {
+						console.log('🖼️  Found company image with selector:', sel, 'URL:', elem.src);
+						return elem.src;
+					}
+				}
+				console.log('❌ No company image found');
 				return '';
 			};
 			
 			return {
 				title: getTitleText(),
 				company: getCompanyText(),
+				companyImageUrl: getCompanyImageUrl(),
 				location: '',
 				description: '',
 				applyUrl: window.location.href,

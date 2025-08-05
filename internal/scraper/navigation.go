@@ -119,8 +119,8 @@ func (s *LinkedInScraper) scrapePage(ctx context.Context, url string, maxJobsFro
 			continue
 		}
 		
-		// Check if job already exists in database
-		exists, err := s.jobRepo.ExistsLinkedInJobID(jobID)
+		// Check if job already exists via data service (cache + API)
+		exists, err := s.dataService.JobExists(jobID)
 		if err != nil {
 			// Include URL anyway to be safe
 			filteredJobURLs = append(filteredJobURLs, jobURL)

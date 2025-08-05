@@ -6,18 +6,11 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
 	LinkedIn LinkedInConfig
 	Scraper  ScraperConfig
+	Redis    RedisConfig
+	API      APIConfig
 	LogLevel string
-}
-
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
 }
 
 type LinkedInConfig struct {
@@ -34,15 +27,22 @@ type ScraperConfig struct {
 	ChromeExecutablePath  string
 }
 
+type RedisConfig struct {
+	Host        string
+	Port        string
+	Password    string
+	DB          int
+	CacheTTL    int
+	JobExistsTTL int
+}
+
+type APIConfig struct {
+	BaseURL string
+	APIKey  string
+}
+
 func Load() *Config {
 	return &Config{
-		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "3306"),
-			User:     getEnv("DB_USER", "root"),
-			Password: getEnv("DB_PASSWORD", ""),
-			DBName:   getEnv("DB_NAME", "linkedin_jobs"),
-		},
 		LinkedIn: LinkedInConfig{
 			Email:    getEnv("LINKEDIN_EMAIL", ""),
 			Password: getEnv("LINKEDIN_PASSWORD", ""),
@@ -54,6 +54,18 @@ func Load() *Config {
 			HeadlessBrowser:       getEnvAsBool("HEADLESS_BROWSER", true), // Already defaults to true (headless)
 			UserDataDir:           getEnv("USER_DATA_DIR", "./chrome-profile"),
 			ChromeExecutablePath:  getEnv("CHROME_EXECUTABLE_PATH", "/usr/bin/chromium"),
+		},
+		Redis: RedisConfig{
+			Host:         getEnv("REDIS_HOST", "127.0.0.1"),
+			Port:         getEnv("REDIS_PORT", "6379"),
+			Password:     getEnv("REDIS_PASSWORD", ""),
+			DB:           getEnvAsInt("REDIS_DB", 0),
+			CacheTTL:     getEnvAsInt("REDIS_CACHE_TTL", 300),
+			JobExistsTTL: getEnvAsInt("REDIS_JOB_EXISTS_TTL", 120),
+		},
+		API: APIConfig{
+			BaseURL: getEnv("API_BASE_URL", "http://localhost:8082/api"),
+			APIKey:  getEnv("API_KEY", ""),
 		},
 		LogLevel: getEnv("LOG_LEVEL", "info"),
 	}

@@ -87,11 +87,44 @@ const getCompanyText = function(): string {
     for (const sel of selectors) {
         const elem = Utils.safeQuery<HTMLElement>(sel);
         if (elem && elem.innerText) {
-            console.log('Found company with selector:', sel, 'text:', elem.innerText.trim());
+            console.log('🏢 Found company with selector:', sel, 'text:', elem.innerText.trim());
             return elem.innerText.trim();
         }
     }
-    console.log('No company found');
+    console.log('❌ No company found');
+    return '';
+};
+
+// Company Image URL extraction
+const getCompanyImageUrl = function(): string {
+    const selectors = [
+        '.job-details-jobs-unified-top-card__company-logo img',
+        '.jobs-unified-top-card__company-logo img',
+        'img[alt*="company"]',
+        'img[alt*="Company"]',
+        'img[alt*="logo"]',
+        'img[alt*="Logo"]',
+        '.topcard__org-logo-container img',
+        '.job-details__company-logo img'
+    ];
+    
+    console.log('🖼️  === SEARCHING FOR COMPANY IMAGE ===');
+    console.log('Total image selectors to try:', selectors.length);
+    
+    for (let i = 0; i < selectors.length; i++) {
+        const sel = selectors[i];
+        console.log(`[${i + 1}/${selectors.length}] Trying image selector: ${sel}`);
+        const elem = Utils.safeQuery<HTMLImageElement>(sel);
+        
+        if (elem && elem.src) {
+            console.log('✅ Company image found with selector:', sel);
+            console.log('🖼️  Image URL:', elem.src);
+            console.log('🖼️  Image alt text:', elem.alt || 'no alt text');
+            return elem.src;
+        }
+    }
+    
+    console.log('❌ No company image found');
     return '';
 };
 

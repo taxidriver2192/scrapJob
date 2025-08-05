@@ -1,63 +1,39 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev   # or Dockerfile.prod
-      args:
-        HOST_UID: ${HOST_UID}
-        HOST_GID: ${HOST_GID}
+  # Redis Cache Service
+  redis:
+    image: redis:7-alpine
     ports:
-      - "8082:80"
+      - "6379:6379"
     volumes:
-      - ./laravel-dashboard:/var/www/html   # hot-reload code
-      - ~/.composer/cache:/tmp/composer     # speeds up rebuilds
-      - ./backups:/var/www/backups         # backup SQL files
-    user: "${HOST_UID}:${HOST_GID}"
-    environment:
-      APP_ENV: local
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: "true"
-      DB_CONNECTION: mysql
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: linkedin_jobs
-      DB_USERNAME: laravel
-      DB_PASSWORD: laravelpass
-      UID: ${HOST_UID}
-      GID: ${HOST_GID}
-    depends_on:
-      db:
-        condition: service_healthy
-    networks: [ internal ]
-
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: linkedin_jobs
-      MYSQL_USER: laravel
-      MYSQL_PASSWORD: laravelpass
-      MYSQL_ROOT_PASSWORD: rootpass
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3307:3306"
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks: [ internal ]
+      retries: 3
+    networks: [scraper_network]
 
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    ports: [ "8080:80" ]
+  # Redis Commander for Redis management (optional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
     environment:
-      PMA_HOST: db
-    depends_on: [ db ]
-    networks: [ internal ]
+      REDIS_HOSTS: local:redis:6379
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [scraper_network]
 
 networks:
-  internal:
+  scraper_network:
+    driver: bridge
 
 volumes:
-  mysql_data:
+  redis_data:

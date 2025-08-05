@@ -11,22 +11,20 @@ help:
 	@echo "  make build          - Build the Go application"
 	@echo ""
 	@echo "🐳 Services:"
-	@echo "  make start          - Start Docker services"
-	@echo "  make stop           - Stop Docker services"
-	@echo "  make restart        - Restart Docker services"
+	@echo "  make start          - Start Redis services"
+	@echo "  make stop           - Stop Redis services"
+	@echo "  make restart        - Restart Redis services"
 	@echo ""
 	@echo "🔧 Job Operations:"
 	@echo "  make scrape         - Start job scraping"
 	@echo "  make scrape-all     - Scrape all jobs in Denmark"
 	@echo "  make scrape-loop    - Run scraping 30 times with 15min timeout each"
-	@echo "  make check-job-status - Check if jobs are still open"
-	@echo "  make analyze-data   - Analyze job data quality"
 	@echo ""
 	@echo "🔧 Development:"
 	@echo "  make test           - Run tests"
 	@echo ""
 	@echo "📊 Access URLs after 'make start':"
-	@echo "  phpMyAdmin: http://localhost:8080"
+	@echo "  Redis Commander: http://localhost:8081 (admin/admin123)"
 
 # Setup and build
 setup:
@@ -44,37 +42,27 @@ build:
 		echo "⚠️  TypeScript compiler not found. Using existing JavaScript files."; \
 	fi
 	go build -o linkedin-scraper cmd/main.go
-	go build -o job-status-checker cmd/job-status-checker/main.go
-
+	
+#go build -o job-status-checker cmd/job-status-checker/main.go
 # Docker services
 start:
-	@echo "🐳 Starting services..."
+	@echo "🐳 Starting Redis services..."
 	docker-compose up -d
 	@echo "✅ Services started!"
-	@echo "📊 phpMyAdmin: http://localhost:8080"
-	@echo "🌐 Web Dashboard: http://localhost:8082"
+	@echo "📊 Redis Commander: http://localhost:8081 (admin/admin123)"
 
 stop:
 	@echo "🛑 Stopping services..."
 	docker-compose down
 
 restart:
-	@echo "🔄 Restarting Docker services..."
+	@echo "🔄 Restarting Redis services..."
 	docker-compose down && docker-compose up -d
-
-check-job-status:
-	@echo "🔍 Checking job status..."
-	go run cmd/job-status-checker/main.go --limit 0
 
 scrape:
 	@echo "🔍 Starting job scraping..."
 	@echo "💡 Edit this target to change keywords/location"
-	./linkedin-scraper scrape --keywords "php" --location "Copenhagen" --total-jobs 50
-
-scrape-all:
-	@echo "🔍 Starting job scraping..."
-	@echo "💡 Edit this target to change keywords/location"
-	./linkedin-scraper scrape --keywords "" --location "denmark" --total-jobs 50
+	./bin/scraper scrape --keywords "software engineer" --location "denmark" --total-jobs 50 
 
 scrape-loop:
 	@echo "🔄 Starting 15 cycles of job scraping with 15-minute timeout per cycle..."
@@ -90,10 +78,6 @@ scrape-loop:
 		fi; \
 	done
 	@echo "✅ All 15 scraping cycles completed!"
-
-analyze-data:
-	@echo "🔍 Analyzing job data quality..."
-	go run cmd/analyze-data/main.go
 
 # Utilities
 test:

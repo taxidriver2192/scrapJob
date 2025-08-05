@@ -12,7 +12,7 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func extractLinkedInJobIDFromURL(jobURL string) (int64, error) {
+func extractLinkedInJobIDFromURL(jobURL string) (int, error) {
 	// LinkedIn job URLs typically look like: 
 	// https://www.linkedin.com/jobs/view/1234567890/
 	// or https://www.linkedin.com/jobs/view/1234567890?...
@@ -25,7 +25,7 @@ func extractLinkedInJobIDFromURL(jobURL string) (int64, error) {
 		return 0, fmt.Errorf("could not extract job ID from URL: %s", jobURL)
 	}
 	
-	jobID, err := strconv.ParseInt(matches[1], 10, 64)
+	jobID, err := strconv.Atoi(matches[1])
 	if err != nil {
 		return 0, fmt.Errorf("invalid job ID '%s' in URL: %w", matches[1], err)
 	}

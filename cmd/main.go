@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"linkedin-job-scraper/internal/config"
-	"linkedin-job-scraper/internal/database"
 	"linkedin-job-scraper/internal/scraper"
+	"linkedin-job-scraper/internal/services"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -77,20 +77,17 @@ func runScraper(keywords, location string, totalJobs int) {
 	// Setup logging
 	setupLogging(cfg.LogLevel)
 
-	// Initialize database with auto-create
-	db, err := database.NewConnectionWithAutoCreate(cfg.Database)
-	if err != nil {
-		logrus.Fatal("Failed to connect to database: ", err)
-	}
-	defer db.Close()
+	// Initialize data service (Redis + API)
+	dataService := services.NewDataService(cfg)
+	defer dataService.Close()
 
 	// Initialize scraper
-	jobScraper := scraper.NewLinkedInScraper(cfg, db)
+	jobScraper := scraper.NewLinkedInScraper(cfg, dataService)
 
 	// Start scraping
 	logrus.Infof("Starting to scrape %d jobs with keywords: %s, location: %s", totalJobs, keywords, location)
 	
-	err = jobScraper.ScrapeJobs(keywords, location, totalJobs)
+	err := jobScraper.ScrapeJobs(keywords, location, totalJobs)
 	if err != nil {
 		logrus.Fatal("Scraping failed: ", err)
 	}
@@ -99,19 +96,8 @@ func runScraper(keywords, location string, totalJobs int) {
 }
 
 func runMigrations() {
-	cfg := config.Load()
-	
-	db, err := database.NewConnectionWithAutoCreate(cfg.Database)
-	if err != nil {
-		logrus.Fatal("Failed to connect to database: ", err)
-	}
-	defer db.Close()
-
-	if err := database.RunMigrations(db); err != nil {
-		logrus.Fatal("Migration failed: ", err)
-	}
-
-	logrus.Info("Migrations completed successfully")
+	logrus.Info("Database migrations are now handled by the Laravel API backend")
+	logrus.Info("Please run migrations on the Laravel application instead")
 }
 
 func setupLogging(level string) {
