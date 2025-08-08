@@ -337,3 +337,8 @@ func (s *DataService) ClearJobExistsCache() error {
 
 	return nil
 }
+
+// GetQueueSize returns the current size of the job processing queue
+func (s *DataService) GetQueueSize() (int, error) {
+	return s.cache.GetQueueSize()
+}

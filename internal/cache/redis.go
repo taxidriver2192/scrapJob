@@ -301,3 +301,16 @@ func (r *RedisCache) AddJobToQueueIfNotExists(key, jobID string) (bool, error) {
 
 	return true, nil // Job was added
 }
+
+// GetQueueSize returns the current size of the job processing queue
+func (r *RedisCache) GetQueueSize() (int, error) {
+	ctx := context.Background()
+	queueKey := "job_processing_queue"
+
+	size, err := r.client.LLen(ctx, queueKey).Result()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get queue size: %w", err)
+	}
+
+	return int(size), nil
+}

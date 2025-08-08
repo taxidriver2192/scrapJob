@@ -45,6 +45,7 @@ var discoverCmd = &cobra.Command{
 		keywords, _ := cmd.Flags().GetString("keywords")
 		location, _ := cmd.Flags().GetString("location")
 		totalJobs, _ := cmd.Flags().GetInt("total-jobs")
+		startFrom, _ := cmd.Flags().GetInt("start-from")
 		debug, _ := cmd.Flags().GetBool("debug")
 
 		if debug {
@@ -52,7 +53,7 @@ var discoverCmd = &cobra.Command{
 			logrus.Info("🐛 Debug mode enabled - will show detailed discovery process")
 		}
 
-		runDiscovery(keywords, location, totalJobs)
+		runDiscovery(keywords, location, totalJobs, startFrom)
 	},
 }
 
@@ -93,6 +94,7 @@ func init() {
 	discoverCmd.Flags().StringP("keywords", "k", "", "Job search keywords (required)")
 	discoverCmd.Flags().StringP("location", "l", "", "Job search location (required)")
 	discoverCmd.Flags().IntP("total-jobs", "t", 100, "Total number of job IDs to discover")
+	discoverCmd.Flags().IntP("start-from", "s", 0, "Start from specific result number (default: 0)")
 	discoverCmd.Flags().BoolP("debug", "d", false, "Enable debug mode")
 	discoverCmd.MarkFlagRequired("keywords")
 	discoverCmd.MarkFlagRequired("location")
@@ -163,7 +165,7 @@ func runScraper(keywords, location string, totalJobs int) {
 	logrus.Info("Scraping completed successfully")
 }
 
-func runDiscovery(keywords, location string, totalJobs int) {
+func runDiscovery(keywords, location string, totalJobs, startFrom int) {
 	// Initialize configuration
 	cfg := config.Load()
 
@@ -177,10 +179,26 @@ func runDiscovery(keywords, location string, totalJobs int) {
 	// Initialize scraper
 	jobScraper := scraper.NewLinkedInScraper(cfg, dataService)
 
-	// Start job ID discovery
-	logrus.Infof("🔍 Starting job ID discovery: %d jobs with keywords: %s, location: %s", totalJobs, keywords, location)
+	// Auto-calculate start position from Redis queue size if not specified
+	if startFrom == 0 {
+		queueSize, err := dataService.GetQueueSize()
+		if err != nil {
+			logrus.Warnf("Could not get queue size from Redis, starting from 0: %v", err)
+			startFrom = 0
+		} else {
+			startFrom = queueSize
+			logrus.Infof("📊 Found %d jobs in Redis queue, starting discovery from result %d", queueSize, startFrom)
+		}
+	}
 
-	err := jobScraper.DiscoverJobIDs(keywords, location, totalJobs)
+	// Start job ID discovery
+	if startFrom > 0 {
+		logrus.Infof("🔍 Starting job ID discovery: %d jobs with keywords: %s, location: %s, starting from result: %d", totalJobs, keywords, location, startFrom)
+	} else {
+		logrus.Infof("🔍 Starting job ID discovery: %d jobs with keywords: %s, location: %s", totalJobs, keywords, location)
+	}
+
+	err := jobScraper.DiscoverJobIDs(keywords, location, totalJobs, startFrom)
 	if err != nil {
 		logrus.Fatal("Job ID discovery failed: ", err)
 	}

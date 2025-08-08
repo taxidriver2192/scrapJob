@@ -265,8 +265,12 @@ func (s *LinkedInScraper) processNewJobs(ctx context.Context, jobURLs []string) 
 }
 
 // DiscoverJobIDs discovers new job IDs and stores them in Redis queue (no detailed scraping)
-func (s *LinkedInScraper) DiscoverJobIDs(keywords, location string, totalJobs int) error {
-	fmt.Println("🔍 Starting LinkedIn job ID discovery...")
+func (s *LinkedInScraper) DiscoverJobIDs(keywords, location string, totalJobs, startFrom int) error {
+	if startFrom > 0 {
+		fmt.Printf("🔍 Starting LinkedIn job ID discovery from result %d...\n", startFrom)
+	} else {
+		fmt.Println("🔍 Starting LinkedIn job ID discovery...")
+	}
 
 	// Setup Chrome options with better error handling
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -306,12 +310,16 @@ func (s *LinkedInScraper) DiscoverJobIDs(keywords, location string, totalJobs in
 		fmt.Println("📝 Continuing without preload - will check individual jobs via API")
 	}
 
-	totalJobIDsFound := 0
+	totalJobIDsFound := startFrom  // Start from the specified position
 	totalNewJobIDs := 0
 	page := 1
 	const maxPages = 1000
 
-	fmt.Printf("🎯 Target: %d job IDs | Keywords: %s | Location: %s\n", totalJobs, keywords, location)
+	if startFrom > 0 {
+		fmt.Printf("🎯 Target: %d job IDs | Keywords: %s | Location: %s | Starting from: %d\n", totalJobs, keywords, location, startFrom)
+	} else {
+		fmt.Printf("🎯 Target: %d job IDs | Keywords: %s | Location: %s\n", totalJobs, keywords, location)
+	}
 
 	for page <= maxPages && totalNewJobIDs < totalJobs {
 		start := totalJobIDsFound
