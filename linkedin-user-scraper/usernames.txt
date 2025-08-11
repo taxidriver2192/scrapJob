@@ -1,0 +1,12 @@
+# Example LinkedIn usernames/URLs for testing
+# Lines starting with # are ignored
+
+williamhgates
+satyanadella
+sundarpichai
+jeffweiner08
+https://www.linkedin.com/in/reid-hoffman-946b7/
+https://www.linkedin.com/in/danielek/
+
+# You can mix usernames and full URLs
+# The scraper will extract the username from URLs automatically
